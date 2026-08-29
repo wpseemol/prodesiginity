@@ -1,6 +1,9 @@
 import Link from "next/link";
 import Image from "next/image";
 
+import darkModeLogo from "@/public/assets/logo/prodesinity-logo-dark.svg";
+import lightModeLogo from "@/public/assets/logo/prodesignity-logo-light.svg";
+
 const serviceLinks = [
     { name: "Short-form & Reels Editing", href: "/services" },
     { name: "Long-form Video Production", href: "/services" },
@@ -32,11 +35,7 @@ export default function Footer() {
                             <div className="relative h-8 sm:h-9 md:h-10 w-auto transition-transform duration-200 group-hover:scale-105">
                                 {/* Dark Mode SVG Logo */}
                                 <Image
-                                    src={
-                                        "assets/logo/prodesinity-logo-dark.svg"
-                                    }
-                                    width="100"
-                                    height="40"
+                                    src={darkModeLogo}
                                     alt="ProDesignity Logo"
                                     className=" h-0 w-0 dark:h-full dark:w-auto object-contain scale-0 dark:scale-100 transition-transform duration-200"
                                     priority
@@ -44,11 +43,7 @@ export default function Footer() {
 
                                 {/* Light Mode SVG Logo */}
                                 <Image
-                                    src={
-                                        "/assets/logo/prodesignity-logo-light.svg"
-                                    }
-                                    width="100"
-                                    height="40"
+                                    src={lightModeLogo}
                                     alt="ProDesignity Logo"
                                     className="h-full w-auto object-contain dark:scale-0 scale-100 dark:w-0 dark:h-0 transition-transform duration-200"
                                     priority
