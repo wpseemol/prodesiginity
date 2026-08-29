@@ -1,9 +1,12 @@
 import Link from "next/link";
 import Image from "next/image";
-import ThemeToggle from "../ThemeToggle";
-import MobileMenu from "./MobileMenu";
+import ThemeToggle from "@/components/ThemeToggle";
+import MobileMenu from "@/components/home/MobileMenu";
 
-const navLinks = [
+const navLinks: {
+    name: string;
+    href: string;
+}[] = [
     { name: "Home", href: "/" },
     { name: "Services", href: "/services" },
     { name: "Pricing", href: "/#pricing" },
