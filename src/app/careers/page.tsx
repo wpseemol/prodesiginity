@@ -20,12 +20,12 @@ export default function CareerPage() {
     return (
         <main className="relative bg-white dark:bg-[#070B14] text-slate-900 dark:text-white transition-colors duration-300 font-sans select-none overflow-hidden">
             <CareerHero />
-            <CareerPerks />
-            <CareerOpenings onSelectRole={handleSelectRole} />
             <CareerForm
                 selectedRole={selectedRole}
                 onRoleChange={setSelectedRole}
             />
+            <CareerPerks />
+            <CareerOpenings onSelectRole={handleSelectRole} />
         </main>
     );
 }

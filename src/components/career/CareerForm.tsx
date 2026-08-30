@@ -62,6 +62,7 @@ export default function CareerForm({
             data.append("coverLetter", formData.coverLetter);
             if (resume) data.append("resume", resume);
 
+            // "api.prodesignity.com/api/career/send-mail",
             const res = await fetch(
                 "https://api.prodesignity.com/api/career/send-mail",
                 {
