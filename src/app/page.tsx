@@ -5,9 +5,9 @@ import FeaturedWorksSection from "@/components/home/portfolio";
 import PricingSection from "@/components/home/PricingSection";
 import ProcessSection from "@/components/home/ProcessSection";
 import RecentProjects from "@/components/home/recent-projects/RecentProjects";
-import ReviewsSection from "@/components/home/ReviewsSection";
 import ServicesMarquee from "@/components/home/ServicesMarquee";
 import StatsSection from "@/components/home/StatsSection";
+import TeamSection from "@/components/home/team/TeamSection";
 import { homeSchema } from "@/lib/seo";
 
 export default function Home() {
@@ -22,7 +22,7 @@ export default function Home() {
             <ProcessSection />
             <RecentProjects />
             <PricingSection />
-            <ReviewsSection />
+            <TeamSection />
         </main>
     );
 }

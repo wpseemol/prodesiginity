@@ -1,0 +1,449 @@
+/*
+ * Hero design tokens.
+ *
+ * The source HTML kept these on :root and flipped them with
+ * [data-theme="dark"]. This project drives dark mode with a `.dark` class on
+ * <html> (next-themes, attribute="class"), so the tokens live on the section
+ * itself and the dark values come from a :global(.dark) ancestor selector.
+ * Scoping them here means the hero cannot leak variables into the rest of the
+ * site, and the rest of the site cannot overwrite the hero's palette.
+ */
+.hero {
+    --ink: #0f1121;
+    --ink-soft: #5a6178;
+    --ink-faint: #8a90aa;
+    --violet: #5b4fe9;
+    --violet-hi: #4a3fd1;
+    --violet-wash: #eeefff;
+    --paper: #fbfbff;
+    --card: #ffffff;
+    --line: #e7e9f5;
+    --glow-a: rgba(124, 109, 255, 0.26);
+    --glow-b: rgba(129, 215, 255, 0.2);
+    --shadow-card: 0 24px 60px -28px rgba(24, 26, 64, 0.3),
+        0 2px 6px rgba(24, 26, 64, 0.05);
+    --shadow-btn: 0 14px 28px -12px rgba(91, 79, 233, 0.65);
+    --r-pill: 999px;
+
+    position: relative;
+    overflow: hidden;
+    background: var(--paper);
+    color: var(--ink);
+    padding-bottom: clamp(20px, 3vw, 30px);
+    transition: background 0.45s ease, color 0.45s ease;
+}
+
+:global(.dark) .hero {
+    --ink: #f2f3ff;
+    --ink-soft: #a0a6c8;
+    --ink-faint: #767c9e;
+    --violet: #7c6dff;
+    --violet-hi: #8e80ff;
+    --violet-wash: #1e1f3d;
+    --paper: #0a0b18;
+    --card: #13152a;
+    --line: #252846;
+    --glow-a: rgba(124, 109, 255, 0.3);
+    --glow-b: rgba(64, 120, 190, 0.22);
+    --shadow-card: 0 26px 60px -30px rgba(0, 0, 0, 0.9),
+        0 2px 6px rgba(0, 0, 0, 0.35);
+    --shadow-btn: 0 14px 30px -12px rgba(124, 109, 255, 0.55);
+}
+
+.hero :focus-visible {
+    outline: 3px solid var(--violet);
+    outline-offset: 3px;
+    border-radius: 8px;
+}
+
+/* ---------- background ---------- */
+.bg {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+}
+
+.bgGrid {
+    position: absolute;
+    inset: -2px;
+    background-image: linear-gradient(
+            to right,
+            var(--line) 1px,
+            transparent 1px
+        ),
+        linear-gradient(to bottom, var(--line) 1px, transparent 1px);
+    background-size: clamp(46px, 6vw, 74px) clamp(46px, 6vw, 74px);
+    -webkit-mask-image: radial-gradient(
+        120% 85% at 62% 34%,
+        #000 25%,
+        transparent 78%
+    );
+    mask-image: radial-gradient(120% 85% at 62% 34%, #000 25%, transparent 78%);
+    opacity: 0.85;
+}
+
+.bgGlow {
+    position: absolute;
+    width: min(760px, 120vw);
+    height: min(760px, 120vw);
+    right: -14%;
+    top: -30%;
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--glow-a), transparent 62%);
+}
+
+.bgGlow2 {
+    left: -26%;
+    top: 26%;
+    right: auto;
+    width: min(620px, 100vw);
+    height: min(620px, 100vw);
+    background: radial-gradient(circle, var(--glow-b), transparent 62%);
+}
+
+/* ---------- layout ---------- */
+.inner {
+    position: relative;
+    z-index: 2;
+    display: grid;
+    grid-template-columns: 1.04fr 0.96fr;
+    align-items: center;
+    gap: clamp(16px, 3vw, 44px);
+    padding: clamp(18px, 3.2vw, 36px) 0 clamp(14px, 2vw, 22px);
+}
+
+/* ---------- copy ---------- */
+.pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--r-pill);
+    padding: 7px 14px 7px 8px;
+    font-size: clamp(0.76rem, 2.4vw, 0.83rem);
+    font-weight: 600;
+    color: var(--ink-soft);
+}
+
+.pillStars {
+    display: inline-flex;
+    gap: 2px;
+    color: #f5a524;
+}
+
+.pillStars svg {
+    width: 13px;
+    height: 13px;
+}
+
+.pill b {
+    color: var(--ink);
+    font-weight: 700;
+}
+
+.headline {
+    margin: clamp(14px, 2.4vw, 22px) 0 0;
+    font-size: clamp(2.05rem, 6.4vw, 4.05rem);
+    line-height: 1.05;
+    letter-spacing: -0.035em;
+    font-weight: 800;
+    max-width: 14ch;
+}
+
+/* Each line is a clipping mask; the inner span is what GSAP slides up. */
+.line {
+    display: block;
+    overflow: hidden;
+    padding-bottom: 0.06em;
+}
+
+.line > span {
+    display: block;
+    will-change: transform;
+}
+
+.lede {
+    margin: clamp(14px, 2vw, 22px) 0 0;
+    max-width: 53ch;
+    font-size: clamp(0.98rem, 2.9vw, 1.11rem);
+    line-height: 1.62;
+    color: var(--ink-soft);
+}
+
+.actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: clamp(20px, 3vw, 32px);
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: clamp(48px, 7vw, 54px);
+    padding: 0 clamp(22px, 4vw, 30px);
+    border-radius: 14px;
+    font-weight: 600;
+    font-size: clamp(0.94rem, 2.6vw, 1rem);
+    border: 1px solid transparent;
+    text-decoration: none;
+    transition: transform 0.18s ease, background 0.18s ease,
+        border-color 0.18s ease;
+}
+
+.btnPrimary {
+    background: var(--violet);
+    color: #fff;
+    box-shadow: var(--shadow-btn);
+}
+
+.btnPrimary:hover {
+    background: var(--violet-hi);
+    transform: translateY(-2px);
+}
+
+.btnGhost {
+    background: var(--card);
+    border-color: var(--line);
+    color: var(--ink);
+}
+
+.btnGhost:hover {
+    border-color: var(--violet);
+    transform: translateY(-2px);
+}
+
+/* ---------- proof strip ---------- */
+.proof {
+    position: relative;
+    z-index: 2;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin-top: clamp(10px, 2vw, 14px);
+    padding-top: clamp(18px, 2.6vw, 26px);
+    border-top: 1px solid var(--line);
+}
+
+.proofItem {
+    padding-right: clamp(12px, 3vw, 46px);
+}
+
+.proofItem + .proofItem {
+    border-left: 1px solid var(--line);
+    padding-left: clamp(14px, 3vw, 46px);
+}
+
+.proofNum {
+    font-size: clamp(1.1rem, 3.4vw, 1.5rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums;
+}
+
+.proofLabel {
+    font-size: clamp(0.74rem, 2.2vw, 0.86rem);
+    color: var(--ink-soft);
+    margin-top: 2px;
+    line-height: 1.35;
+}
+
+/* ---------- 3D stage ---------- */
+.stage {
+    position: relative;
+    height: clamp(360px, 46vw, 560px);
+}
+
+.stage canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    /* the page still scrolls vertically over the box */
+    touch-action: pan-y;
+    cursor: grab;
+}
+
+/* Toggled from heroScene.ts, which has no access to the hashed module names —
+   hence :global. */
+.stage canvas:global(.is-dragging) {
+    cursor: grabbing;
+}
+
+.readout {
+    position: absolute;
+    left: 50%;
+    bottom: 0;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 10px 18px 10px 12px;
+    box-shadow: var(--shadow-card);
+    min-width: min(280px, 92%);
+    max-width: 100%;
+}
+
+.readoutDot {
+    width: 26px;
+    height: 26px;
+    border-radius: 8px;
+    background: var(--violet-wash);
+    display: grid;
+    place-items: center;
+    flex: none;
+}
+
+.readoutDot svg {
+    width: 13px;
+    height: 13px;
+    stroke: var(--violet);
+    stroke-width: 2.6;
+    fill: none;
+}
+
+.readoutName {
+    display: block;
+    font-size: clamp(0.88rem, 2.6vw, 0.95rem);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+.readoutNote {
+    display: block;
+    font-size: clamp(0.72rem, 2.2vw, 0.78rem);
+    color: var(--ink-soft);
+    margin-top: 1px;
+}
+
+/* Replaces the GSAP tween the standalone file ran on every face change —
+   React swaps the text via a keyed node, so a CSS animation is enough. */
+.readoutSwap {
+    animation: readoutIn 0.35s ease-out both;
+}
+
+@keyframes readoutIn {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.hint {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    transform: translateX(-50%);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: clamp(0.72rem, 2.2vw, 0.79rem);
+    font-weight: 600;
+    color: var(--ink-faint);
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--r-pill);
+    padding: 6px 13px;
+    white-space: nowrap;
+}
+
+.hint svg {
+    width: 14px;
+    height: 14px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+}
+
+/* ---------- responsive ---------- */
+@media (max-width: 1024px) {
+    .inner {
+        grid-template-columns: 1fr;
+        gap: clamp(6px, 2vw, 18px);
+    }
+
+    .copy {
+        max-width: 640px;
+    }
+
+    .headline {
+        max-width: 16ch;
+    }
+
+    .stage {
+        order: 2;
+        height: clamp(340px, 56vw, 470px);
+    }
+}
+
+@media (max-width: 720px) {
+    .stage {
+        height: clamp(320px, 78vw, 400px);
+    }
+
+    .readout {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .proof {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px 0;
+    }
+
+    .proofItem {
+        padding-right: 14px;
+    }
+
+    .proofItem + .proofItem {
+        padding-left: 16px;
+    }
+
+    .proofItem:nth-child(3) {
+        border-left: 0;
+        padding-left: 0;
+    }
+}
+
+@media (max-width: 430px) {
+    .stage {
+        height: 300px;
+    }
+
+    .hint {
+        font-size: 0.7rem;
+        padding: 5px 11px;
+    }
+
+    .proof {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-height: 520px) and (orientation: landscape) {
+    .stage {
+        height: 260px;
+    }
+
+    .headline {
+        font-size: clamp(1.8rem, 5vw, 2.4rem);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .hero *,
+    .hero *::before,
+    .hero *::after {
+        animation: none !important;
+        transition: none !important;
+    }
+}

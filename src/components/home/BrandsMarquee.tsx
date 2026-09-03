@@ -32,7 +32,10 @@ const brands: Brand[] = [
     },
     {
         name: "Nestlé",
-        logo: "/assets/brands/Nestl#U00e9.png",
+        // The file used to be "Nestl#U00e9.png". A "#" in a URL starts the
+        // fragment, so the browser only ever requested "/assets/brands/Nestl"
+        // and got a 404. Renamed to a plain ASCII filename.
+        logo: "/assets/brands/nestle.png",
     },
     {
         name: "Shopify",

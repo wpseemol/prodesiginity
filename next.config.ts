@@ -16,6 +16,9 @@ const nextConfig = {
         remotePatterns: [
             { protocol: "https", hostname: "avatars.githubusercontent.com" },
             { protocol: "https", hostname: "opengraph.githubassets.com" },
+            // Placeholder team/review headshots. Drop this once real photos
+            // live in /public/assets/team/.
+            { protocol: "https", hostname: "images.unsplash.com" },
         ],
     },
 };

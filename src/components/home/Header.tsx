@@ -53,23 +53,27 @@ export default function Header() {
                         className="flex items-center group select-none"
                     >
                         <div className="relative h-8 sm:h-9 md:h-10 w-auto transition-transform duration-200 group-hover:scale-105">
-                            {/* Dark Mode SVG Logo */}
+                            {/* Dark Mode SVG Logo.
+                                Paths MUST start with "/". A bare
+                                "assets/..." is resolved against the current
+                                URL, so it 404s on every nested route
+                                (/contact/assets/... etc). */}
                             <Image
-                                src={`assets/logo/prodesinity-logo-dark.svg`}
+                                src="/assets/logo/prodesinity-logo-dark.svg"
                                 width="100"
                                 height="40"
                                 alt="ProDesignity Logo"
-                                className=" h-0 w-0 dark:h-full dark:w-auto object-contain scale-0 dark:scale-100 transition-transform duration-200"
+                                className="hidden dark:block h-full w-auto object-contain"
                                 priority
                             />
 
                             {/* Light Mode SVG Logo */}
                             <Image
-                                src={`assets/logo/prodesignity-logo-light.svg`}
+                                src="/assets/logo/prodesignity-logo-light.svg"
                                 width="100"
                                 height="40"
                                 alt="ProDesignity Logo"
-                                className="h-full w-auto object-contain dark:scale-0 scale-100 dark:w-0 dark:h-0 transition-transform duration-200"
+                                className="block dark:hidden h-full w-auto object-contain"
                                 priority
                             />
                         </div>
