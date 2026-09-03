@@ -4,6 +4,7 @@ const nextConfig = {
     // Client-side routing still ships in the JS bundle, so links between pages
     // are soft navigations (no full reload), exactly like a normal Next app.
     output: "export",
+    trailingSlash: true,
     reactStrictMode: true,
     poweredByHeader: false,
     // redirects() and headers() are server features and are ignored by
