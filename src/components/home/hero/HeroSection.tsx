@@ -112,7 +112,11 @@ export default function HeroSection() {
                         tl.to(grid, { opacity: 0.85, duration: 1.2 }, 0);
                     }
 
-                    tl.to(lines, { yPercent: 0, duration: 1.05, stagger: 0.09 }, 0.1)
+                    tl.to(
+                        lines,
+                        { yPercent: 0, duration: 1.05, stagger: 0.09 },
+                        0.1,
+                    )
                         .to(
                             reveals,
                             { opacity: 1, y: 0, duration: 0.7, stagger: 0.08 },
@@ -127,7 +131,13 @@ export default function HeroSection() {
                     if (scene) {
                         tl.from(
                             scene.group.scale,
-                            { x: 0.72, y: 0.72, z: 0.72, duration: 1.5, ease: "expo.out" },
+                            {
+                                x: 0.72,
+                                y: 0.72,
+                                z: 0.72,
+                                duration: 1.5,
+                                ease: "expo.out",
+                            },
                             0.15,
                         )
                             .fromTo(
@@ -147,11 +157,17 @@ export default function HeroSection() {
                             )
                             .from(
                                 scene.ring.scale,
-                                { x: 0.45, y: 0.45, z: 0.45, duration: 1.4, ease: "expo.out" },
+                                {
+                                    x: 0.45,
+                                    y: 0.45,
+                                    z: 0.45,
+                                    duration: 1.4,
+                                    ease: "expo.out",
+                                },
                                 0.5,
                             )
                             .from(
-                                (scene.dust.material as { opacity: number }),
+                                scene.dust.material as { opacity: number },
                                 { opacity: 0, duration: 1.2 },
                                 0.6,
                             );
@@ -178,7 +194,10 @@ export default function HeroSection() {
                 <div className={styles.inner}>
                     <div className={styles.copy}>
                         <span className={styles.pill} data-reveal>
-                            <span className={styles.pillStars} aria-hidden="true">
+                            <span
+                                className={styles.pillStars}
+                                aria-hidden="true"
+                            >
                                 <Star />
                                 <Star />
                                 <Star />
@@ -199,8 +218,8 @@ export default function HeroSection() {
                         <p className={styles.lede} data-reveal>
                             Listings, creative, ads and SEO across Amazon,
                             Shopify, Meta, Google and TikTok — handled by one
-                            team on a single monthly retainer, so you can stay on
-                            the product.
+                            team on a single monthly retainer, so you can stay
+                            on the product.
                         </p>
 
                         <div className={styles.actions} data-reveal>
@@ -235,7 +254,11 @@ export default function HeroSection() {
                             Drag the box to steer it
                         </span>
 
-                        <div className={styles.readout} data-chrome aria-live="polite">
+                        <div
+                            className={styles.readout}
+                            data-chrome
+                            aria-live="polite"
+                        >
                             <span className={styles.readoutDot}>
                                 <svg viewBox="0 0 24 24" aria-hidden="true">
                                     <path d="M4 12.5l5 5L20 6.5" />
@@ -243,7 +266,10 @@ export default function HeroSection() {
                             </span>
                             {/* Keyed so React remounts the text and the CSS
                                 fade replays on every quarter turn. */}
-                            <span key={face.slot} className={styles.readoutSwap}>
+                            <span
+                                key={face.slot}
+                                className={styles.readoutSwap}
+                            >
                                 <span className={styles.readoutName}>
                                     {face.name}
                                 </span>
@@ -257,7 +283,11 @@ export default function HeroSection() {
 
                 <div className={styles.proof}>
                     {HERO_STATS.map((stat) => (
-                        <div className={styles.proofItem} data-reveal key={stat.label}>
+                        <div
+                            className={styles.proofItem}
+                            data-reveal
+                            key={stat.label}
+                        >
                             <div
                                 className={styles.proofNum}
                                 data-count={stat.value}
@@ -266,7 +296,9 @@ export default function HeroSection() {
                             >
                                 {`${stat.prefix ?? ""}${stat.value}${stat.suffix ?? ""}`}
                             </div>
-                            <div className={styles.proofLabel}>{stat.label}</div>
+                            <div className={styles.proofLabel}>
+                                {stat.label}
+                            </div>
                         </div>
                     ))}
                 </div>

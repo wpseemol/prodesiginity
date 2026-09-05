@@ -1,7 +1,7 @@
 import BrandsMarquee from "@/components/home/BrandsMarquee";
 import HeroSection from "@/components/home/hero/HeroSection";
 import JsonLd from "@/components/home/JsonLd";
-import FeaturedWorksSection from "@/components/home/portfolio";
+// import FeaturedWorksSection from "@/components/home/portfolio";
 import PricingSection from "@/components/home/PricingSection";
 import ProcessSection from "@/components/home/ProcessSection";
 import RecentProjects from "@/components/home/recent-projects/RecentProjects";
@@ -17,7 +17,7 @@ export default function Home() {
             <HeroSection />
             <StatsSection />
             <BrandsMarquee />
-            <FeaturedWorksSection />
+            {/* <FeaturedWorksSection /> */}
             <ServicesMarquee />
             <ProcessSection />
             <RecentProjects />

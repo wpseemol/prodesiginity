@@ -32,7 +32,7 @@ export const TEAM_MEMBERS: TeamMember[] = [
     {
         id: "Antor-Halder",
         name: "Antor Halder",
-        role: "2D animator",
+        role: "2D Artist & Animator",
         photo: "/assets/images/team/antor.jpg",
     },
     {
@@ -60,6 +60,12 @@ export const TEAM_MEMBERS: TeamMember[] = [
         name: "Asif Iqbol Suzon",
         role: "Graphic Designer",
         photo: "/assets/images/team/asif.jpg",
+    },
+    {
+        id: "Shahariar",
+        name: "Shahariar",
+        role: "Advertising and marketing SEO",
+        photo: "/assets/images/team/shahariar.jpg",
     },
 ];
 

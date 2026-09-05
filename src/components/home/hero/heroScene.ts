@@ -1,11 +1,6 @@
 import * as THREE from "three";
 
-import {
-    FRONT_OF,
-    HERO_CHANNELS,
-    HERO_SIDES,
-    type HeroSide,
-} from "./heroData";
+import { FRONT_OF, HERO_CHANNELS, HERO_SIDES, type HeroSide } from "./heroData";
 
 /**
  * The WebGL half of the hero, kept deliberately free of React.
@@ -35,7 +30,7 @@ const FLOOR_Y = -2.18;
 const LIGHT_GAIN = Math.PI;
 
 /** Auto-tour timings, in milliseconds. */
-const TOUR = { dwell: 1250, resume: 2400 };
+const TOUR = { dwell: 4000, resume: 6000 };
 
 interface Palette {
     face: string;
@@ -199,8 +194,10 @@ export function createHeroScene(
        Textures
        ------------------------------------------------------------------ */
 
-    const logoImg: { light: HTMLImageElement | null; dark: HTMLImageElement | null } =
-        { light: null, dark: null };
+    const logoImg: {
+        light: HTMLImageElement | null;
+        dark: HTMLImageElement | null;
+    } = { light: null, dark: null };
 
     function faceTexture(side: HeroSide, p: Palette) {
         const c = document.createElement("canvas");
@@ -255,7 +252,12 @@ export function createHeroScene(
     }
 
     /** Placeholder wordmark, used until a real logo file is supplied. */
-    function drawMark(g: CanvasRenderingContext2D, p: Palette, cx: number, cy: number) {
+    function drawMark(
+        g: CanvasRenderingContext2D,
+        p: Palette,
+        cx: number,
+        cy: number,
+    ) {
         const S = 132;
         const r = 38;
         const x = cx - S / 2;
@@ -675,8 +677,7 @@ export function createHeroScene(
         el: HTMLElement | Window,
         type: K | string,
         fn: (e: never) => void,
-    ) =>
-        el.addEventListener(type, fn as EventListener, { signal: ac.signal });
+    ) => el.addEventListener(type, fn as EventListener, { signal: ac.signal });
 
     on(holder, "pointermove", (e: PointerEvent) => {
         const r = holder.getBoundingClientRect();
@@ -780,9 +781,10 @@ export function createHeroScene(
             if (!dragging) {
                 // Underdamped spring: each turn arrives with a small overshoot
                 // and settles, instead of gliding in flat.
-                const stiff = 26;
-                const damp = 7.4;
-                spin.sv += ((spin.targetY - spin.y) * stiff - spin.sv * damp) * dt;
+                const stiff = 12;
+                const damp = 5.5;
+                spin.sv +=
+                    ((spin.targetY - spin.y) * stiff - spin.sv * damp) * dt;
                 spin.y += spin.sv * dt;
                 spin.x += (0 - spin.x) * (1 - Math.pow(0.0001, dt)) * 0.6;
             }
@@ -793,12 +795,14 @@ export function createHeroScene(
             // Slow breathing tilt.
             group.rotation.x = par.y * 0.09 + Math.sin(t * 0.52) * 0.022;
             hoverLift +=
-                ((hovering ? 1 : 0) - hoverLift) * (1 - Math.pow(0.0001, dt)) * 0.45;
+                ((hovering ? 1 : 0) - hoverLift) *
+                (1 - Math.pow(0.0001, dt)) *
+                0.45;
             // Rises to meet the cursor, plus a barely-there drift.
             group.position.y = Math.sin(t * 0.74) * 0.14 + hoverLift * 0.1;
             group.position.x = Math.sin(t * 0.31) * 0.05;
 
-            ring.rotation.z += dt * 0.17; // ~37s a lap
+            ring.rotation.z += dt * 0.05; // ~37s a lap
             orbiters.forEach((o) => {
                 o.getWorldPosition(worldPos); // dim the ones swinging behind
                 o.material.opacity = Math.max(
@@ -830,7 +834,9 @@ export function createHeroScene(
 
     resize();
     const ro =
-        typeof ResizeObserver !== "undefined" ? new ResizeObserver(resize) : null;
+        typeof ResizeObserver !== "undefined"
+            ? new ResizeObserver(resize)
+            : null;
     ro?.observe(holder);
     on(window, "resize", resize);
     on(window, "orientationchange", () => setTimeout(resize, 220));
