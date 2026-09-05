@@ -1,22 +1,25 @@
 "use client";
-
 import Marquee from "react-fast-marquee";
 import {
-    MonitorPlay,
-    Video,
-    Mic,
-    Layers,
-    Box,
-    Globe,
-    Zap,
-    BarChart3,
-    Smartphone,
-    Film,
+    Palette, // Graphic Design
+    ListChecks, // Product Listing
+    AppWindow, // Web Applications
+    Layout, // Website Design & Development
+    ShoppingBag, // Shopify Store Design
+    PackageSearch, // Amazon Listing
+    Sparkles, // Product Animation
+    Megaphone, // Paid Advertising
+    SearchCheck, // SEO
+    Video, // UGC Video
+    Box, // 3D Animation
+    Film, // 2D Animation
+    BookOpen, // Product Catalog Design
+    type LucideIcon,
 } from "lucide-react";
 import { HeaderPill } from "@/components/HeaderPill";
 
 interface ServiceCard {
-    icon: typeof MonitorPlay;
+    icon: LucideIcon;
     title: string;
     description: string;
     iconBg: string;
@@ -26,91 +29,110 @@ interface ServiceCard {
 
 const topRowServices: ServiceCard[] = [
     {
-        icon: MonitorPlay,
-        title: "Demo Videos",
+        icon: Palette,
+        title: "Graphic Design",
         description:
-            "Showcase your product features with clear, step-by-step walkthroughs that educate and convert.",
+            "Design strong visuals for your brand, social media, packaging, and marketing materials.",
         iconBg: "bg-emerald-500/10 dark:bg-emerald-500/15",
         iconColor: "text-emerald-600 dark:text-emerald-400",
         accentBorder: "group-hover:border-emerald-500/40",
     },
     {
-        icon: Video,
-        title: "Video Editing",
+        icon: ListChecks,
+        title: "Product Listing",
         description:
-            "Transform raw footage into cinematic stories with perfect pacing that keeps viewers watching.",
+            "Create clear, optimized product listings that help customers understand and buy with confidence.",
         iconBg: "bg-brand-violet/10 dark:bg-dark-brand-violet/15",
         iconColor: "text-brand-violet dark:text-dark-brand-violet",
         accentBorder:
             "group-hover:border-brand-violet/40 dark:group-hover:border-dark-brand-violet/40",
     },
     {
-        icon: Mic,
-        title: "Podcast Production",
+        icon: AppWindow,
+        title: "Web Applications",
         description:
-            "End-to-end audio & video editing to make your episodes sound studio-grade and professional.",
+            "Develop custom web applications that simplify operations and solve real business needs.",
         iconBg: "bg-brand-blue/10 dark:bg-dark-brand-blue/15",
         iconColor: "text-brand-blue dark:text-dark-brand-blue",
         accentBorder:
             "group-hover:border-brand-blue/40 dark:group-hover:border-dark-brand-blue/40",
     },
     {
-        icon: Layers,
-        title: "SaaS Explainers",
+        icon: Layout,
+        title: "Website Design & Development",
         description:
-            "Simplify complex software concepts into engaging visuals that drive instant user understanding.",
+            "Create modern, fast, mobile-friendly websites made to represent your brand professionally.",
         iconBg: "bg-brand-orange/10 dark:bg-dark-brand-orange/15",
         iconColor: "text-brand-orange dark:text-dark-brand-orange",
         accentBorder:
             "group-hover:border-brand-orange/40 dark:group-hover:border-dark-brand-orange/40",
     },
     {
-        icon: Box,
-        title: "3D Animation",
+        icon: ShoppingBag,
+        title: "Shopify Store Design",
         description:
-            "Create immersive 3D worlds and product visualizations that captivate your audience instantly.",
+            "Build high-converting Shopify stores that make shopping simple and drive more sales.",
         iconBg: "bg-primary/10 dark:bg-dark-primary/15",
         iconColor: "text-primary dark:text-dark-primary",
         accentBorder:
             "group-hover:border-primary/40 dark:group-hover:border-dark-primary/40",
     },
-];
-
-const bottomRowServices: ServiceCard[] = [
     {
-        icon: Globe,
-        title: "Web Development",
+        icon: PackageSearch,
+        title: "Amazon Listing",
         description:
-            "Build fast, SEO-optimized, and mobile-responsive websites that turn your visitors into clients.",
+            "Optimize Amazon titles, images, descriptions, and content to improve product conversions.",
         iconBg: "bg-brand-blue/10 dark:bg-dark-brand-blue/15",
         iconColor: "text-brand-blue dark:text-dark-brand-blue",
         accentBorder:
             "group-hover:border-brand-blue/40 dark:group-hover:border-dark-brand-blue/40",
     },
     {
-        icon: Zap,
-        title: "Short Form",
+        icon: Sparkles,
+        title: "Product Animation",
         description:
-            "Dominate TikTok, Reels & Shorts with viral editing styles that boost engagement and growth.",
+            "Bring your product to life with animated visuals that highlight key features and benefits.",
+        iconBg: "bg-emerald-500/10 dark:bg-emerald-500/15",
+        iconColor: "text-emerald-600 dark:text-emerald-400",
+        accentBorder: "group-hover:border-emerald-500/40",
+    },
+];
+
+const bottomRowServices: ServiceCard[] = [
+    {
+        icon: Megaphone,
+        title: "Paid Advertising",
+        description:
+            "Run targeted ad campaigns designed to reach the right people and generate results.",
+        iconBg: "bg-brand-blue/10 dark:bg-dark-brand-blue/15",
+        iconColor: "text-brand-blue dark:text-dark-brand-blue",
+        accentBorder:
+            "group-hover:border-brand-blue/40 dark:group-hover:border-dark-brand-blue/40",
+    },
+    {
+        icon: SearchCheck,
+        title: "SEO",
+        description:
+            "Improve your search visibility so more potential customers can find your business online.",
         iconBg: "bg-emerald-500/10 dark:bg-emerald-500/15",
         iconColor: "text-emerald-600 dark:text-emerald-400",
         accentBorder: "group-hover:border-emerald-500/40",
     },
     {
-        icon: BarChart3,
-        title: "Digital Marketing",
+        icon: Video,
+        title: "UGC Video",
         description:
-            "Data-driven strategies and targeted campaigns to scale your brand's reach and revenue fast.",
+            "Create authentic user-generated-style videos that build trust and make products feel real.",
         iconBg: "bg-brand-violet/10 dark:bg-dark-brand-violet/15",
         iconColor: "text-brand-violet dark:text-dark-brand-violet",
         accentBorder:
             "group-hover:border-brand-violet/40 dark:group-hover:border-dark-brand-violet/40",
     },
     {
-        icon: Smartphone,
-        title: "UGC Content",
+        icon: Box,
+        title: "3D Animation",
         description:
-            "Leverage authentic user stories and testimonials to build trust and social proof for sales.",
+            "Showcase products with realistic 3D visuals and animations that grab attention.",
         iconBg: "bg-brand-orange/10 dark:bg-dark-brand-orange/15",
         iconColor: "text-brand-orange dark:text-dark-brand-orange",
         accentBorder:
@@ -118,16 +140,25 @@ const bottomRowServices: ServiceCard[] = [
     },
     {
         icon: Film,
-        title: "Corporate Video",
+        title: "2D Animation",
         description:
-            "Polished, professional storytelling that strengthens your company's reputation and authority.",
+            "Turn your message into engaging animated videos that are easy to understand and remember.",
         iconBg: "bg-primary/10 dark:bg-dark-primary/15",
         iconColor: "text-primary dark:text-dark-primary",
         accentBorder:
             "group-hover:border-primary/40 dark:group-hover:border-dark-primary/40",
     },
+    {
+        icon: BookOpen,
+        title: "Product Catalog Design",
+        description:
+            "Create clean, professional product catalogs that make your full range easy to explore.",
+        iconBg: "bg-brand-blue/10 dark:bg-dark-brand-blue/15",
+        iconColor: "text-brand-blue dark:text-dark-brand-blue",
+        accentBorder:
+            "group-hover:border-brand-blue/40 dark:group-hover:border-dark-brand-blue/40",
+    },
 ];
-
 function CardItem({ service }: { service: ServiceCard }) {
     const Icon = service.icon;
     return (
