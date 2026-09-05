@@ -25,28 +25,28 @@ interface RecentProjectsProps {
 
 const DEFAULT_PROJECTS: Project[] = [
     {
-        id: "amazon-content",
+        id: "amazon-content-2",
         title: "Create A+ Content on Amazon",
         videoUrl:
-            "https://res.cloudinary.com/cnjo4gnb/video/upload/f_auto,q_auto/v1788614618/Create_A_content_on_Amazon.mp4",
+            "https://res.cloudinary.com/cnjo4gnb/video/upload/f_auto,q_auto/v1788617086/Create_A_content_on_Amazon_2.mp4",
         thumbnail:
-            "https://res.cloudinary.com/cnjo4gnb/video/upload/so_0,f_auto,q_auto/v1788614618/Create_A_content_on_Amazon.jpg",
+            "https://res.cloudinary.com/cnjo4gnb/video/upload/so_0,f_auto,q_auto/v1788617086/Create_A_content_on_Amazon_2.jpg",
     },
     {
-        id: "shopify-importance",
+        id: "shopify-importance-2",
         title: "The Importance of Shopify for E-Commerce Growth",
         videoUrl:
-            "https://res.cloudinary.com/cnjo4gnb/video/upload/f_auto,q_auto/v1788614618/Importance_of_Shopify.mp4",
+            "https://res.cloudinary.com/cnjo4gnb/video/upload/f_auto,q_auto/v1788617089/Importance_of_Shopify_2.mp4",
         thumbnail:
-            "https://res.cloudinary.com/cnjo4gnb/video/upload/so_0,f_auto,q_auto/v1788614618/Importance_of_Shopify.jpg",
+            "https://res.cloudinary.com/cnjo4gnb/video/upload/so_0,f_auto,q_auto/v1788617089/Importance_of_Shopify_2.jpg",
     },
     {
-        id: "why-need-website",
+        id: "why-need-website-2",
         title: "Why Your Brand Needs a Professional Website",
         videoUrl:
-            "https://res.cloudinary.com/cnjo4gnb/video/upload/f_auto,q_auto/v1788614619/Why_you_need_a_website.mp4",
+            "https://res.cloudinary.com/cnjo4gnb/video/upload/f_auto,q_auto/v1788617088/Why_you_need_a_Website.mp4",
         thumbnail:
-            "https://res.cloudinary.com/cnjo4gnb/video/upload/so_0,f_auto,q_auto/v1788614619/Why_you_need_a_website.jpg",
+            "https://res.cloudinary.com/cnjo4gnb/video/upload/so_0,f_auto,q_auto/v1788617088/Why_you_need_a_Website.jpg",
     },
 ];
 
