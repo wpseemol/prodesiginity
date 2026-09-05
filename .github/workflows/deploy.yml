@@ -3,7 +3,7 @@ name: Deploy Static Site to Hostinger
 on:
     push:
         branches:
-            - seemol
+            - main
 
 jobs:
     build-and-deploy:
