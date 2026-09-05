@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { motion, useReducedMotion } from "framer-motion";
+import { motion, useReducedMotion, AnimatePresence } from "framer-motion";
+import { X } from "lucide-react";
 import ProjectSlide from "./ProjectSlide";
 import CarouselControls from "./CarouselControls";
 import { HeaderPill } from "@/components/HeaderPill";
@@ -9,7 +10,8 @@ import { HeaderPill } from "@/components/HeaderPill";
 export type Project = {
     id: string;
     title: string;
-    youtubeId: string;
+    videoUrl?: string;
+    youtubeId?: string;
     thumbnail?: string;
 };
 
@@ -23,19 +25,28 @@ interface RecentProjectsProps {
 
 const DEFAULT_PROJECTS: Project[] = [
     {
-        id: "cholesterol",
-        title: "Lower Cholesterol Naturally — 2-Minute Health Hacks",
-        youtubeId: "dQw4w9WgXcQ",
+        id: "amazon-content",
+        title: "Create A+ Content on Amazon",
+        videoUrl:
+            "https://res.cloudinary.com/cnjo4gnb/video/upload/f_auto,q_auto/v1788614618/Create_A_content_on_Amazon.mp4",
+        thumbnail:
+            "https://res.cloudinary.com/cnjo4gnb/video/upload/so_0,f_auto,q_auto/v1788614618/Create_A_content_on_Amazon.jpg",
     },
     {
-        id: "probiotics",
-        title: "Probiotics and prebiotics explained — Doctor Mike Hansen",
-        youtubeId: "aqz-KE-bpKQ",
+        id: "shopify-importance",
+        title: "The Importance of Shopify for E-Commerce Growth",
+        videoUrl:
+            "https://res.cloudinary.com/cnjo4gnb/video/upload/f_auto,q_auto/v1788614618/Importance_of_Shopify.mp4",
+        thumbnail:
+            "https://res.cloudinary.com/cnjo4gnb/video/upload/so_0,f_auto,q_auto/v1788614618/Importance_of_Shopify.jpg",
     },
     {
-        id: "ai-automation",
-        title: "AI automation with no-code tools",
-        youtubeId: "ScMzIvxBSi4",
+        id: "why-need-website",
+        title: "Why Your Brand Needs a Professional Website",
+        videoUrl:
+            "https://res.cloudinary.com/cnjo4gnb/video/upload/f_auto,q_auto/v1788614619/Why_you_need_a_website.mp4",
+        thumbnail:
+            "https://res.cloudinary.com/cnjo4gnb/video/upload/so_0,f_auto,q_auto/v1788614619/Why_you_need_a_website.jpg",
     },
 ];
 
@@ -48,7 +59,7 @@ export default function RecentProjects({
 }: RecentProjectsProps) {
     const count = projects.length;
     const [active, setActive] = useState(0);
-    const [playingId, setPlayingId] = useState<string | null>(null);
+    const [selectedVideo, setSelectedVideo] = useState<Project | null>(null);
     const [isCompact, setIsCompact] = useState(false);
     const reduceMotion = useReducedMotion();
 
@@ -60,16 +71,23 @@ export default function RecentProjects({
         return () => mq.removeEventListener("change", sync);
     }, []);
 
+    // Close on Escape key
+    useEffect(() => {
+        const onKeyDown = (e: KeyboardEvent) => {
+            if (e.key === "Escape") setSelectedVideo(null);
+        };
+        window.addEventListener("keydown", onKeyDown);
+        return () => window.removeEventListener("keydown", onKeyDown);
+    }, []);
+
     const go = useCallback(
         (direction: 1 | -1) => {
-            setPlayingId(null);
             setActive((prev) => (prev + direction + count) % count);
         },
         [count],
     );
 
     const goTo = useCallback((index: number) => {
-        setPlayingId(null);
         setActive(index);
     }, []);
 
@@ -124,7 +142,7 @@ export default function RecentProjects({
                 </p>
             </div>
 
-            {/* 3D Video Carousel Container */}
+            {/* 3D Carousel Container */}
             <div
                 className="relative mx-auto mt-12 w-full max-w-6xl px-4 sm:mt-16 sm:px-6 z-10"
                 role="region"
@@ -144,7 +162,7 @@ export default function RecentProjects({
             >
                 <motion.div
                     className="relative flex items-center justify-center"
-                    drag={playingId ? false : "x"}
+                    drag="x"
                     dragConstraints={{ left: 0, right: 0 }}
                     dragElastic={0.12}
                     dragMomentum={false}
@@ -155,7 +173,7 @@ export default function RecentProjects({
                             go(-1);
                     }}
                 >
-                    {/* Spacer to hold layout height */}
+                    {/* Placeholder aspect ratio */}
                     <div
                         className="invisible aspect-video w-[86vw] max-w-140"
                         aria-hidden
@@ -166,7 +184,6 @@ export default function RecentProjects({
                         const distance = Math.abs(offset);
                         const isActive = offset === 0;
                         const isVisible = isCompact ? isActive : distance <= 1;
-                        const isPlaying = playingId === project.id;
 
                         return (
                             <ProjectSlide
@@ -176,17 +193,16 @@ export default function RecentProjects({
                                 offset={offset}
                                 isActive={isActive}
                                 isVisible={isVisible}
-                                isPlaying={isPlaying}
                                 isCompact={isCompact}
                                 transition={transition}
                                 onSelect={goTo}
-                                onPlay={setPlayingId}
+                                onOpenModal={(p) => setSelectedVideo(p)}
                             />
                         );
                     })}
                 </motion.div>
 
-                {/* Navigation Arrows & Mobile Dots */}
+                {/* Navigation Arrows */}
                 <CarouselControls
                     projects={projects}
                     active={active}
@@ -195,6 +211,73 @@ export default function RecentProjects({
                     onSelect={goTo}
                 />
             </div>
+
+            {/* Video Player Modal Popup */}
+            <AnimatePresence>
+                {selectedVideo && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 lg:p-8">
+                        {/* Backdrop with dynamic blur */}
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setSelectedVideo(null)}
+                            className="absolute inset-0 bg-slate-950/80 dark:bg-black/85 backdrop-blur-md"
+                        />
+
+                        {/* Modal Container */}
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                            transition={{
+                                type: "spring",
+                                stiffness: 300,
+                                damping: 25,
+                            }}
+                            className="relative w-full max-w-4xl overflow-hidden rounded-3xl bg-white dark:bg-[#0D121F] border border-border-color dark:border-dark-border-color shadow-2xl z-10"
+                        >
+                            {/* Modal Header */}
+                            <div className="flex items-center justify-between px-6 py-4 border-b border-border-color dark:border-dark-border-color">
+                                <h3 className="text-sm sm:text-base font-bold text-slate-800 dark:text-slate-100 truncate pr-4">
+                                    {selectedVideo.title}
+                                </h3>
+                                <button
+                                    type="button"
+                                    onClick={() => setSelectedVideo(null)}
+                                    aria-label="Close modal"
+                                    className="p-1.5 rounded-full text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+
+                            {/* Video Display */}
+                            <div className="aspect-video w-full bg-black">
+                                {selectedVideo.videoUrl ? (
+                                    <video
+                                        src={selectedVideo.videoUrl}
+                                        poster={selectedVideo.thumbnail}
+                                        controls
+                                        autoPlay
+                                        playsInline
+                                        preload="metadata"
+                                        className="h-full w-full object-contain"
+                                    />
+                                ) : (
+                                    <iframe
+                                        className="h-full w-full border-0"
+                                        src={`https://www.youtube-nocookie.com/embed/${selectedVideo.youtubeId}?autoplay=1&rel=0&modestbranding=1&playsinline=1`}
+                                        title={selectedVideo.title}
+                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                        allowFullScreen
+                                    />
+                                )}
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </section>
     );
 }

@@ -19,6 +19,8 @@ const nextConfig = {
             // Placeholder team/review headshots. Drop this once real photos
             // live in /public/assets/team/.
             { protocol: "https", hostname: "images.unsplash.com" },
+            { protocol: "https", hostname: "res.cloudinary.com" },
+            { protocol: "https", hostname: "i.ytimg.com" },
         ],
     },
 };
