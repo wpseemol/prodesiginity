@@ -40,10 +40,10 @@ const DEFAULT_PROJECTS: Project[] = [
 ];
 
 export default function RecentProjects({
-    eyebrow = "RECENT PROJECTS",
-    headline = "Visuals That",
-    headlineAccent = "Convert",
-    description = "We align with business goals to deliver premier services in video editing, 2D/3D animation, and graphic design.",
+    eyebrow = "WATCH & LEARN",
+    headline = "Insights That",
+    headlineAccent = "Move Business Forward",
+    description = "Explore our videos on Amazon, Shopify, graphic design, e-commerce, branding, and the digital strategies shaping modern businesses.",
     projects = DEFAULT_PROJECTS,
 }: RecentProjectsProps) {
     const count = projects.length;

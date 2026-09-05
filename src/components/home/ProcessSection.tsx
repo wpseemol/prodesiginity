@@ -27,27 +27,27 @@ const processSteps: Step[] = [
         number: "01",
         stepFraction: "1/5",
         badge: "FOUNDATION",
-        title: "Discover & Brief",
+        title: "Discover & Understand",
         description:
-            "A focused discovery call to understand your brand, audience, goals, and content style. No guesswork — just clarity from day one so every asset hits the mark.",
+            "We learn about your business, goals, audience, and challenges. This gives us the clarity to build the right solution—not just a beautiful one.",
         icon: Search,
     },
     {
         number: "02",
         stepFraction: "2/5",
-        badge: "PLANNING",
-        title: "Strategy & Creative Direction",
+        badge: "STRATEGY",
+        title: "Plan & Strategize",
         description:
-            "Content strategy, style guide, script framework, and moodboards. You approve the creative direction — then we build with full confidence.",
+            "We define the creative direction, solution, timeline, and deliverables. You see the plan before production begins, so everyone stays aligned.",
         icon: Compass,
     },
     {
         number: "03",
         stepFraction: "3/5",
         badge: "PRODUCTION",
-        title: "Create & Edit",
+        title: "Create & Build",
         description:
-            "The craft phase: editing, motion graphics, sound mix, color grade, and design. Every technical detail handled so you don't have to think about it.",
+            "Our team brings the idea to life—from graphics and video to websites and digital solutions. Every detail is designed and developed with purpose.",
         icon: Scissors,
     },
     {
@@ -56,16 +56,16 @@ const processSteps: Step[] = [
         badge: "QUALITY",
         title: "Review & Refine",
         description:
-            "You receive a review version to check flow, style, and details. Share your feedback — we refine fast until every frame meets your standard.",
+            "You review the work, share your feedback, and we refine it until everything feels right. We focus on the details that make the final result stronger.",
         icon: Eye,
     },
     {
         number: "05",
         stepFraction: "5/5",
-        badge: "LAUNCH",
-        title: "Deliver & Scale",
+        badge: "RESULTS",
+        title: "Launch & Grow",
         description:
-            "Final files in all formats: vertical for social, HD/4K for YouTube, web-optimized for ads. We analyze performance and plan your next content cycle.",
+            "We deliver everything ready to use, launch your project, and help you move forward. We can also support your next campaign, update, or digital solution.",
         icon: Rocket,
     },
 ];
@@ -124,16 +124,16 @@ export default function ProcessSection() {
                             inlineDivClassName="px-3.5 py-1.5 sm:text-xs"
                         />
                         <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 dark:text-white tracking-tight leading-[1.15]">
-                            How We Create <br />
+                            How We Turn Ideas <br />
                             <span className="bg-linear-to-r from-brand-violet via-primary to-brand-blue dark:from-dark-brand-violet dark:via-dark-primary dark:to-dark-brand-blue bg-clip-text text-transparent">
-                                Content That Converts
+                                Into Powerful Solutions
                             </span>
                         </h2>
                     </div>
 
                     <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 max-w-xs md:text-right leading-relaxed">
-                        A 5-step creative system built for speed, quality, and
-                        real results.
+                        A clear, collaborative process built to deliver quality,
+                        speed, and measurable results.
                     </p>
                 </motion.div>
 
@@ -240,7 +240,7 @@ export default function ProcessSection() {
                     className="mt-12 pt-6 border-t border-border-color dark:border-dark-border-color flex flex-col sm:flex-row items-center justify-between gap-4 text-xs sm:text-sm"
                 >
                     <p className="text-slate-400 dark:text-slate-500 font-medium">
-                        Every project starts with a conversation.
+                        Let’s Build Something That Works
                     </p>
 
                     <Link
