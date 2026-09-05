@@ -172,10 +172,10 @@ export default function ContactPage() {
                                     </h3>
                                     <p className="text-xs text-slate-500 dark:text-slate-400">
                                         <a
-                                            href="mailto:contact@prodesignity.com"
+                                            href="mailto:info@prodesignity.com"
                                             className="hover:text-primary dark:hover:text-dark-primary font-medium transition-colors"
                                         >
-                                            contact@prodesignity.com
+                                            info@prodesignity.com
                                         </a>
                                     </p>
                                     <p className="text-xs text-slate-500 dark:text-slate-400">

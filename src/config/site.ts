@@ -33,8 +33,8 @@ export const siteConfig = {
         "ProDesignity is a 3D product visualization and packaging design studio that produces photorealistic product CGI, 3D product renders, product animation, and conversion-focused Amazon A+ and Shopify listing visuals for perfume, cosmetics, skincare, beverage and consumer-goods brands in the USA, UK and Europe.",
 
     // --- Contact -----------------------------------------------------------
-    email: "contact@prodesignity.com",
-    privacyEmail: "contact@prodesignity.com", // e.g. privacy@ once the alias exists
+    email: "info@prodesignity.com",
+    privacyEmail: "info@prodesignity.com", // e.g. privacy@ once the alias exists
     phone: "+880 1738-142398",
     whatsapp: "https://wa.me/8801738142398", // TODO: confirm the number in the link
     contactPath: "/contact",
@@ -96,5 +96,5 @@ export function absoluteUrl(path = "/"): string {
 
 /** Non-empty social profiles, ready for schema.org sameAs. */
 export const socialProfiles: string[] = Object.values(siteConfig.social).filter(
-    (value) => value.length > 0
+    (value) => value.length > 0,
 );

@@ -204,7 +204,7 @@ export default function HeroSection() {
                                 <Star />
                                 <Star />
                             </span>
-                            Rated <b>4.9</b> by 120+ store owners
+                            Rated <b>4.8</b> by 300+ store owners
                         </span>
 
                         <h1 className={styles.headline}>
@@ -246,13 +246,13 @@ export default function HeroSection() {
                             aria-label="A 3D carton with one service printed on each side. It turns on its own; drag it or use the arrow keys to control it."
                         />
 
-                        <span className={styles.hint} data-chrome ref={hintRef}>
+                        {/* <span className={styles.hint} data-chrome ref={hintRef}>
                             <svg viewBox="0 0 24 24" aria-hidden="true">
                                 <path d="M8.5 6v9m0 0l-3-3m3 3l3-3" />
                                 <path d="M4 18.5h16" />
                             </svg>
                             Drag the box to steer it
-                        </span>
+                        </span> */}
 
                         <div
                             className={styles.readout}

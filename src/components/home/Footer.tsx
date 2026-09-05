@@ -108,10 +108,10 @@ export default function Footer() {
                                     Email:
                                 </span>
                                 <a
-                                    href="mailto:contact@prodesignity.com"
+                                    href="mailto:info@prodesignity.com"
                                     className="hover:text-primary dark:hover:text-dark-primary transition-colors"
                                 >
-                                    contact@prodesignity.com
+                                    info@prodesignity.com
                                 </a>
                             </li>
                             <li className="flex items-center gap-2">

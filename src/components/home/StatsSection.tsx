@@ -16,9 +16,9 @@ interface StatItem {
 const stats: StatItem[] = [
     {
         icon: Video,
-        value: "500+",
-        label: "Videos Edited",
-        description: "Reels, Shorts, Long-form & Ads",
+        value: "Build",
+        label: "Product listings",
+        description: "storefronts & brand assets",
         accentBar: "bg-emerald-500",
         iconBg: "bg-emerald-500/10 dark:bg-emerald-500/15",
         iconColor: "text-emerald-600 dark:text-emerald-400",
@@ -27,9 +27,9 @@ const stats: StatItem[] = [
     },
     {
         icon: Users,
-        value: "50+",
-        label: "Happy Clients",
-        description: "Across USA, BD, UK & beyond",
+        value: "Create",
+        label: "3D visuals",
+        description: "product photography, video & ad creatives",
         accentBar: "bg-brand-violet dark:bg-dark-brand-violet",
         iconBg: "bg-brand-violet/10 dark:bg-dark-brand-violet/15",
         iconColor: "text-brand-violet dark:text-dark-brand-violet",
@@ -38,9 +38,9 @@ const stats: StatItem[] = [
     },
     {
         icon: Award,
-        value: "5+",
-        label: "Years Experience",
-        description: "In video, design & web",
+        value: "Grow",
+        label: "Amazon",
+        description: "Amazon, Meta, Google & TikTok advertising.",
         accentBar: "bg-brand-blue dark:bg-dark-brand-blue",
         iconBg: "bg-brand-blue/10 dark:bg-dark-brand-blue/15",
         iconColor: "text-brand-blue dark:text-dark-brand-blue",
@@ -49,9 +49,10 @@ const stats: StatItem[] = [
     },
     {
         icon: ThumbsUp,
-        value: "98%",
-        label: "Client Retention",
-        description: "They come back. Every time.",
+        value: "Optimize",
+        label: "SEO",
+        description:
+            "Conversion optimization & ongoing performance improvements",
         accentBar: "bg-brand-orange dark:bg-dark-brand-orange",
         iconBg: "bg-brand-orange/10 dark:bg-dark-brand-orange/15",
         iconColor: "text-brand-orange dark:text-dark-brand-orange",

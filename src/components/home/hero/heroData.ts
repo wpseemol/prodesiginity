@@ -17,7 +17,11 @@ export const HERO_SIDES: HeroSide[] = [
         name: "Amazon management",
         note: "Listings, A+ content, PPC, reviews",
     },
-    { slot: 1, name: "Shopify & store design", note: "Build, theme, speed, CRO" },
+    {
+        slot: 1,
+        name: "Shopify & store design",
+        note: "Build, theme, speed, CRO",
+    },
     {
         slot: 5,
         name: "Creative & packaging",
@@ -43,9 +47,9 @@ export const HERO_CHANNELS = [
 ];
 
 export const HERO_HEADLINE_LINES = [
-    "We run the whole",
-    "e-commerce side",
-    "of your business.",
+    "Your E-commerce",
+    "Growth Partner",
+    "All in One Place.",
 ];
 
 export interface HeroStat {
@@ -56,7 +60,12 @@ export interface HeroStat {
 }
 
 export const HERO_STATS: HeroStat[] = [
-    { value: 120, suffix: "+", label: "brands scaled since 2017" },
-    { value: 48, prefix: "$", suffix: "M+", label: "in client revenue managed" },
-    { value: 6, suffix: " channels", label: "run from one dashboard" },
+    { value: 300, suffix: "+", label: "brands scaled since 2017" },
+    {
+        value: 50,
+        prefix: "$",
+        suffix: "M+",
+        label: "We Generated Revenue for our clients",
+    },
+    { value: 20, suffix: "+ channels", label: "run from one umbrella" },
 ];
