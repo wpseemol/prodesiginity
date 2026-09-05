@@ -67,6 +67,12 @@ export const TEAM_MEMBERS: TeamMember[] = [
         role: "Advertising and marketing SEO",
         photo: "/assets/images/team/shahariar.jpg",
     },
+    {
+        id: "Shajjad-Shagor",
+        name: "Shajjad Shagor",
+        role: "Shopify Developer",
+        photo: "/assets/images/team/shajjad.jpg",
+    },
 ];
 
 /** Index the slider opens on: the founder, if there is one. */
