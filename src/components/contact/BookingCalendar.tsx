@@ -1,26 +1,5 @@
 "use client";
 
-/**
- * Free-discovery-call booker: pick a future date, pick a slot, confirm.
- *
- * Static-export notes
- * -------------------
- * The site builds to plain HTML, so there is no Next server to talk to. The
- * form posts to `/api/book-call.php`, a PHP endpoint that ships in /public and
- * therefore lands next to the HTML on Hostinger. That file creates the Zoom
- * meeting and sends the emails. If it is missing or errors, the widget falls
- * back to a prefilled WhatsApp message so an enquiry is never lost.
- *
- * Hydration note
- * --------------
- * "Today" is baked into the HTML at build time, which could be weeks before a
- * visitor loads the page. Every date calculation is therefore gated behind
- * `isClient`, so the prerendered markup never claims a stale month or disables
- * the wrong days. The clock is read exactly once per session and threaded
- * through as `nowMs`, which keeps the derived values pure and stable across
- * re-renders.
- */
-
 import { useMemo, useState, useSyncExternalStore } from "react";
 import {
     ArrowRight,
@@ -39,31 +18,16 @@ import {
 import { siteConfig } from "@/config/site";
 import { cn } from "@/lib/utils";
 
-/* ---------------------------------------------------------------------------
-   Studio availability. Bangladesh does not observe DST, so a fixed +6 offset
-   is safe and avoids shipping a timezone library.
-   --------------------------------------------------------------------------- */
-
 const STUDIO_UTC_OFFSET_HOURS = 6;
 const STUDIO_TZ_LABEL = "Dhaka (GMT+6)";
-
-/** Slot start times, in studio local hours (24h). */
 const SLOT_HOURS = [10, 11, 12, 14, 15, 16, 17, 18, 20];
-
-/** 0 = Sunday. Friday is the studio's day off — "Saturday to Thursday". */
 const CLOSED_WEEKDAYS = [5];
-
 const MEETING_MINUTES = 30;
-/** How far ahead the calendar will let someone book. */
 const BOOKING_WINDOW_DAYS = 60;
-/** Same-day bookings need breathing room. */
 const MIN_LEAD_HOURS = 4;
-
 const API_ENDPOINT = "/api/book-call.php";
 
-/** useSyncExternalStore needs a subscribe function; nothing ever changes. */
 const SUBSCRIBE_NOOP = () => () => {};
-
 const WEEKDAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
 const MONTH_FORMAT = new Intl.DateTimeFormat("en-US", {
     month: "long",
@@ -79,11 +43,6 @@ interface BookingResult {
     passcode?: string;
 }
 
-/* ---------------------------------------------------------------------------
-   Date helpers. Everything works on "civil date" keys (YYYY-MM-DD) so the UI
-   never has to reason about the visitor's offset.
-   --------------------------------------------------------------------------- */
-
 function dateKey(year: number, month: number, day: number): string {
     return `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
@@ -93,7 +52,6 @@ function parseKey(key: string) {
     return { year, month: month - 1, day };
 }
 
-/** The exact instant a slot starts, converted from studio time to UTC. */
 function slotInstant(key: string, hour: number): Date {
     const { year, month, day } = parseKey(key);
     return new Date(
@@ -113,51 +71,27 @@ function toIcsStamp(date: Date): string {
 
 export default function BookingCalendar() {
     const [step, setStep] = useState<Step>("date");
-
-    /**
-     * How many months forward the grid has been paged. Derived from the
-     * current month rather than stored as an absolute year/month pair, so
-     * there is no state to seed from a clock the server does not have.
-     */
     const [monthOffset, setMonthOffset] = useState(0);
-
     const [selectedDate, setSelectedDate] = useState<string | null>(null);
     const [selectedHour, setSelectedHour] = useState<number | null>(null);
-
     const [form, setForm] = useState({
         name: "",
         email: "",
         company: "",
         notes: "",
     });
-
     const [status, setStatus] = useState<Status>("idle");
     const [result, setResult] = useState<BookingResult | null>(null);
     const [error, setError] = useState<string | null>(null);
 
-    /**
-     * Client detection without a mount effect. The server snapshot is false,
-     * the client snapshot is true, and React re-renders once after hydration —
-     * which is exactly the signal needed, without setting state in an effect.
-     */
     const isClient = useSyncExternalStore(
         SUBSCRIBE_NOOP,
         () => true,
         () => false,
     );
-
-    /**
-     * One reading of the clock for the whole widget.
-     *
-     * `Date.now()` is impure, so it is called once here and every derived
-     * value below takes `nowMs` as an input instead of reading the clock
-     * again. That makes the calendar deterministic for a given render pass —
-     * two components can never disagree about which day "today" is.
-     */
-    // eslint-disable-next-line react-hooks/purity -- read once, then threaded through as data
+    // eslint-disable-next-line react-hooks/purity
     const nowMs = useMemo(() => (isClient ? Date.now() : 0), [isClient]);
 
-    /** The visitor's own timezone label, for the "your time" line. */
     const visitorTz = useMemo(() => {
         if (!isClient) return "";
         try {
@@ -167,7 +101,6 @@ export default function BookingCalendar() {
         }
     }, [isClient]);
 
-    /** The month the grid is currently showing. */
     const { viewYear, viewMonth } = useMemo(() => {
         const base = new Date(nowMs);
         const shifted = new Date(
@@ -181,7 +114,6 @@ export default function BookingCalendar() {
         };
     }, [nowMs, monthOffset]);
 
-    /** First bookable day and last bookable day, as YYYY-MM-DD keys. */
     const { todayKey, maxKey } = useMemo(() => {
         if (!isClient) return { todayKey: "", maxKey: "" };
         const now = new Date(nowMs);
@@ -193,15 +125,10 @@ export default function BookingCalendar() {
         };
     }, [isClient, nowMs]);
 
-    /**
-     * The month grid: leading blanks so the 1st lands on the right weekday,
-     * then every day with a flag saying whether it can be booked.
-     */
     const cells = useMemo(() => {
         if (!isClient) return [];
         const firstWeekday = new Date(viewYear, viewMonth, 1).getDay();
         const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
-
         const out: ({ key: string; day: number; disabled: boolean } | null)[] =
             Array.from({ length: firstWeekday }, () => null);
 
@@ -217,7 +144,6 @@ export default function BookingCalendar() {
         return out;
     }, [isClient, viewYear, viewMonth, todayKey, maxKey]);
 
-    /** Slots for the chosen date, with anything already past filtered out. */
     const slots = useMemo(() => {
         if (!selectedDate) return [];
         const cutoff = nowMs + MIN_LEAD_HOURS * 3600_000;
@@ -236,11 +162,9 @@ export default function BookingCalendar() {
         });
     }, [selectedDate, nowMs]);
 
-    // Paging back past the current month would only show unbookable days.
     const canGoBackAMonth = monthOffset > 0;
-
     const shiftMonth = (delta: number) =>
-        setMonthOffset((value) => Math.max(0, value + delta));
+        setMonthOffset((v) => Math.max(0, v + delta));
 
     const chosenInstant =
         selectedDate && selectedHour !== null
@@ -249,29 +173,12 @@ export default function BookingCalendar() {
 
     const longDate = chosenInstant
         ? new Intl.DateTimeFormat(undefined, {
-              weekday: "long",
+              weekday: "short",
               day: "numeric",
-              month: "long",
+              month: "short",
               year: "numeric",
           }).format(chosenInstant)
         : "";
-
-    /* ---------------------------------------------------------------------
-       Submission
-       --------------------------------------------------------------------- */
-
-    const whatsappFallbackUrl = () => {
-        const lines = [
-            "Hello ProDesignity, I would like to book a free strategy call.",
-            `Name: ${form.name}`,
-            `Email: ${form.email}`,
-            form.company ? `Company: ${form.company}` : "",
-            `Preferred slot: ${longDate}`,
-            `Studio time: ${selectedHour !== null ? formatStudioHour(selectedHour) : ""} ${STUDIO_TZ_LABEL}`,
-            form.notes ? `Notes: ${form.notes}` : "",
-        ].filter(Boolean);
-        return `${siteConfig.whatsapp}?text=${encodeURIComponent(lines.join("\n"))}`;
-    };
 
     const handleSubmit = async (event: React.FormEvent) => {
         event.preventDefault();
@@ -300,7 +207,6 @@ export default function BookingCalendar() {
             });
 
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
             const data = (await response.json()) as {
                 ok?: boolean;
                 error?: string;
@@ -318,17 +224,14 @@ export default function BookingCalendar() {
             });
             setStatus("done");
         } catch (err) {
-            // The endpoint is not reachable yet, or PHP errored. Rather than
-            // showing a dead end, hand the visitor a working alternative.
             console.warn("Booking endpoint unavailable:", err);
             setError(
-                "We could not confirm the slot automatically. Send it through WhatsApp and we will confirm within 1–2 hours.",
+                "Could not auto-confirm. Connect via WhatsApp for immediate confirmation.",
             );
             setStatus("fallback");
         }
     };
 
-    /** Calendar file so the slot lands in the visitor's own calendar too. */
     const downloadIcs = () => {
         if (!chosenInstant) return;
         const end = new Date(
@@ -336,7 +239,7 @@ export default function BookingCalendar() {
         );
         const description = result?.joinUrl
             ? `Zoom link: ${result.joinUrl}`
-            : `We will email the Zoom link before the call. Contact: ${siteConfig.email}`;
+            : `Contact: ${siteConfig.email}`;
 
         const ics = [
             "BEGIN:VCALENDAR",
@@ -356,13 +259,11 @@ export default function BookingCalendar() {
             .filter(Boolean)
             .join("\r\n");
 
-        const blob = new Blob([ics], {
-            type: "text/calendar;charset=utf-8",
-        });
+        const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
         const url = URL.createObjectURL(blob);
         const anchor = document.createElement("a");
         anchor.href = url;
-        anchor.download = "prodesignity-strategy-call.ics";
+        anchor.download = "prodesignity-call.ics";
         anchor.click();
         URL.revokeObjectURL(url);
     };
@@ -376,88 +277,74 @@ export default function BookingCalendar() {
         setError(null);
     };
 
-    /* ---------------------------------------------------------------------
-       Render
-       --------------------------------------------------------------------- */
-
     const shellClass =
-        "w-full rounded-2xl bg-white/85 dark:bg-slate-900/80 backdrop-blur-md border border-border-color dark:border-dark-border-color shadow-xl overflow-hidden";
+        "w-full rounded-2xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-border-color dark:border-dark-border-color shadow-lg overflow-hidden";
 
-    // Skeleton until the client knows what day it is.
     if (!isClient) {
         return (
-            <div className={cn(shellClass, "p-6 space-y-4")}>
-                <div className="h-5 w-40 rounded bg-slate-200 dark:bg-slate-800 animate-pulse" />
-                <div className="h-56 rounded-xl bg-slate-100 dark:bg-slate-800/60 animate-pulse" />
+            <div className={cn(shellClass, "p-5 space-y-3")}>
+                <div className="h-4 w-32 rounded bg-slate-200 dark:bg-slate-800 animate-pulse" />
+                <div className="h-44 rounded-xl bg-slate-100 dark:bg-slate-800/60 animate-pulse" />
             </div>
         );
     }
 
-    /* ---- Success ---- */
     if (status === "done") {
         return (
-            <div className={cn(shellClass, "p-6 sm:p-7")}>
-                <div className="flex items-center gap-3">
-                    <span className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-                        <Check className="w-5 h-5" aria-hidden="true" />
+            <div className={cn(shellClass, "p-5 sm:p-6")}>
+                <div className="flex items-center gap-2.5">
+                    <span className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                        <Check className="w-4 h-4" />
                     </span>
                     <div>
-                        <h3 className="text-base font-black text-slate-900 dark:text-white">
-                            Call booked
+                        <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                            Call Confirmed!
                         </h3>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                            A confirmation is on its way to {form.email}.
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                            Check {form.email} for details.
                         </p>
                     </div>
                 </div>
 
-                <div className="mt-5 p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-border-color dark:border-dark-border-color space-y-1.5">
-                    <p className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                <div className="mt-3.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-border-color dark:border-dark-border-color text-xs space-y-1">
+                    <p className="font-bold text-slate-800 dark:text-slate-100">
                         {longDate}
                     </p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                    <p className="text-slate-500 dark:text-slate-400">
                         {selectedHour !== null &&
                             formatStudioHour(selectedHour)}{" "}
-                        {STUDIO_TZ_LABEL} · {MEETING_MINUTES} minutes
+                        {STUDIO_TZ_LABEL} (30 min)
                     </p>
-                    {result?.meetingId && (
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                            Meeting ID: {result.meetingId}
-                            {result.passcode
-                                ? ` · Passcode: ${result.passcode}`
-                                : ""}
-                        </p>
-                    )}
                 </div>
 
-                <div className="mt-5 flex flex-col sm:flex-row gap-2.5">
+                <div className="mt-3.5 flex gap-2">
                     {result?.joinUrl && (
                         <a
                             href={result.joinUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm font-bold text-white bg-primary hover:bg-primary/85 transition-colors"
+                            className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-primary hover:bg-primary/90 transition-colors"
                         >
-                            <Video className="w-4 h-4" aria-hidden="true" />
-                            Join on Zoom
+                            <Video className="w-3.5 h-3.5" />
+                            Zoom Link
                         </a>
                     )}
                     <button
                         type="button"
                         onClick={downloadIcs}
-                        className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 border border-border-color dark:border-dark-border-color hover:border-primary/40 transition-colors"
+                        className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 border border-border-color dark:border-dark-border-color hover:border-primary/40 transition-colors"
                     >
-                        <Download className="w-4 h-4" aria-hidden="true" />
-                        Add to calendar
+                        <Download className="w-3.5 h-3.5" />
+                        Calendar (.ics)
                     </button>
                 </div>
 
                 <button
                     type="button"
                     onClick={reset}
-                    className="mt-3 w-full text-xs font-semibold text-slate-400 hover:text-primary transition-colors"
+                    className="mt-2.5 w-full text-[11px] text-slate-400 hover:text-primary transition-colors text-center"
                 >
-                    Book another slot
+                    Book another time
                 </button>
             </div>
         );
@@ -465,76 +352,72 @@ export default function BookingCalendar() {
 
     return (
         <div className={shellClass}>
-            {/* Header */}
-            <div className="flex items-center justify-between gap-3 px-5 sm:px-6 py-4 border-b border-border-color dark:border-dark-border-color">
-                <div className="flex items-center gap-2.5">
-                    <span className="w-9 h-9 rounded-lg bg-primary/10 text-primary dark:text-dark-primary flex items-center justify-center">
-                        <Video className="w-4 h-4" aria-hidden="true" />
+            {/* Minimal Header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border-color dark:border-dark-border-color">
+                <div className="flex items-center gap-2">
+                    <span className="w-7 h-7 rounded-lg bg-primary/10 text-primary dark:text-dark-primary flex items-center justify-center">
+                        <Video className="w-3.5 h-3.5" />
                     </span>
                     <div>
-                        <h3 className="text-sm font-black text-slate-900 dark:text-white">
-                            Zoom strategy call
+                        <h3 className="text-xs font-bold text-slate-900 dark:text-white">
+                            30-Min Strategy Call
                         </h3>
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                            {MEETING_MINUTES} minutes · free · no commitment
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                            Free on Zoom · No pitch
                         </p>
                     </div>
                 </div>
-                <ol className="hidden sm:flex items-center gap-1.5" aria-label="Progress">
-                    {(["date", "time", "details"] as Step[]).map((id, i) => (
-                        <li
-                            key={id}
-                            className={cn(
-                                "w-6 h-6 rounded-full text-[10px] font-black flex items-center justify-center transition-colors",
-                                step === id
-                                    ? "bg-primary text-white"
-                                    : "bg-slate-100 dark:bg-slate-800 text-slate-400",
-                            )}
-                            aria-current={step === id ? "step" : undefined}
-                        >
-                            {i + 1}
-                        </li>
-                    ))}
-                </ol>
+
+                {/* Step indicator */}
+                <div className="flex items-center gap-1 text-[10px] font-bold text-slate-400">
+                    <span className={cn(step === "date" && "text-primary")}>
+                        Date
+                    </span>
+                    <span>›</span>
+                    <span className={cn(step === "time" && "text-primary")}>
+                        Time
+                    </span>
+                    <span>›</span>
+                    <span className={cn(step === "details" && "text-primary")}>
+                        Details
+                    </span>
+                </div>
             </div>
 
-            <div className="p-5 sm:p-6">
-                {/* ------------------------- Step 1: date ------------------------- */}
+            <div className="p-4 sm:p-5">
+                {/* Step 1: Date */}
                 {step === "date" && (
                     <div>
-                        <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center justify-between mb-2.5">
                             <button
                                 type="button"
                                 onClick={() => shiftMonth(-1)}
                                 disabled={!canGoBackAMonth}
                                 aria-label="Previous month"
-                                className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-20 transition-colors"
                             >
-                                <ChevronLeft className="w-4 h-4" />
+                                <ChevronLeft className="w-3.5 h-3.5" />
                             </button>
-                            <p className="text-sm font-black text-slate-900 dark:text-white">
+                            <span className="text-xs font-bold text-slate-900 dark:text-white">
                                 {MONTH_FORMAT.format(
                                     new Date(viewYear, viewMonth, 1),
                                 )}
-                            </p>
+                            </span>
                             <button
                                 type="button"
                                 onClick={() => shiftMonth(1)}
                                 aria-label="Next month"
-                                className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                             >
-                                <ChevronRight className="w-4 h-4" />
+                                <ChevronRight className="w-3.5 h-3.5" />
                             </button>
                         </div>
 
-                        <div
-                            className="grid grid-cols-7 gap-1 mb-1.5"
-                            aria-hidden="true"
-                        >
+                        <div className="grid grid-cols-7 gap-1 mb-1">
                             {WEEKDAY_LABELS.map((label, i) => (
                                 <span
                                     key={`${label}-${i}`}
-                                    className="text-center text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 py-1"
+                                    className="text-center text-[9px] font-bold text-slate-400 dark:text-slate-500"
                                 >
                                     {label}
                                 </span>
@@ -542,9 +425,12 @@ export default function BookingCalendar() {
                         </div>
 
                         <div className="grid grid-cols-7 gap-1">
-                            {cells.map((cell, index) =>
+                            {cells.map((cell, idx) =>
                                 cell === null ? (
-                                    <span key={`blank-${index}`} />
+                                    <span
+                                        key={`blank-${idx}`}
+                                        className="h-7 w-7"
+                                    />
                                 ) : (
                                     <button
                                         key={cell.key}
@@ -555,11 +441,10 @@ export default function BookingCalendar() {
                                             setSelectedHour(null);
                                             setStep("time");
                                         }}
-                                        aria-label={cell.key}
                                         className={cn(
-                                            "aspect-square rounded-lg text-xs font-semibold transition-all",
+                                            "h-7 w-7 mx-auto rounded-md text-[11px] font-semibold flex items-center justify-center transition-all",
                                             cell.disabled
-                                                ? "text-slate-300 dark:text-slate-700 cursor-not-allowed line-through decoration-1"
+                                                ? "text-slate-300 dark:text-slate-700 opacity-40 cursor-not-allowed"
                                                 : "text-slate-700 dark:text-slate-200 hover:bg-primary/10 hover:text-primary",
                                             selectedDate === cell.key &&
                                                 "bg-primary text-white hover:bg-primary hover:text-white",
@@ -571,43 +456,35 @@ export default function BookingCalendar() {
                             )}
                         </div>
 
-                        <p className="mt-4 flex items-center gap-1.5 text-[11px] text-slate-400 dark:text-slate-500">
-                            <CalendarDays
-                                className="w-3.5 h-3.5"
-                                aria-hidden="true"
-                            />
-                            Available Saturday to Thursday, up to{" "}
-                            {BOOKING_WINDOW_DAYS} days ahead.
+                        <p className="mt-3 flex items-center justify-center gap-1.5 text-[10px] text-slate-400">
+                            <CalendarDays className="w-3 h-3 text-primary" />
+                            Saturday – Thursday availability
                         </p>
                     </div>
                 )}
 
-                {/* ------------------------- Step 2: time ------------------------- */}
+                {/* Step 2: Time Slots */}
                 {step === "time" && selectedDate && (
                     <div>
-                        <button
-                            type="button"
-                            onClick={() => setStep("date")}
-                            className="inline-flex items-center gap-1 text-xs font-semibold text-slate-500 hover:text-primary transition-colors mb-4"
-                        >
-                            <ChevronLeft className="w-3.5 h-3.5" />
-                            Change date
-                        </button>
+                        <div className="flex items-center justify-between mb-3">
+                            <button
+                                type="button"
+                                onClick={() => setStep("date")}
+                                className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-500 hover:text-primary transition-colors"
+                            >
+                                <ChevronLeft className="w-3.5 h-3.5" />
+                                Back
+                            </button>
+                            <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                                {new Intl.DateTimeFormat(undefined, {
+                                    weekday: "short",
+                                    month: "short",
+                                    day: "numeric",
+                                }).format(slotInstant(selectedDate, 12))}
+                            </span>
+                        </div>
 
-                        <p className="text-sm font-black text-slate-900 dark:text-white">
-                            {new Intl.DateTimeFormat(undefined, {
-                                weekday: "long",
-                                day: "numeric",
-                                month: "long",
-                            }).format(slotInstant(selectedDate, 12))}
-                        </p>
-                        <p className="mt-1 flex items-center gap-1.5 text-[11px] text-slate-400 dark:text-slate-500">
-                            <Globe className="w-3.5 h-3.5" aria-hidden="true" />
-                            Times shown in {STUDIO_TZ_LABEL}
-                            {visitorTz ? ` · yours in ${visitorTz}` : ""}
-                        </p>
-
-                        <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-64 overflow-y-auto pr-1">
+                        <div className="grid grid-cols-3 gap-1.5 max-h-48 overflow-y-auto pr-0.5">
                             {slots.map((slot) => (
                                 <button
                                     key={slot.hour}
@@ -618,184 +495,102 @@ export default function BookingCalendar() {
                                         setStep("details");
                                     }}
                                     className={cn(
-                                        "px-3 py-2.5 rounded-xl border text-left transition-all",
+                                        "py-2 px-1.5 rounded-lg border text-center transition-all",
                                         slot.disabled
-                                            ? "border-border-color dark:border-dark-border-color opacity-40 cursor-not-allowed"
+                                            ? "border-border-color dark:border-dark-border-color opacity-30 cursor-not-allowed"
                                             : "border-border-color dark:border-dark-border-color hover:border-primary hover:bg-primary/5",
                                         selectedHour === slot.hour &&
                                             "border-primary bg-primary/10",
                                     )}
                                 >
-                                    <span className="block text-xs font-bold text-slate-800 dark:text-slate-100">
+                                    <span className="block text-[11px] font-bold text-slate-800 dark:text-slate-100 leading-tight">
                                         {slot.studioLabel}
                                     </span>
-                                    <span className="block text-[10px] text-slate-400 dark:text-slate-500">
-                                        {slot.localLabel} your time
+                                    <span className="block text-[9px] text-slate-400 dark:text-slate-500">
+                                        {slot.localLabel}
                                     </span>
                                 </button>
                             ))}
                         </div>
-
-                        {slots.every((slot) => slot.disabled) && (
-                            <p className="mt-4 text-xs text-slate-500 dark:text-slate-400">
-                                Every slot on this day has passed. Pick another
-                                date.
-                            </p>
-                        )}
                     </div>
                 )}
 
-                {/* ----------------------- Step 3: details ------------------------ */}
+                {/* Step 3: Minimal Form */}
                 {step === "details" && chosenInstant && (
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        <button
-                            type="button"
-                            onClick={() => setStep("time")}
-                            className="inline-flex items-center gap-1 text-xs font-semibold text-slate-500 hover:text-primary transition-colors"
-                        >
-                            <ChevronLeft className="w-3.5 h-3.5" />
-                            Change time
-                        </button>
-
-                        <div className="p-3.5 rounded-xl bg-primary/5 border border-primary/20 flex items-start gap-2.5">
-                            <Clock
-                                className="w-4 h-4 mt-0.5 text-primary shrink-0"
-                                aria-hidden="true"
-                            />
-                            <div>
-                                <p className="text-xs font-bold text-slate-800 dark:text-slate-100">
-                                    {longDate}
-                                </p>
-                                <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                                    {selectedHour !== null &&
-                                        formatStudioHour(selectedHour)}{" "}
-                                    {STUDIO_TZ_LABEL} · {MEETING_MINUTES} min on
-                                    Zoom
-                                </p>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <label className="block">
-                                <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1.5">
-                                    Full name *
-                                </span>
-                                <input
-                                    type="text"
-                                    required
-                                    value={form.name}
-                                    onChange={(e) =>
-                                        setForm({
-                                            ...form,
-                                            name: e.target.value,
-                                        })
-                                    }
-                                    placeholder="Jane Doe"
-                                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/90 border border-border-color dark:border-dark-border-color text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary transition-all"
-                                />
-                            </label>
-
-                            <label className="block">
-                                <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1.5">
-                                    Email *
-                                </span>
-                                <input
-                                    type="email"
-                                    required
-                                    value={form.email}
-                                    onChange={(e) =>
-                                        setForm({
-                                            ...form,
-                                            email: e.target.value,
-                                        })
-                                    }
-                                    placeholder="jane@company.com"
-                                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/90 border border-border-color dark:border-dark-border-color text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary transition-all"
-                                />
-                            </label>
-                        </div>
-
-                        <label className="block">
-                            <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1.5">
-                                Company
+                    <form onSubmit={handleSubmit} className="space-y-2.5">
+                        <div className="flex items-center justify-between mb-1">
+                            <button
+                                type="button"
+                                onClick={() => setStep("time")}
+                                className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-500 hover:text-primary transition-colors"
+                            >
+                                <ChevronLeft className="w-3.5 h-3.5" />
+                                Change Slot
+                            </button>
+                            <span className="text-[11px] font-bold text-primary flex items-center gap-1">
+                                <Clock className="w-3 h-3" />
+                                {longDate} @{" "}
+                                {selectedHour !== null &&
+                                    formatStudioHour(selectedHour)}
                             </span>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2">
                             <input
                                 type="text"
-                                value={form.company}
+                                required
+                                value={form.name}
                                 onChange={(e) =>
-                                    setForm({
-                                        ...form,
-                                        company: e.target.value,
-                                    })
+                                    setForm({ ...form, name: e.target.value })
                                 }
-                                placeholder="Optional"
-                                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/90 border border-border-color dark:border-dark-border-color text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary transition-all"
+                                placeholder="Your Name *"
+                                className="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-900/90 border border-border-color dark:border-dark-border-color text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-primary"
                             />
-                        </label>
+                            <input
+                                type="email"
+                                required
+                                value={form.email}
+                                onChange={(e) =>
+                                    setForm({ ...form, email: e.target.value })
+                                }
+                                placeholder="Your Email *"
+                                className="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-900/90 border border-border-color dark:border-dark-border-color text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-primary"
+                            />
+                        </div>
 
-                        <label className="block">
-                            <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1.5">
-                                What would you like to cover?
-                            </span>
-                            <textarea
-                                rows={3}
-                                value={form.notes}
-                                onChange={(e) =>
-                                    setForm({ ...form, notes: e.target.value })
-                                }
-                                placeholder="A sentence is enough — it just helps us prepare."
-                                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/90 border border-border-color dark:border-dark-border-color text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary transition-all"
-                            />
-                        </label>
+                        <input
+                            type="text"
+                            value={form.notes}
+                            onChange={(e) =>
+                                setForm({ ...form, notes: e.target.value })
+                            }
+                            placeholder="Website / Brand name or what to discuss (optional)"
+                            className="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-900/90 border border-border-color dark:border-dark-border-color text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-primary"
+                        />
 
                         {status === "fallback" && (
-                            <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 space-y-2.5">
-                                <p className="text-xs text-amber-700 dark:text-amber-300 leading-relaxed">
-                                    {error}
-                                </p>
-                                <a
-                                    href={whatsappFallbackUrl()}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition-colors"
-                                >
-                                    <MessageSquare
-                                        className="w-3.5 h-3.5"
-                                        aria-hidden="true"
-                                    />
-                                    Send on WhatsApp
-                                </a>
-                            </div>
+                            <p className="text-[11px] text-amber-600 dark:text-amber-400 text-center">
+                                {error}
+                            </p>
                         )}
 
                         <button
                             type="submit"
                             disabled={status === "sending"}
-                            className="w-full inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl font-bold text-white bg-linear-to-r from-brand-violet to-brand-blue dark:from-dark-brand-violet dark:to-dark-brand-blue shadow-lg shadow-primary/25 hover:opacity-90 disabled:opacity-60 transition-all"
+                            className="w-full inline-flex items-center justify-center gap-1.5 py-2.5 rounded-xl font-bold text-xs text-white bg-primary hover:bg-primary/90 shadow-md shadow-primary/20 transition-all disabled:opacity-50"
                         >
                             {status === "sending" ? (
                                 <>
-                                    <Loader2
-                                        className="w-4 h-4 animate-spin"
-                                        aria-hidden="true"
-                                    />
-                                    Booking your slot…
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                    Reserving Slot…
                                 </>
                             ) : (
                                 <>
-                                    Confirm Zoom booking
-                                    <ArrowRight
-                                        className="w-4 h-4"
-                                        aria-hidden="true"
-                                    />
+                                    Confirm Free Zoom Call
+                                    <ArrowRight className="w-3.5 h-3.5" />
                                 </>
                             )}
                         </button>
-
-                        <p className="text-[10px] text-center text-slate-400 dark:text-slate-500">
-                            We will email the Zoom link straight away. No card,
-                            no obligation.
-                        </p>
                     </form>
                 )}
             </div>

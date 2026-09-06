@@ -89,7 +89,7 @@ export default function Header() {
                         <ThemeToggle />
 
                         <Link
-                            href="/contact"
+                            href="/contact/#book-a-call"
                             className="hidden md:inline-flex items-center justify-center px-5 py-2.5 text-sm font-semibold text-white bg-linear-to-r from-brand-violet to-brand-blue hover:from-primary-hover hover:to-brand-blue dark:from-dark-brand-violet dark:to-dark-brand-blue dark:hover:from-dark-primary-hover dark:hover:to-dark-brand-blue rounded-xl shadow-md transition-all duration-200"
                         >
                             Get Started
