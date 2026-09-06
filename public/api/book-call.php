@@ -39,7 +39,7 @@ header('Cache-Control: no-store');
 $defaults = [
     'studio_email'      => 'info@prodesignity.com',
     'studio_name'       => 'ProDesignity',
-    'from_email'        => 'no-reply@prodesignity.com',
+    'from_email'        => 'info@prodesignity.com',
     'site_url'          => 'https://prodesignity.com',
     'studio_timezone'   => 'Asia/Dhaka',
     // Used when Zoom credentials are absent or the API call fails.
