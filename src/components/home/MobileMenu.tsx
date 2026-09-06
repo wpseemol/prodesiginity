@@ -105,7 +105,8 @@ export default function MobileMenu({ navLinks }: { navLinks: NavLink[] }) {
                                             <ChevronDown
                                                 className={cn(
                                                     "w-4 h-4 transition-transform",
-                                                    servicesOpen && "rotate-180",
+                                                    servicesOpen &&
+                                                        "rotate-180",
                                                 )}
                                                 aria-hidden="true"
                                             />
@@ -114,100 +115,132 @@ export default function MobileMenu({ navLinks }: { navLinks: NavLink[] }) {
                                         <AnimatePresence initial={false}>
                                             {servicesOpen && (
                                                 <motion.div
-                                                    initial={{ height: 0, opacity: 0 }}
-                                                    animate={{ height: "auto", opacity: 1 }}
-                                                    exit={{ height: 0, opacity: 0 }}
-                                                    transition={{ duration: 0.22 }}
+                                                    initial={{
+                                                        height: 0,
+                                                        opacity: 0,
+                                                    }}
+                                                    animate={{
+                                                        height: "auto",
+                                                        opacity: 1,
+                                                    }}
+                                                    exit={{
+                                                        height: 0,
+                                                        opacity: 0,
+                                                    }}
+                                                    transition={{
+                                                        duration: 0.22,
+                                                    }}
                                                     className="overflow-hidden pl-2 border-l border-border-color dark:border-dark-border-color ml-4 space-y-1"
                                                 >
-                                                    {SERVICE_MENU.map((group) => {
-                                                        const expanded =
-                                                            openGroup === group.slug;
-                                                        return (
-                                                            <div key={group.slug}>
-                                                                <button
-                                                                    type="button"
-                                                                    aria-expanded={expanded}
-                                                                    onClick={() =>
-                                                                        setOpenGroup(
-                                                                            expanded
-                                                                                ? null
-                                                                                : group.slug,
-                                                                        )
+                                                    {SERVICE_MENU.map(
+                                                        (group) => {
+                                                            const expanded =
+                                                                openGroup ===
+                                                                group.slug;
+                                                            return (
+                                                                <div
+                                                                    key={
+                                                                        group.slug
                                                                     }
-                                                                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors"
                                                                 >
-                                                                    <span className="w-7 h-7 rounded-lg bg-primary/10 dark:bg-dark-primary/15 text-primary dark:text-dark-primary flex items-center justify-center shrink-0">
-                                                                        <ServiceIcon
-                                                                            name={group.icon}
-                                                                            className="w-3.5 h-3.5"
-                                                                        />
-                                                                    </span>
-                                                                    <span className="flex-1 text-left">
-                                                                        {group.title}
-                                                                    </span>
-                                                                    <ChevronDown
-                                                                        className={cn(
-                                                                            "w-3.5 h-3.5 transition-transform",
-                                                                            expanded &&
-                                                                                "rotate-180",
-                                                                        )}
-                                                                        aria-hidden="true"
-                                                                    />
-                                                                </button>
-
-                                                                <AnimatePresence initial={false}>
-                                                                    {expanded && (
-                                                                        <motion.ul
-                                                                            initial={{
-                                                                                height: 0,
-                                                                                opacity: 0,
-                                                                            }}
-                                                                            animate={{
-                                                                                height: "auto",
-                                                                                opacity: 1,
-                                                                            }}
-                                                                            exit={{
-                                                                                height: 0,
-                                                                                opacity: 0,
-                                                                            }}
-                                                                            transition={{
-                                                                                duration: 0.2,
-                                                                            }}
-                                                                            className="overflow-hidden ml-10 space-y-0.5"
-                                                                        >
-                                                                            {group.items.map(
-                                                                                (item) => (
-                                                                                    <li
-                                                                                        key={
-                                                                                            item.slug
-                                                                                        }
-                                                                                    >
-                                                                                        <Link
-                                                                                            href={
-                                                                                                item.href
-                                                                                            }
-                                                                                            onClick={
-                                                                                                close
-                                                                                            }
-                                                                                            className="block px-3 py-2 rounded-lg text-sm text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-dark-primary hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors"
-                                                                                        >
-                                                                                            {
-                                                                                                item.title
-                                                                                            }
-                                                                                        </Link>
-                                                                                    </li>
-                                                                                ),
+                                                                    <button
+                                                                        type="button"
+                                                                        aria-expanded={
+                                                                            expanded
+                                                                        }
+                                                                        onClick={() =>
+                                                                            setOpenGroup(
+                                                                                expanded
+                                                                                    ? null
+                                                                                    : group.slug,
+                                                                            )
+                                                                        }
+                                                                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors"
+                                                                    >
+                                                                        <span className="w-7 h-7 rounded-lg bg-primary/10 dark:bg-dark-primary/15 text-primary dark:text-dark-primary flex items-center justify-center shrink-0">
+                                                                            <ServiceIcon
+                                                                                name={
+                                                                                    group.icon
+                                                                                }
+                                                                                className="w-3.5 h-3.5"
+                                                                            />
+                                                                        </span>
+                                                                        <span className="flex-1 text-left">
+                                                                            {
+                                                                                group.title
+                                                                            }
+                                                                        </span>
+                                                                        <ChevronDown
+                                                                            className={cn(
+                                                                                "w-3.5 h-3.5 transition-transform",
+                                                                                expanded &&
+                                                                                    "rotate-180",
                                                                             )}
-                                                                        </motion.ul>
-                                                                    )}
-                                                                </AnimatePresence>
-                                                            </div>
-                                                        );
-                                                    })}
+                                                                            aria-hidden="true"
+                                                                        />
+                                                                    </button>
+
+                                                                    <AnimatePresence
+                                                                        initial={
+                                                                            false
+                                                                        }
+                                                                    >
+                                                                        {expanded && (
+                                                                            <motion.ul
+                                                                                initial={{
+                                                                                    height: 0,
+                                                                                    opacity: 0,
+                                                                                }}
+                                                                                animate={{
+                                                                                    height: "auto",
+                                                                                    opacity: 1,
+                                                                                }}
+                                                                                exit={{
+                                                                                    height: 0,
+                                                                                    opacity: 0,
+                                                                                }}
+                                                                                transition={{
+                                                                                    duration: 0.2,
+                                                                                }}
+                                                                                className="overflow-hidden ml-10 space-y-0.5"
+                                                                            >
+                                                                                {group.items.map(
+                                                                                    (
+                                                                                        item,
+                                                                                    ) => (
+                                                                                        <li
+                                                                                            key={
+                                                                                                item.slug
+                                                                                            }
+                                                                                        >
+                                                                                            <Link
+                                                                                                href={
+                                                                                                    item.href
+                                                                                                }
+                                                                                                onClick={
+                                                                                                    close
+                                                                                                }
+                                                                                                className="block px-3 py-2 rounded-lg text-sm text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-dark-primary hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors"
+                                                                                            >
+                                                                                                {
+                                                                                                    item.title
+                                                                                                }
+                                                                                            </Link>
+                                                                                        </li>
+                                                                                    ),
+                                                                                )}
+                                                                            </motion.ul>
+                                                                        )}
+                                                                    </AnimatePresence>
+                                                                </div>
+                                                            );
+                                                        },
+                                                    )}
 
                                                     <Link
-                                                        href={SERVICES_BASE_PATH}
+                                                        href={
+                                                            SERVICES_BASE_PATH
+                                                        }
                                                         onClick={close}
                                                         className="block px-3 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider text-primary dark:text-dark-primary hover:bg-primary/10 transition-colors"
                                                     >
@@ -223,7 +256,7 @@ export default function MobileMenu({ navLinks }: { navLinks: NavLink[] }) {
 
                         <div className="pt-2">
                             <Link
-                                href="/contact"
+                                href="/contact/#book-a-call"
                                 onClick={close}
                                 className="flex items-center justify-center gap-2 w-full py-3 rounded-xl font-semibold text-white bg-linear-to-r from-brand-violet to-brand-blue dark:from-dark-brand-violet dark:to-dark-brand-blue shadow-md transition-all"
                             >
