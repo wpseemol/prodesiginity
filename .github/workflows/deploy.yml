@@ -1,4 +1,4 @@
-name: Deploy static site to Hostinger (zip + auto-extract)
+name: Deploy Static Site to Hostinger
 
 on:
     push:
@@ -15,7 +15,7 @@ jobs:
         runs-on: ubuntu-latest
 
         steps:
-            - name: Checkout code
+            - name: Checkout Code
               uses: actions/checkout@v4
 
             - name: Setup Node.js
@@ -24,15 +24,14 @@ jobs:
                   node-version: 20
                   cache: "npm"
 
-            - name: Install dependencies
+            - name: Install Dependencies
               run: npm ci
 
-            - name: Build static export
+            - name: Build Static Export
               run: npm run build
 
             - name: Sanity-check the build
               run: |
-                  test -d out || { echo "::error::out/ directory missing - is output:'export' set in next.config?"; exit 1; }
                   test -f out/index.html || { echo "::error::out/index.html missing"; exit 1; }
                   echo "Files to ship: $(find out -type f | wc -l)"
 
@@ -40,7 +39,6 @@ jobs:
               run: |
                   set -euo pipefail
 
-                  # One-time token, masked so it never appears in the logs.
                   TOKEN="$(openssl rand -hex 24)"
                   echo "::add-mask::$TOKEN"
                   echo "DEPLOY_TOKEN=$TOKEN" >> "$GITHUB_ENV"
@@ -55,7 +53,6 @@ jobs:
                       echo "::error::deploy/deploy-extract.php not found in the repo"; exit 1;
                   }
 
-                  # Inject the token into a COPY - the repo file keeps its placeholder.
                   sed "s|__DEPLOY_TOKEN__|${TOKEN}|g" deploy/deploy-extract.php > upload/deploy-extract.php
 
                   if grep -q '__DEPLOY_TOKEN__' upload/deploy-extract.php; then
@@ -64,38 +61,25 @@ jobs:
 
                   ls -lh upload
 
-            - name: Upload zip + extractor over FTPS
-              env:
-                  FTP_SERVER: ${{ secrets.FTP_SERVER }}
-                  FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
-                  FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
-                  # Optional repo variable. Leave unset if your FTP user already
-                  # lands inside public_html; set it to public_html otherwise.
-                  FTP_REMOTE_DIR: ${{ vars.FTP_REMOTE_DIR }}
-              run: |
-                  set -euo pipefail
-
-                  DIR="${FTP_REMOTE_DIR:-}"
-                  DIR="${DIR#/}"; DIR="${DIR%/}"
-                  BASE="ftp://${FTP_SERVER}/${DIR:+$DIR/}"
-
-                  # Zip first, extractor second, so the extractor is never
-                  # reachable before the archive it needs is in place.
-                  for f in site.zip deploy-extract.php; do
-                      echo "Uploading $f"
-                      curl -sS --ssl-reqd --ftp-create-dirs --max-time 900 \
-                           --user "${FTP_USERNAME}:${FTP_PASSWORD}" \
-                           -T "upload/$f" "$BASE"
-                  done
-
-                  echo "Upload finished."
+            - name: Deploy to Hostinger via FTP
+              uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+              with:
+                  server: ${{ secrets.FTP_SERVER }}
+                  username: ${{ secrets.FTP_USERNAME }}
+                  password: ${{ secrets.FTP_PASSWORD }}
+                  local-dir: ./upload/
+                  server-dir: ./
+                  # Fresh state name each run: the extractor deletes site.zip
+                  # from the server, so a reused state file would wrongly
+                  # decide the zip is already there and skip the upload.
+                  state-name: .deploy-state-${{ github.run_id }}.json
+                  dangerous-clean-slate: false
 
             - name: Extract on the server
               env:
                   SITE_URL: ${{ vars.SITE_URL || 'https://prodesignity.com' }}
               run: |
                   set -uo pipefail
-
                   BASE="${SITE_URL%/}"
                   echo "Calling ${BASE}/deploy-extract.php"
 
