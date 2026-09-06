@@ -1,5 +1,6 @@
 {
     "css.lint.unknownAtRules": "ignore",
+    "github-actions.validate.enable": false,
     "cSpell.words": [
         "Designity",
         "embla",
