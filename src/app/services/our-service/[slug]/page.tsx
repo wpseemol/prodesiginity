@@ -139,7 +139,7 @@ export default async function ServiceDetailPage({
                 --------------------------------------------------------------- */}
             <section className="relative pt-14 pb-16 sm:pt-20 sm:pb-20 px-4 sm:px-6 lg:px-8">
                 <div
-                    className={`absolute top-0 left-1/2 -translate-x-1/2 w-[52rem] h-[32rem] bg-linear-to-tr ${service.accent.wash} rounded-full blur-3xl pointer-events-none opacity-70`}
+                    className={`absolute top-0 left-1/2 -translate-x-1/2 w-208 h-128 bg-linear-to-tr ${service.accent.wash} rounded-full blur-3xl pointer-events-none opacity-70`}
                     aria-hidden="true"
                 />
 
