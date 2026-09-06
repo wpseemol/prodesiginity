@@ -1,9 +1,14 @@
-name: Deploy Static Site to Hostinger
+name: Deploy Static Site to Hostinger (Zip & Auto-Extract)
 
 on:
     push:
         branches:
             - main
+    workflow_dispatch:
+
+concurrency:
+    group: deploy-hostinger
+    cancel-in-progress: true
 
 jobs:
     build-and-deploy:
@@ -16,7 +21,7 @@ jobs:
             - name: Setup Node.js
               uses: actions/setup-node@v4
               with:
-                  node-version: 24
+                  node-version: 20
                   cache: "npm"
 
             - name: Install Dependencies
@@ -25,12 +30,165 @@ jobs:
             - name: Build Static Export
               run: npm run build
 
-            - name: Deploy to Hostinger via FTP
+            - name: Sanity-check the build
+              run: |
+                  test -f out/index.html || { echo "::error::out/index.html missing"; exit 1; }
+                  echo "Files to ship: $(find out -type f | wc -l)"
+
+            - name: Mint a one-time deploy token
+              run: echo "DEPLOY_TOKEN=$(openssl rand -hex 24)" >> "$GITHUB_ENV"
+
+            - name: Assemble the upload payload & create extractor
+              run: |
+                  mkdir -p upload
+                  ( cd out && zip -qr ../upload/site.zip . )
+
+                  cat << 'EOF' > upload/deploy-extract.php
+                  <?php
+                  declare(strict_types=1);
+
+                  header('Content-Type: text/plain; charset=utf-8');
+                  header('Cache-Control: no-store');
+
+                  const DEPLOY_TOKEN = '__DEPLOY_TOKEN__';
+                  const ZIP_NAME = 'site.zip';
+
+                  const PROTECTED_PATHS = [
+                      '.htaccess',
+                      '.well-known',
+                      'cgi-bin',
+                      'php.ini',
+                      '.user.ini',
+                      'error_log',
+                      'api/config.php',
+                      'api/bookings.log',
+                      'deploy-extract.php',
+                      ZIP_NAME,
+                  ];
+
+                  function done(int $code, string $message): never {
+                      http_response_code($code);
+                      echo $message, "\n";
+                      exit;
+                  }
+
+                  if (DEPLOY_TOKEN === '__DEPLOY_' . 'TOKEN__' || strlen(DEPLOY_TOKEN) < 24) {
+                      done(500, 'FAIL: deploy token was not substituted.');
+                  }
+
+                  $supplied = (string) ($_GET['token'] ?? '');
+                  if ($supplied === '' || !hash_equals(DEPLOY_TOKEN, $supplied)) {
+                      done(403, 'FAIL: bad token.');
+                  }
+
+                  $root = __DIR__;
+                  $zipPath = $root . DIRECTORY_SEPARATOR . ZIP_NAME;
+
+                  if (!is_readable($zipPath)) {
+                      done(404, 'FAIL: ' . ZIP_NAME . ' not found.');
+                  }
+
+                  if (!class_exists('ZipArchive')) {
+                      done(500, 'FAIL: PHP zip extension not enabled.');
+                  }
+
+                  $zip = new ZipArchive();
+                  if ($zip->open($zipPath) !== true) {
+                      done(500, 'FAIL: could not open ' . ZIP_NAME . '.');
+                  }
+
+                  $shipped = [];
+                  for ($i = 0; $i < $zip->numFiles; $i++) {
+                      $entry = $zip->getNameIndex($i);
+                      if ($entry === false) continue;
+                      if (str_contains($entry, '..')) {
+                          $zip->close();
+                          done(400, 'FAIL: archive contains a path traversal entry.');
+                      }
+                      $shipped[rtrim($entry, '/')] = true;
+                  }
+
+                  if (!$zip->extractTo($root)) {
+                      $zip->close();
+                      done(500, 'FAIL: extraction failed.');
+                  }
+                  $zip->close();
+
+                  $extracted = count($shipped);
+                  $removed = 0;
+
+                  if (($_GET['purge'] ?? '') === '1') {
+                      $walk = new RecursiveIteratorIterator(
+                          new RecursiveDirectoryIterator($root, FilesystemIterator::SKIP_DOTS),
+                          RecursiveIteratorIterator::CHILD_FIRST
+                      );
+
+                      foreach ($walk as $item) {
+                          $relative = str_replace('\\', '/', substr($item->getPathname(), strlen($root) + 1));
+                          if (isset($shipped[$relative])) continue;
+
+                          $isProtected = false;
+                          foreach (PROTECTED_PATHS as $keep) {
+                              if ($relative === $keep || str_starts_with($relative, $keep . '/')) {
+                                  $isProtected = true;
+                                  break;
+                              }
+                          }
+                          if ($isProtected) continue;
+
+                          if ($item->isDir()) {
+                              if (@rmdir($item->getPathname())) $removed++;
+                          } elseif (@unlink($item->getPathname())) {
+                              $removed++;
+                          }
+                      }
+                  }
+
+                  @unlink($zipPath);
+                  $selfDeleted = @unlink(__FILE__);
+
+                  echo "OK\n";
+                  echo 'extracted: ' . $extracted . " entries\n";
+                  echo 'purged: ' . $removed . " paths\n";
+                  echo 'self-removed: ' . ($selfDeleted ? 'yes' : 'NO') . "\n";
+                  EOF
+
+                  sed -i "s/__DEPLOY_TOKEN__/${DEPLOY_TOKEN}/" upload/deploy-extract.php
+                  ls -lh upload
+
+            - name: Upload zip + extractor via FTP
               uses: SamKirkland/FTP-Deploy-Action@v4.3.5
               with:
                   server: ${{ secrets.FTP_SERVER }}
                   username: ${{ secrets.FTP_USERNAME }}
                   password: ${{ secrets.FTP_PASSWORD }}
-                  local-dir: ./out/ # Update to ./dist/ or ./build/ if not using Next.js export
-                  server-dir: ./ # upload to the root directory of your hosting account Public_html folder
-                  dangerous-clean-slate: true
+                  local-dir: ./upload/
+                  server-dir: ./
+                  dangerous-clean-slate: false
+
+            - name: Extract on the server
+              env:
+                  SITE_URL: ${{ vars.SITE_URL || 'https://prodesignity.com' }}
+              run: |
+                  URL="${SITE_URL%/}/deploy-extract.php?token=${DEPLOY_TOKEN}&purge=1"
+                  echo "Calling ${SITE_URL%/}/deploy-extract.php"
+
+                  RESPONSE=$(curl -sS --fail-with-body --max-time 180 "$URL") || {
+                      echo "::error::Extractor call failed"
+                      echo "$RESPONSE"
+                      exit 1
+                  }
+
+                  echo "$RESPONSE"
+                  echo "$RESPONSE" | head -n1 | grep -q '^OK$' || {
+                      echo "::error::Extractor did not report OK"
+                      exit 1
+                  }
+
+            - name: Verify the site responds
+              env:
+                  SITE_URL: ${{ vars.SITE_URL || 'https://prodesignity.com' }}
+              run: |
+                  CODE=$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 "${SITE_URL%/}/")
+                  echo "Homepage returned $CODE"
+                  [ "$CODE" = "200" ] || { echo "::error::Homepage returned $CODE"; exit 1; }
