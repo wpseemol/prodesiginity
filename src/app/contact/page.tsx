@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { motion, type Variants } from "framer-motion";
+import BookingCalendar from "@/components/contact/BookingCalendar";
 import {
     MapPin,
     Mail,
@@ -10,7 +11,6 @@ import {
     Calendar,
     CheckCircle2,
     ArrowRight,
-    Video,
     Globe,
     MessageSquare,
 } from "lucide-react";
@@ -394,15 +394,16 @@ export default function ContactPage() {
                 whileInView="visible"
                 viewport={{ once: false, amount: 0.2 }}
                 variants={fadeInUpVariant}
-                className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-24"
+                id="book-a-call"
+                className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-24 scroll-mt-24"
             >
                 <div className="relative p-8 sm:p-12 rounded-3xl bg-linear-to-br from-card-bg to-slate-100 dark:from-[#0B101E] dark:to-[#070A12] border border-border-color dark:border-dark-border-color shadow-2xl overflow-hidden">
                     {/* Ambient Flare */}
                     <div className="absolute -top-20 -right-20 w-80 h-80 bg-primary/10 dark:bg-primary/15 rounded-full blur-3xl pointer-events-none" />
 
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center relative z-10">
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start relative z-10">
                         {/* Left Content */}
-                        <div className="lg:col-span-7 space-y-4">
+                        <div className="lg:col-span-5 space-y-4 lg:pt-2">
                             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/30 text-primary dark:text-dark-primary text-xs font-bold uppercase tracking-wider">
                                 Free Discovery Call
                             </div>
@@ -432,57 +433,36 @@ export default function ContactPage() {
                                 </span>
                             </div>
 
-                            <div className="pt-2">
+                            <div className="pt-2 flex flex-col sm:flex-row gap-3">
                                 <a
-                                    href="https://wa.me/8801738142398?text=Hello%20ProDesignity,%20I%20would%20like%20to%20book%20a%20free%20strategy%20call."
-                                    target="_blank"
-                                    rel="noopener noreferrer"
+                                    href="#book-a-call"
                                     className="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-xl font-bold text-white bg-primary hover:bg-primary/80 shadow-lg shadow-primary/25 transition-all"
                                 >
                                     <Calendar className="w-4 h-4" />
                                     <span>Book Your Free Call</span>
                                     <ArrowRight className="w-4 h-4" />
                                 </a>
+
+                                <a
+                                    href="https://wa.me/8801738142398?text=Hello%20ProDesignity,%20I%20would%20like%20to%20book%20a%20free%20strategy%20call."
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-xl font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800/70 border border-border-color dark:border-dark-border-color hover:border-primary/40 transition-all"
+                                >
+                                    <MessageSquare className="w-4 h-4" />
+                                    <span>Ask on WhatsApp</span>
+                                </a>
                             </div>
                         </div>
 
-                        {/* Right Mini Schedule Widget */}
-                        <div className="lg:col-span-5 flex justify-center">
-                            <div className="w-full max-w-sm p-6 rounded-2xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-border-color dark:border-dark-border-color shadow-xl space-y-4">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2.5">
-                                        <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-                                            <Video className="w-4 h-4" />
-                                        </div>
-                                        <div>
-                                            <h4 className="text-xs font-bold text-slate-900 dark:text-white">
-                                                Strategy Call
-                                            </h4>
-                                            <p className="text-[10px] text-slate-400">
-                                                Google Meet / Zoom
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-                                </div>
-
-                                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/50 dark:border-slate-700/50 space-y-1">
-                                    <p className="text-[11px] font-semibold text-slate-700 dark:text-slate-200">
-                                        Duration: 30 Mins
-                                    </p>
-                                    <p className="text-[10px] text-slate-400">
-                                        Available: Saturday to Thursday
-                                    </p>
-                                </div>
-
-                                <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-1">
-                                    <span>Fast Response</span>
-                                    <span className="font-bold text-primary dark:text-dark-primary">
-                                        1–2 Hours
-                                    </span>
-                                </div>
-                            </div>
+                        {/* Live booking widget.
+                            Replaces the old static mock-up: this one shows a
+                            real calendar, refuses past dates, and creates the
+                            Zoom meeting through /api/book-call.php. */}
+                        <div className="lg:col-span-7">
+                            <BookingCalendar />
                         </div>
+
                     </div>
                 </div>
             </motion.section>

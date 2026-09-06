@@ -273,3 +273,50 @@ export function legalPageSchema(doc: LegalDocument) {
         ],
     };
 }
+
+/**
+ * Structured data for one service detail page.
+ *
+ * Emits a `Service` entity wired back to the Organization via `provider`, plus
+ * an `ItemList` of what is included. The BreadcrumbList and FAQPage are added
+ * by the page itself so this helper stays composable.
+ */
+export function serviceSchema(service: {
+    title: string;
+    tagline: string;
+    summary: string;
+    path: string;
+    deliverables: string[];
+}) {
+    return {
+        "@type": "Service",
+        "@id": absoluteUrl(`${service.path}#service`),
+        name: service.title,
+        serviceType: service.title,
+        description: service.summary,
+        url: absoluteUrl(service.path),
+        provider: { "@id": ORG_ID },
+        areaServed: siteConfig.serviceAreas.map((name) => ({
+            "@type": "AdministrativeArea",
+            name,
+        })),
+        availableLanguage: siteConfig.languages,
+        hasOfferCatalog: {
+            "@type": "OfferCatalog",
+            name: `${service.title} deliverables`,
+            itemListElement: service.deliverables.map((item, i) => ({
+                "@type": "Offer",
+                position: i + 1,
+                itemOffered: { "@type": "Service", name: item },
+            })),
+        },
+    };
+}
+
+/** Wraps any set of entities in the @graph envelope the site already uses. */
+export function graph(...entities: object[]) {
+    return {
+        "@context": "https://schema.org",
+        "@graph": entities,
+    };
+}

@@ -1,0 +1,29 @@
+# /api/.htaccess
+#
+# book-call.php writes bookings.log next to itself, and config.php holds Zoom
+# credentials. Both sit under the document root, so without this file they are
+# fetchable over HTTP. Deny them explicitly.
+#
+# Directory listing is disabled too — /api/ should reveal nothing.
+
+Options -Indexes
+
+<FilesMatch "\.(log|sample\.php|md)$">
+    Require all denied
+</FilesMatch>
+
+<Files "config.php">
+    Require all denied
+</Files>
+
+# Apache 2.2 fallback, in case the host has not moved to 2.4 authz.
+<IfModule !mod_authz_core.c>
+    <FilesMatch "\.(log|sample\.php|md)$">
+        Order allow,deny
+        Deny from all
+    </FilesMatch>
+    <Files "config.php">
+        Order allow,deny
+        Deny from all
+    </Files>
+</IfModule>

@@ -1,194 +1,64 @@
 "use client";
+
+/**
+ * "Types of Work We Do" — the two-row marquee on the homepage.
+ *
+ * The card content is no longer declared here. Titles, summaries, icons and
+ * accent colours all come from `data/servicesData.ts`, the same file the header
+ * dropdown and the /services pages read, so the three can never disagree.
+ *
+ * Each card is now a link to its own service page.
+ */
+
 import Marquee from "react-fast-marquee";
-import {
-    Palette, // Graphic Design
-    ListChecks, // Product Listing
-    AppWindow, // Web Applications
-    Layout, // Website Design & Development
-    ShoppingBag, // Shopify Store Design
-    PackageSearch, // Amazon Listing
-    Sparkles, // Product Animation
-    Megaphone, // Paid Advertising
-    SearchCheck, // SEO
-    Video, // UGC Video
-    Box, // 3D Animation
-    Film, // 2D Animation
-    BookOpen, // Product Catalog Design
-    type LucideIcon,
-} from "lucide-react";
+import Link from "next/link";
+import { ArrowUpRight } from "lucide-react";
+
 import { HeaderPill } from "@/components/HeaderPill";
+import ServiceIcon from "@/components/ServiceIcon";
+import {
+    MARQUEE_BOTTOM_ROW,
+    MARQUEE_TOP_ROW,
+    serviceHref,
+    type Service,
+} from "@/data/servicesData";
 
-interface ServiceCard {
-    icon: LucideIcon;
-    title: string;
-    description: string;
-    iconBg: string;
-    iconColor: string;
-    accentBorder: string;
-}
-
-const topRowServices: ServiceCard[] = [
-    {
-        icon: Palette,
-        title: "Graphic Design",
-        description:
-            "Design strong visuals for your brand, social media, packaging, and marketing materials.",
-        iconBg: "bg-emerald-500/10 dark:bg-emerald-500/15",
-        iconColor: "text-emerald-600 dark:text-emerald-400",
-        accentBorder: "group-hover:border-emerald-500/40",
-    },
-    {
-        icon: ListChecks,
-        title: "Product Listing",
-        description:
-            "Create clear, optimized product listings that help customers understand and buy with confidence.",
-        iconBg: "bg-brand-violet/10 dark:bg-dark-brand-violet/15",
-        iconColor: "text-brand-violet dark:text-dark-brand-violet",
-        accentBorder:
-            "group-hover:border-brand-violet/40 dark:group-hover:border-dark-brand-violet/40",
-    },
-    {
-        icon: AppWindow,
-        title: "Web Applications",
-        description:
-            "Develop custom web applications that simplify operations and solve real business needs.",
-        iconBg: "bg-brand-blue/10 dark:bg-dark-brand-blue/15",
-        iconColor: "text-brand-blue dark:text-dark-brand-blue",
-        accentBorder:
-            "group-hover:border-brand-blue/40 dark:group-hover:border-dark-brand-blue/40",
-    },
-    {
-        icon: Layout,
-        title: "Website Design & Development",
-        description:
-            "Create modern, fast, mobile-friendly websites made to represent your brand professionally.",
-        iconBg: "bg-brand-orange/10 dark:bg-dark-brand-orange/15",
-        iconColor: "text-brand-orange dark:text-dark-brand-orange",
-        accentBorder:
-            "group-hover:border-brand-orange/40 dark:group-hover:border-dark-brand-orange/40",
-    },
-    {
-        icon: ShoppingBag,
-        title: "Shopify Store Design",
-        description:
-            "Build high-converting Shopify stores that make shopping simple and drive more sales.",
-        iconBg: "bg-primary/10 dark:bg-dark-primary/15",
-        iconColor: "text-primary dark:text-dark-primary",
-        accentBorder:
-            "group-hover:border-primary/40 dark:group-hover:border-dark-primary/40",
-    },
-    {
-        icon: PackageSearch,
-        title: "Amazon Listing",
-        description:
-            "Optimize Amazon titles, images, descriptions, and content to improve product conversions.",
-        iconBg: "bg-brand-blue/10 dark:bg-dark-brand-blue/15",
-        iconColor: "text-brand-blue dark:text-dark-brand-blue",
-        accentBorder:
-            "group-hover:border-brand-blue/40 dark:group-hover:border-dark-brand-blue/40",
-    },
-    {
-        icon: Sparkles,
-        title: "Product Animation",
-        description:
-            "Bring your product to life with animated visuals that highlight key features and benefits.",
-        iconBg: "bg-emerald-500/10 dark:bg-emerald-500/15",
-        iconColor: "text-emerald-600 dark:text-emerald-400",
-        accentBorder: "group-hover:border-emerald-500/40",
-    },
-];
-
-const bottomRowServices: ServiceCard[] = [
-    {
-        icon: Megaphone,
-        title: "Paid Advertising",
-        description:
-            "Run targeted ad campaigns designed to reach the right people and generate results.",
-        iconBg: "bg-brand-blue/10 dark:bg-dark-brand-blue/15",
-        iconColor: "text-brand-blue dark:text-dark-brand-blue",
-        accentBorder:
-            "group-hover:border-brand-blue/40 dark:group-hover:border-dark-brand-blue/40",
-    },
-    {
-        icon: SearchCheck,
-        title: "SEO",
-        description:
-            "Improve your search visibility so more potential customers can find your business online.",
-        iconBg: "bg-emerald-500/10 dark:bg-emerald-500/15",
-        iconColor: "text-emerald-600 dark:text-emerald-400",
-        accentBorder: "group-hover:border-emerald-500/40",
-    },
-    {
-        icon: Video,
-        title: "UGC Video",
-        description:
-            "Create authentic user-generated-style videos that build trust and make products feel real.",
-        iconBg: "bg-brand-violet/10 dark:bg-dark-brand-violet/15",
-        iconColor: "text-brand-violet dark:text-dark-brand-violet",
-        accentBorder:
-            "group-hover:border-brand-violet/40 dark:group-hover:border-dark-brand-violet/40",
-    },
-    {
-        icon: Box,
-        title: "3D Animation",
-        description:
-            "Showcase products with realistic 3D visuals and animations that grab attention.",
-        iconBg: "bg-brand-orange/10 dark:bg-dark-brand-orange/15",
-        iconColor: "text-brand-orange dark:text-dark-brand-orange",
-        accentBorder:
-            "group-hover:border-brand-orange/40 dark:group-hover:border-dark-brand-orange/40",
-    },
-    {
-        icon: Film,
-        title: "2D Animation",
-        description:
-            "Turn your message into engaging animated videos that are easy to understand and remember.",
-        iconBg: "bg-primary/10 dark:bg-dark-primary/15",
-        iconColor: "text-primary dark:text-dark-primary",
-        accentBorder:
-            "group-hover:border-primary/40 dark:group-hover:border-dark-primary/40",
-    },
-    {
-        icon: BookOpen,
-        title: "Product Catalog Design",
-        description:
-            "Create clean, professional product catalogs that make your full range easy to explore.",
-        iconBg: "bg-brand-blue/10 dark:bg-dark-brand-blue/15",
-        iconColor: "text-brand-blue dark:text-dark-brand-blue",
-        accentBorder:
-            "group-hover:border-brand-blue/40 dark:group-hover:border-dark-brand-blue/40",
-    },
-];
-function CardItem({ service }: { service: ServiceCard }) {
-    const Icon = service.icon;
+function CardItem({ service }: { service: Service }) {
     return (
-        <div
-            className={`group relative w-55 md:w-60 h-55 sm:h-60 p-6 sm:p-7 rounded-3xl bg-card-bg dark:bg-dark-card-bg border border-border-color dark:border-dark-border-color ${service.accentBorder} shadow-lg hover:shadow-2xl transition-all duration-300 flex flex-col justify-between mx-3 select-none`}
+        <Link
+            href={serviceHref(service.slug)}
+            aria-label={`${service.title} — view service details`}
+            className={`group relative w-55 md:w-60 h-55 sm:h-60 p-6 sm:p-7 rounded-3xl bg-card-bg dark:bg-dark-card-bg border border-border-color dark:border-dark-border-color ${service.accent.hoverBorder} shadow-lg hover:shadow-2xl transition-all duration-300 flex flex-col justify-between mx-3 select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2`}
         >
             <div>
                 {/* Icon Frame */}
                 <div
-                    className={`w-12 h-12 rounded-2xl ${service.iconBg} ${service.iconColor} flex items-center justify-center mb-4 transition-transform duration-300 group-hover:scale-110`}
+                    className={`w-12 h-12 rounded-2xl ${service.accent.iconBg} ${service.accent.iconColor} flex items-center justify-center mb-4 transition-transform duration-300 group-hover:scale-110`}
                 >
-                    <Icon className="w-6 h-6" />
+                    <ServiceIcon name={service.icon} className="w-6 h-6" />
                 </div>
 
-                {/* Title */}
-                <h3 className="text-lg font-black text-slate-900 dark:text-white leading-tight mb-2">
+                {/* Title — h3 because the section heading above is the h2 */}
+                <h3 className="text-lg font-black text-slate-900 dark:text-white leading-tight mb-2 pr-5">
                     {service.title}
                 </h3>
 
                 {/* Description */}
                 <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 leading-relaxed line-clamp-3">
-                    {service.description}
+                    {service.summary}
                 </p>
             </div>
+
+            <ArrowUpRight
+                className="absolute top-6 right-6 w-4 h-4 text-slate-300 dark:text-slate-600 opacity-0 group-hover:opacity-100 group-hover:text-primary transition-all duration-300"
+                aria-hidden="true"
+            />
 
             {/* Interactive Bottom Progress Indicator */}
             <div className="w-full h-1 rounded-full bg-slate-100 dark:bg-slate-800/80 overflow-hidden">
                 <div className="w-0 group-hover:w-full h-full bg-linear-to-r from-brand-violet to-brand-blue dark:from-dark-brand-violet dark:to-dark-brand-blue transition-all duration-500 rounded-full" />
             </div>
-        </div>
+        </Link>
     );
 }
 
@@ -213,7 +83,8 @@ export default function ServicesMarquee() {
 
                     <p className="mt-3 text-sm sm:text-base text-slate-500 dark:text-slate-400 max-w-xl mx-auto">
                         We provide a wide range of digital services to help your
-                        business grow online.
+                        business grow online. Tap any card to see how that
+                        service works.
                     </p>
                 </div>
 
@@ -233,16 +104,14 @@ export default function ServicesMarquee() {
                             direction="right"
                             speed={35}
                             gradient={false}
-                            autoFill={
-                                true
-                            } /* <-- Prevents gaps across all screen sizes */
+                            autoFill={true}
                             pauseOnHover={true}
                             pauseOnClick={true}
                             className="overflow-hidden py-2"
                         >
-                            {topRowServices.map((service, index) => (
+                            {MARQUEE_TOP_ROW.map((service) => (
                                 <CardItem
-                                    key={`top-${service.title}-${index}`}
+                                    key={`top-${service.slug}`}
                                     service={service}
                                 />
                             ))}
@@ -255,21 +124,30 @@ export default function ServicesMarquee() {
                             direction="left"
                             speed={28}
                             gradient={false}
-                            autoFill={
-                                true
-                            } /* <-- Prevents gaps across all screen sizes */
+                            autoFill={true}
                             pauseOnHover={true}
                             pauseOnClick={true}
                             className="overflow-hidden py-2"
                         >
-                            {bottomRowServices.map((service, index) => (
+                            {MARQUEE_BOTTOM_ROW.map((service) => (
                                 <CardItem
-                                    key={`bottom-${service.title}-${index}`}
+                                    key={`bottom-${service.slug}`}
                                     service={service}
                                 />
                             ))}
                         </Marquee>
                     </div>
+                </div>
+
+                {/* Route into the hub for anyone who would rather read a list */}
+                <div className="mt-12 flex justify-center relative z-10">
+                    <Link
+                        href="/services"
+                        className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold text-white bg-linear-to-r from-brand-violet to-brand-blue dark:from-dark-brand-violet dark:to-dark-brand-blue shadow-lg shadow-primary/20 hover:opacity-90 transition-all"
+                    >
+                        Explore all services
+                        <ArrowUpRight className="w-4 h-4" aria-hidden="true" />
+                    </Link>
                 </div>
             </div>
         </section>

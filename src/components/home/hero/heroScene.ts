@@ -39,6 +39,12 @@ interface Palette {
     soft: string;
     rule: string;
     violet: string;
+    /**
+     * Ink used INSIDE the logo tile on the top/bottom faces. Needed because
+     * the light box is now brand-coloured: a hardcoded white "P" disappeared
+     * against the light logo gradient.
+     */
+    markInk: string;
     edge: number;
     edgeOp: number;
     ring: number;
@@ -61,27 +67,41 @@ interface Palette {
  * step by hand: canvas pixels cannot read CSS variables.
  */
 const PALETTE: Record<"light" | "dark", Palette> = {
+    /**
+     * LIGHT MODE IS BRAND-COLOURED ON PURPOSE.
+     *
+     * The box used to be white (#FFFFFF) sitting on a near-white page, so on a
+     * bright screen it read as a faint outline and nothing else. It now uses
+     * the same indigo as the "Get Started" button, with the type knocked out in
+     * white — so the cube carries the brand colour instead of disappearing.
+     *
+     * Dark mode is untouched: a dark box on a dark page already has contrast
+     * from its edges and rim light.
+     */
     light: {
-        face: "#FFFFFF",
-        faceAlt: "#F4F5FC",
-        text: "#0F1121",
-        soft: "#8A90AA",
-        rule: "#E7E9F5",
-        violet: "#5B4FE9",
-        edge: 0x5b4fe9,
-        edgeOp: 0.26,
-        ring: 0x5b4fe9,
-        ringOp: 0.34,
-        dust: 0x6b5ff0,
-        dustOp: 0.5,
+        face: "#5B4FE9",
+        faceAlt: "#4F44D6",
+        text: "#FFFFFF",
+        soft: "#CFCBFF",
+        rule: "#7B70F2",
+        // On a brand-coloured face the accent has to be the light one, so the
+        // check badge and the chip dot stay legible.
+        violet: "#FFFFFF",
+        markInk: "#4F44D6",
+        edge: 0x9a8dff,
+        edgeOp: 0.38,
+        ring: 0x7c6dff,
+        ringOp: 0.4,
+        dust: 0x7c6dff,
+        dustOp: 0.55,
         hemi: 0xffffff,
         ground: 0xd9dcf5,
-        hemiI: 0.85,
-        keyI: 1.05,
-        rimI: 0.75,
-        shadow: 0.2,
-        blob: 0x1c1f45,
-        blobOp: 0.3,
+        hemiI: 0.9,
+        keyI: 1.15,
+        rimI: 0.8,
+        shadow: 0.22,
+        blob: 0x5b4fe9,
+        blobOp: 0.26,
         blobAdd: false,
     },
     dark: {
@@ -91,6 +111,7 @@ const PALETTE: Record<"light" | "dark", Palette> = {
         soft: "#8E95BC",
         rule: "#2E3155",
         violet: "#8A7BFF",
+        markInk: "#FFFFFF",
         edge: 0x8a7bff,
         edgeOp: 0.42,
         ring: 0x8a7bff,
@@ -277,7 +298,7 @@ export function createHeroScene(
         g.fillStyle = grad;
         g.fill();
 
-        g.fillStyle = "#fff";
+        g.fillStyle = p.markInk;
         g.font = font(800, 78);
         g.textAlign = "center";
         g.textBaseline = "middle";

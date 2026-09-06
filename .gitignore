@@ -39,3 +39,13 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# PHP API secrets and runtime data (public/api/).
+# config.php holds the Zoom credentials; bookings.log holds enquiry data.
+# Both live on the server only — never in the repo, never in the deploy zip.
+/public/api/config.php
+/public/api/bookings.log
+
+# Deploy payload assembled by .github/workflows/deploy-zip.yml
+/upload/
+site.zip
