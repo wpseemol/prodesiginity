@@ -94,14 +94,14 @@ export default function OurServiceAndTeamPage() {
             {/* ---------------------------- Hero ---------------------------- */}
             <section className="relative pt-14 pb-16 sm:pt-20 px-4 sm:px-6 lg:px-8">
                 <div
-                    className="absolute top-0 left-1/2 -translate-x-1/2 w-[52rem] h-[30rem] bg-linear-to-tr from-brand-violet/15 via-primary/12 to-brand-blue/15 rounded-full blur-3xl pointer-events-none"
+                    className="absolute top-0 left-1/2 -translate-x-1/2 w-208 h-120 bg-linear-to-tr from-brand-violet/15 via-primary/12 to-brand-blue/15 rounded-full blur-3xl pointer-events-none"
                     aria-hidden="true"
                 />
 
-                <div className="relative max-w-4xl mx-auto text-center">
+                <div className="relative container mx-auto px-4 sm:px-6 lg:px-8">
                     <nav
                         aria-label="Breadcrumb"
-                        className="flex items-center justify-center gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400 mb-8"
+                        className="flex items-center  gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400 mb-8"
                     >
                         <Link
                             href="/"
@@ -132,14 +132,14 @@ export default function OurServiceAndTeamPage() {
                         </span>
                     </h1>
 
-                    <p className="mt-6 text-base sm:text-lg text-slate-600 dark:text-slate-400 leading-relaxed max-w-2xl mx-auto">
+                    <p className="mt-6 text-base sm:text-lg text-slate-600 dark:text-slate-400 leading-relaxed max-w-2xl ">
                         {SERVICE_GROUPS.length} service groups, one studio, and
                         a team of {TEAM_MEMBERS.length} who each own a
                         discipline end to end. Here is how the work runs and who
                         you will actually be talking to.
                     </p>
 
-                    <div className="mt-9 flex flex-col sm:flex-row gap-3 justify-center">
+                    <div className="mt-9 flex flex-col sm:flex-row gap-3 ">
                         <Link
                             href="/contact"
                             className="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-xl font-bold text-white bg-linear-to-r from-brand-violet to-brand-blue dark:from-dark-brand-violet dark:to-dark-brand-blue shadow-lg shadow-primary/25 hover:opacity-90 transition-all"
@@ -162,7 +162,7 @@ export default function OurServiceAndTeamPage() {
 
             {/* ------------------------ Working model ----------------------- */}
             <section className="relative py-16 sm:py-20 px-4 sm:px-6 lg:px-8 border-t border-border-color dark:border-dark-border-color">
-                <div className="max-w-5xl mx-auto">
+                <div className=" container mx-auto px-4 sm:px-6 lg:px-8">
                     <HeaderPill text="How we work" className="sm:mb-6" />
                     <h2 className="text-center text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-slate-900 dark:text-white">
                         The way we run a project
@@ -194,7 +194,7 @@ export default function OurServiceAndTeamPage() {
 
             {/* --------------------- Services by group ---------------------- */}
             <section className="relative py-16 sm:py-20 px-4 sm:px-6 lg:px-8 bg-slate-50/60 dark:bg-[#0A0F1C] border-y border-border-color dark:border-dark-border-color">
-                <div className="max-w-6xl mx-auto">
+                <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                     <HeaderPill text="What we cover" className="sm:mb-6" />
                     <h2 className="text-center text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-slate-900 dark:text-white">
                         Every service, grouped by discipline
@@ -230,9 +230,7 @@ export default function OurServiceAndTeamPage() {
                                         {services.map((service) => (
                                             <Link
                                                 key={service.slug}
-                                                href={serviceHref(
-                                                    service.slug,
-                                                )}
+                                                href={serviceHref(service.slug)}
                                                 className={`group p-6 rounded-2xl bg-card-bg dark:bg-dark-card-bg border border-border-color dark:border-dark-border-color ${service.accent.hoverBorder} shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col`}
                                             >
                                                 <div
@@ -268,7 +266,7 @@ export default function OurServiceAndTeamPage() {
 
             {/* --------------------------- The team ------------------------- */}
             <section className="relative py-16 sm:py-24 px-4 sm:px-6 lg:px-8">
-                <div className="max-w-6xl mx-auto">
+                <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                     <HeaderPill text="Our team" className="sm:mb-6" />
                     <h2 className="text-center text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-slate-900 dark:text-white">
                         The people doing the work
@@ -348,7 +346,7 @@ export default function OurServiceAndTeamPage() {
 
             {/* ----------------------------- CTA ---------------------------- */}
             <section className="relative pb-24 px-4 sm:px-6 lg:px-8">
-                <div className="max-w-4xl mx-auto p-8 sm:p-12 rounded-3xl bg-linear-to-br from-card-bg to-slate-100 dark:from-[#0B101E] dark:to-[#070A12] border border-border-color dark:border-dark-border-color shadow-2xl text-center">
+                <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:p-12 rounded-3xl bg-linear-to-br from-card-bg to-slate-100 dark:from-[#0B101E] dark:to-[#070A12] border border-border-color dark:border-dark-border-color shadow-2xl text-center">
                     <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white">
                         Want to talk to the people, not a sales team?
                     </h2>

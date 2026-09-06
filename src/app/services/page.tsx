@@ -81,14 +81,14 @@ export default function ServicesHubPage() {
             {/* ---------------------------- Hero ---------------------------- */}
             <section className="relative pt-14 pb-14 sm:pt-20 px-4 sm:px-6 lg:px-8">
                 <div
-                    className="absolute top-0 left-1/2 -translate-x-1/2 w-[52rem] h-[30rem] bg-linear-to-tr from-brand-violet/15 via-primary/12 to-brand-blue/15 rounded-full blur-3xl pointer-events-none"
+                    className="absolute top-0 left-1/2 -translate-x-1/2 w-208 h-120 bg-linear-to-tr from-brand-violet/15 via-primary/12 to-brand-blue/15 rounded-full blur-3xl pointer-events-none"
                     aria-hidden="true"
                 />
 
-                <div className="relative max-w-4xl mx-auto text-center">
+                <div className="relative container mx-auto  px-4 sm:px-6 lg:px-8">
                     <nav
                         aria-label="Breadcrumb"
-                        className="flex items-center justify-center gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400 mb-8"
+                        className="flex items-center justify-start gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400 mb-8"
                     >
                         <Link
                             href="/"
@@ -112,19 +112,23 @@ export default function ServicesHubPage() {
                         </span>
                     </h1>
 
-                    <p className="mt-6 text-base sm:text-lg text-slate-600 dark:text-slate-400 leading-relaxed max-w-2xl mx-auto">
-                        {SERVICES.length} services across {SERVICE_GROUPS.length}{" "}
-                        disciplines — build, rank, advertise and animate. Take
-                        one, or run several on a single monthly retainer.
+                    <p className="mt-6 text-base sm:text-lg text-slate-600 dark:text-slate-400 leading-relaxed max-w-2xl">
+                        {SERVICES.length} services across{" "}
+                        {SERVICE_GROUPS.length} disciplines — build, rank,
+                        advertise and animate. Take one, or run several on a
+                        single monthly retainer.
                     </p>
 
-                    <div className="mt-9 flex flex-col sm:flex-row gap-3 justify-center">
+                    <div className="mt-9 flex flex-col sm:flex-row gap-3 justify-start">
                         <Link
                             href="/contact"
                             className="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-xl font-bold text-white bg-linear-to-r from-brand-violet to-brand-blue dark:from-dark-brand-violet dark:to-dark-brand-blue shadow-lg shadow-primary/25 hover:opacity-90 transition-all"
                         >
                             Book a free call
-                            <ArrowRight className="w-4 h-4" aria-hidden="true" />
+                            <ArrowRight
+                                className="w-4 h-4"
+                                aria-hidden="true"
+                            />
                         </Link>
                         <Link
                             href="/#pricing"
@@ -138,7 +142,7 @@ export default function ServicesHubPage() {
 
             {/* -------------------- Jump links by group --------------------- */}
             <section className="relative px-4 sm:px-6 lg:px-8 pb-4">
-                <ul className="max-w-4xl mx-auto flex flex-wrap justify-center gap-2">
+                <ul className="container mx-auto flex flex-wrap gap-2 px-4 sm:px-6 lg:px-8">
                     {SERVICE_GROUPS.map((group) => (
                         <li key={group.slug}>
                             <a
@@ -158,7 +162,7 @@ export default function ServicesHubPage() {
 
             {/* ------------------------ Service groups ---------------------- */}
             <section className="relative py-14 sm:py-16 px-4 sm:px-6 lg:px-8">
-                <div className="max-w-6xl mx-auto space-y-16">
+                <div className="container mx-auto space-y-16 px-4 sm:px-6 lg:px-8">
                     {SERVICE_GROUPS.map((group) => (
                         <div
                             key={group.slug}
@@ -231,7 +235,10 @@ export default function ServicesHubPage() {
             {/* --------------------------- Bundles -------------------------- */}
             <section className="relative py-16 sm:py-20 px-4 sm:px-6 lg:px-8 bg-slate-50/60 dark:bg-[#0A0F1C] border-y border-border-color dark:border-dark-border-color">
                 <div className="max-w-5xl mx-auto">
-                    <HeaderPill text="Not sure where to start" className="sm:mb-6" />
+                    <HeaderPill
+                        text="Not sure where to start"
+                        className="sm:mb-6"
+                    />
                     <h2 className="text-center text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-slate-900 dark:text-white">
                         Most clients start with one of these
                     </h2>
@@ -252,7 +259,11 @@ export default function ServicesHubPage() {
                                 icon: Layers,
                                 title: "Selling but not scaling",
                                 body: "Listings rewritten, technical SEO fixed and paid campaigns rebuilt around a real conversion signal.",
-                                picks: ["seo", "paid-advertising", "amazon-listing"],
+                                picks: [
+                                    "seo",
+                                    "paid-advertising",
+                                    "amazon-listing",
+                                ],
                             },
                             {
                                 icon: ArrowRight,
@@ -310,8 +321,8 @@ export default function ServicesHubPage() {
             </section>
 
             {/* ----------------------------- CTA ---------------------------- */}
-            <section className="relative py-20 px-4 sm:px-6 lg:px-8">
-                <div className="max-w-4xl mx-auto p-8 sm:p-12 rounded-3xl bg-linear-to-br from-card-bg to-slate-100 dark:from-[#0B101E] dark:to-[#070A12] border border-border-color dark:border-dark-border-color shadow-2xl text-center">
+            <section className="relative py-20 px-4 sm:px-6 lg:px-8 ">
+                <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:p-12 rounded-3xl bg-linear-to-br from-card-bg to-slate-100 dark:from-[#0B101E] dark:to-[#070A12] border border-border-color dark:border-dark-border-color shadow-2xl text-center">
                     <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white">
                         Tell us what you are trying to fix
                     </h2>
@@ -326,7 +337,10 @@ export default function ServicesHubPage() {
                             className="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-xl font-bold text-white bg-linear-to-r from-brand-violet to-brand-blue dark:from-dark-brand-violet dark:to-dark-brand-blue shadow-lg shadow-primary/25 hover:opacity-90 transition-all"
                         >
                             Book your free call
-                            <ArrowRight className="w-4 h-4" aria-hidden="true" />
+                            <ArrowRight
+                                className="w-4 h-4"
+                                aria-hidden="true"
+                            />
                         </Link>
                         <Link
                             href="/services/our-service"

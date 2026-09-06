@@ -143,7 +143,7 @@ export default async function ServiceDetailPage({
                     aria-hidden="true"
                 />
 
-                <div className="relative max-w-5xl mx-auto">
+                <div className="relative container mx-auto px-4 sm:px-6 lg:px-8">
                     {/* Breadcrumb */}
                     <nav
                         aria-label="Breadcrumb"
@@ -270,7 +270,7 @@ export default async function ServiceDetailPage({
                 Overview + deliverables
                 --------------------------------------------------------------- */}
             <section className="relative py-16 sm:py-20 px-4 sm:px-6 lg:px-8 border-t border-border-color dark:border-dark-border-color">
-                <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12">
+                <div className="container mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 px-4 sm:px-6 lg:px-8">
                     <div className="lg:col-span-7">
                         <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white">
                             What this actually involves
@@ -333,7 +333,7 @@ export default async function ServiceDetailPage({
                 Process
                 --------------------------------------------------------------- */}
             <section className="relative py-16 sm:py-20 px-4 sm:px-6 lg:px-8 bg-slate-50/60 dark:bg-[#0A0F1C] border-y border-border-color dark:border-dark-border-color">
-                <div className="max-w-5xl mx-auto">
+                <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                     <HeaderPill text="How we work" className="sm:mb-6" />
                     <h2 className="text-center text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-slate-900 dark:text-white">
                         The {service.title.toLowerCase()} process
@@ -403,7 +403,7 @@ export default async function ServiceDetailPage({
                 Related services + CTA
                 --------------------------------------------------------------- */}
             <section className="relative py-16 sm:py-20 px-4 sm:px-6 lg:px-8 border-t border-border-color dark:border-dark-border-color">
-                <div className="max-w-5xl mx-auto">
+                <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                     <h2 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white">
                         Often paired with
                     </h2>
