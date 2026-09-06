@@ -1,4 +1,4 @@
-name: Deploy Static Site to Hostinger Zip & Auto-Extract
+name: Deploy static site to Hostinger (zip + auto-extract)
 
 on:
     push:
@@ -15,7 +15,7 @@ jobs:
         runs-on: ubuntu-latest
 
         steps:
-            - name: Checkout Code
+            - name: Checkout code
               uses: actions/checkout@v4
 
             - name: Setup Node.js
@@ -24,156 +24,85 @@ jobs:
                   node-version: 20
                   cache: "npm"
 
-            - name: Install Dependencies
+            - name: Install dependencies
               run: npm ci
 
-            - name: Build Static Export
+            - name: Build static export
               run: npm run build
 
             - name: Sanity-check the build
               run: |
+                  test -d out || { echo "::error::out/ directory missing - is output:'export' set in next.config?"; exit 1; }
                   test -f out/index.html || { echo "::error::out/index.html missing"; exit 1; }
                   echo "Files to ship: $(find out -type f | wc -l)"
 
-            - name: Mint a one-time deploy token
-              run: echo "DEPLOY_TOKEN=$(openssl rand -hex 24)" >> "$GITHUB_ENV"
-
-            - name: Assemble the upload payload & create extractor
+            - name: Assemble the upload payload
               run: |
+                  set -euo pipefail
+
+                  # One-time token, masked so it never appears in the logs.
+                  TOKEN="$(openssl rand -hex 24)"
+                  echo "::add-mask::$TOKEN"
+                  echo "DEPLOY_TOKEN=$TOKEN" >> "$GITHUB_ENV"
+
+                  rm -rf upload
                   mkdir -p upload
+
+                  # Zip the CONTENTS of out/, not the folder itself.
                   ( cd out && zip -qr ../upload/site.zip . )
 
-                  cat << 'EOF' > upload/deploy-extract.php
-                  <?php
-                  declare(strict_types=1);
-
-                  header('Content-Type: text/plain; charset=utf-8');
-                  header('Cache-Control: no-store');
-
-                  const DEPLOY_TOKEN = '__DEPLOY_TOKEN__';
-                  const ZIP_NAME = 'site.zip';
-
-                  const PROTECTED_PATHS = [
-                      '.htaccess',
-                      '.well-known',
-                      'cgi-bin',
-                      'php.ini',
-                      '.user.ini',
-                      'error_log',
-                      'api/config.php',
-                      'api/bookings.log',
-                      'deploy-extract.php',
-                      ZIP_NAME,
-                  ];
-
-                  function done(int $code, string $message): never {
-                      http_response_code($code);
-                      echo $message, "\n";
-                      exit;
+                  test -f deploy/deploy-extract.php || {
+                      echo "::error::deploy/deploy-extract.php not found in the repo"; exit 1;
                   }
 
-                  if (DEPLOY_TOKEN === '__DEPLOY_' . 'TOKEN__' || strlen(DEPLOY_TOKEN) < 24) {
-                      done(500, 'FAIL: deploy token was not substituted.');
-                  }
+                  # Inject the token into a COPY - the repo file keeps its placeholder.
+                  sed "s|__DEPLOY_TOKEN__|${TOKEN}|g" deploy/deploy-extract.php > upload/deploy-extract.php
 
-                  $supplied = (string) ($_GET['token'] ?? '');
-                  if ($supplied === '' || !hash_equals(DEPLOY_TOKEN, $supplied)) {
-                      done(403, 'FAIL: bad token.');
-                  }
+                  if grep -q '__DEPLOY_TOKEN__' upload/deploy-extract.php; then
+                      echo "::error::token placeholder was not replaced"; exit 1
+                  fi
 
-                  $root = __DIR__;
-                  $zipPath = $root . DIRECTORY_SEPARATOR . ZIP_NAME;
-
-                  if (!is_readable($zipPath)) {
-                      done(404, 'FAIL: ' . ZIP_NAME . ' not found.');
-                  }
-
-                  if (!class_exists('ZipArchive')) {
-                      done(500, 'FAIL: PHP zip extension not enabled.');
-                  }
-
-                  $zip = new ZipArchive();
-                  if ($zip->open($zipPath) !== true) {
-                      done(500, 'FAIL: could not open ' . ZIP_NAME . '.');
-                  }
-
-                  $shipped = [];
-                  for ($i = 0; $i < $zip->numFiles; $i++) {
-                      $entry = $zip->getNameIndex($i);
-                      if ($entry === false) continue;
-                      if (str_contains($entry, '..')) {
-                          $zip->close();
-                          done(400, 'FAIL: archive contains a path traversal entry.');
-                      }
-                      $shipped[rtrim($entry, '/')] = true;
-                  }
-
-                  if (!$zip->extractTo($root)) {
-                      $zip->close();
-                      done(500, 'FAIL: extraction failed.');
-                  }
-                  $zip->close();
-
-                  $extracted = count($shipped);
-                  $removed = 0;
-
-                  if (($_GET['purge'] ?? '') === '1') {
-                      $walk = new RecursiveIteratorIterator(
-                          new RecursiveDirectoryIterator($root, FilesystemIterator::SKIP_DOTS),
-                          RecursiveIteratorIterator::CHILD_FIRST
-                      );
-
-                      foreach ($walk as $item) {
-                          $relative = str_replace('\\', '/', substr($item->getPathname(), strlen($root) + 1));
-                          if (isset($shipped[$relative])) continue;
-
-                          $isProtected = false;
-                          foreach (PROTECTED_PATHS as $keep) {
-                              if ($relative === $keep || str_starts_with($relative, $keep . '/')) {
-                                  $isProtected = true;
-                                  break;
-                              }
-                          }
-                          if ($isProtected) continue;
-
-                          if ($item->isDir()) {
-                              if (@rmdir($item->getPathname())) $removed++;
-                          } elseif (@unlink($item->getPathname())) {
-                              $removed++;
-                          }
-                      }
-                  }
-
-                  @unlink($zipPath);
-                  $selfDeleted = @unlink(__FILE__);
-
-                  echo "OK\n";
-                  echo 'extracted: ' . $extracted . " entries\n";
-                  echo 'purged: ' . $removed . " paths\n";
-                  echo 'self-removed: ' . ($selfDeleted ? 'yes' : 'NO') . "\n";
-                  EOF
-
-                  sed -i "s/__DEPLOY_TOKEN__/${DEPLOY_TOKEN}/" upload/deploy-extract.php
                   ls -lh upload
 
-            - name: Upload zip + extractor via FTP
-              uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-              with:
-                  server: ${{ secrets.FTP_SERVER }}
-                  username: ${{ secrets.FTP_USERNAME }}
-                  password: ${{ secrets.FTP_PASSWORD }}
-                  local-dir: ./upload/
-                  server-dir: ./
-                  dangerous-clean-slate: false
+            - name: Upload zip + extractor over FTPS
+              env:
+                  FTP_SERVER: ${{ secrets.FTP_SERVER }}
+                  FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+                  FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+                  # Optional repo variable. Leave unset if your FTP user already
+                  # lands inside public_html; set it to public_html otherwise.
+                  FTP_REMOTE_DIR: ${{ vars.FTP_REMOTE_DIR }}
+              run: |
+                  set -euo pipefail
+
+                  DIR="${FTP_REMOTE_DIR:-}"
+                  DIR="${DIR#/}"; DIR="${DIR%/}"
+                  BASE="ftp://${FTP_SERVER}/${DIR:+$DIR/}"
+
+                  # Zip first, extractor second, so the extractor is never
+                  # reachable before the archive it needs is in place.
+                  for f in site.zip deploy-extract.php; do
+                      echo "Uploading $f"
+                      curl -sS --ssl-reqd --ftp-create-dirs --max-time 900 \
+                           --user "${FTP_USERNAME}:${FTP_PASSWORD}" \
+                           -T "upload/$f" "$BASE"
+                  done
+
+                  echo "Upload finished."
 
             - name: Extract on the server
               env:
                   SITE_URL: ${{ vars.SITE_URL || 'https://prodesignity.com' }}
               run: |
-                  URL="${SITE_URL%/}/deploy-extract.php?token=${DEPLOY_TOKEN}&purge=1"
-                  echo "Calling ${SITE_URL%/}/deploy-extract.php"
+                  set -uo pipefail
 
-                  RESPONSE=$(curl -sS --fail-with-body --max-time 180 "$URL") || {
+                  BASE="${SITE_URL%/}"
+                  echo "Calling ${BASE}/deploy-extract.php"
+
+                  RESPONSE="$(curl -sS --fail-with-body --max-time 300 \
+                      --get "${BASE}/deploy-extract.php" \
+                      --data-urlencode "token=${DEPLOY_TOKEN}" \
+                      --data "purge=1")" || {
                       echo "::error::Extractor call failed"
                       echo "$RESPONSE"
                       exit 1
@@ -189,6 +118,15 @@ jobs:
               env:
                   SITE_URL: ${{ vars.SITE_URL || 'https://prodesignity.com' }}
               run: |
-                  CODE=$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 "${SITE_URL%/}/")
+                  BASE="${SITE_URL%/}"
+
+                  CODE=$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 "${BASE}/")
                   echo "Homepage returned $CODE"
                   [ "$CODE" = "200" ] || { echo "::error::Homepage returned $CODE"; exit 1; }
+
+                  LEFTOVER=$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 "${BASE}/deploy-extract.php")
+                  if [ "$LEFTOVER" = "200" ]; then
+                      echo "::warning::deploy-extract.php is still on the server - delete it manually"
+                  else
+                      echo "Extractor is gone (HTTP $LEFTOVER)"
+                  fi
