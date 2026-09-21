@@ -13,7 +13,9 @@
     "onlyBuiltDependencies": [
       "bcrypt",
       "esbuild",
-      "unrs-resolver"
+      "unrs-resolver",
+      "@prisma/engines",
+      "prisma"
     ]
   }
 }
