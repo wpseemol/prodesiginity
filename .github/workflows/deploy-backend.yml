@@ -1,0 +1,145 @@
+name: Deploy Backend API
+
+# Future backend deploy — does NOT run on every push.
+# Use Actions → "Deploy Backend API" → Run workflow when ready.
+# Frontend Hostinger deploy stays the primary auto path on main.
+on:
+    workflow_dispatch:
+        inputs:
+            run_migrations:
+                description: "Run prisma db push before deploy"
+                type: boolean
+                default: false
+            deploy_target:
+                description: "Where to ship the API build"
+                type: choice
+                options:
+                    - build-only
+                    - ssh-vps
+                default: build-only
+
+concurrency:
+    group: deploy-backend
+    cancel-in-progress: true
+
+defaults:
+    run:
+        working-directory: backend
+
+jobs:
+    build-and-deploy:
+        runs-on: ubuntu-latest
+        environment: backend # optional GitHub Environment for secrets/protection
+
+        steps:
+            - name: Checkout Code
+              uses: actions/checkout@v4
+              with:
+                  submodules: recursive
+
+            - name: Setup Node
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+
+            - name: Install pnpm
+              uses: pnpm/action-setup@v4
+              with:
+                  version: 10
+                  run_install: false
+
+            - name: Install dependencies
+              working-directory: .
+              run: pnpm install
+
+            - name: Generate Prisma client
+              run: pnpm exec prisma generate
+
+            - name: Build TypeScript
+              run: pnpm run build
+
+            - name: Sanity-check the build
+              run: |
+                  test -f dist/index.js || { echo "::error::dist/index.js missing"; exit 1; }
+                  echo "Backend build OK"
+                  find dist -type f | head -n 40
+
+            - name: Prisma db push (optional)
+              if: ${{ inputs.run_migrations }}
+              env:
+                  DATABASE_URL: ${{ secrets.DATABASE_URL }}
+              run: |
+                  test -n "$DATABASE_URL" || { echo "::error::DATABASE_URL secret is required for migrations"; exit 1; }
+                  pnpm exec prisma db push
+
+            # ── build-only: verify CI build; no remote deploy yet ──────────
+            - name: Build-only complete
+              if: ${{ inputs.deploy_target == 'build-only' }}
+              run: |
+                  echo "Build succeeded. Switch deploy_target to ssh-vps when the VPS is ready."
+                  echo "Required secrets for ssh-vps:"
+                  echo "  BACKEND_SSH_HOST, BACKEND_SSH_USER, BACKEND_SSH_KEY"
+                  echo "  BACKEND_REMOTE_DIR (e.g. /var/www/prodesignity-api)"
+                  echo "  DATABASE_URL (for migrations)"
+
+            # ── ssh-vps: rsync dist + package files, then restart process ──
+            - name: Prepare SSH key
+              if: ${{ inputs.deploy_target == 'ssh-vps' }}
+              run: |
+                  set -euo pipefail
+                  mkdir -p ~/.ssh
+                  echo "${{ secrets.BACKEND_SSH_KEY }}" > ~/.ssh/deploy_key
+                  chmod 600 ~/.ssh/deploy_key
+                  ssh-keyscan -H "${{ secrets.BACKEND_SSH_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+            - name: Upload API to VPS
+              if: ${{ inputs.deploy_target == 'ssh-vps' }}
+              working-directory: .
+              env:
+                  HOST: ${{ secrets.BACKEND_SSH_HOST }}
+                  USER: ${{ secrets.BACKEND_SSH_USER }}
+                  REMOTE_DIR: ${{ secrets.BACKEND_REMOTE_DIR }}
+              run: |
+                  set -euo pipefail
+                  test -n "$HOST" && test -n "$USER" && test -n "$REMOTE_DIR" || {
+                    echo "::error::BACKEND_SSH_HOST, BACKEND_SSH_USER, BACKEND_REMOTE_DIR required"; exit 1;
+                  }
+
+                  rsync -az --delete \
+                    -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new" \
+                    --exclude node_modules \
+                    --exclude .env \
+                    backend/dist \
+                    backend/prisma \
+                    backend/package.json \
+                    backend/.npmrc \
+                    "${USER}@${HOST}:${REMOTE_DIR}/"
+
+                  # Root lockfile helps reproducible installs on the server
+                  rsync -az \
+                    -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new" \
+                    pnpm-lock.yaml \
+                    "${USER}@${HOST}:${REMOTE_DIR}/pnpm-lock.yaml"
+
+            - name: Install & restart on VPS
+              if: ${{ inputs.deploy_target == 'ssh-vps' }}
+              env:
+                  HOST: ${{ secrets.BACKEND_SSH_HOST }}
+                  USER: ${{ secrets.BACKEND_SSH_USER }}
+                  REMOTE_DIR: ${{ secrets.BACKEND_REMOTE_DIR }}
+              run: |
+                  set -euo pipefail
+                  ssh -i ~/.ssh/deploy_key "${USER}@${HOST}" bash -s <<EOF
+                  set -euo pipefail
+                  cd "${REMOTE_DIR}"
+                  corepack enable
+                  pnpm install --prod
+                  pnpm exec prisma generate
+                  # Prefer pm2 if available; otherwise document systemd unit name.
+                  if command -v pm2 >/dev/null 2>&1; then
+                    pm2 restart prodesignity-api || pm2 start dist/index.js --name prodesignity-api
+                    pm2 save
+                  else
+                    sudo systemctl restart prodesignity-api
+                  fi
+                  EOF
