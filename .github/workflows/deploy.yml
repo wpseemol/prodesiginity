@@ -1,7 +1,6 @@
 name: Deploy Static Site to Hostinger
 
-# PRIMARY auto-deploy (frontend → Hostinger).
-# Backend has a separate manual workflow: deploy-backend.yml
+# Auto-deploy frontend → Hostinger on main.
 # Same deploy flow as frontend/.github/workflows/deploy.yml,
 # but scoped to ./frontend for this monorepo.
 on:
