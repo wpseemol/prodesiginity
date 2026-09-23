@@ -27,9 +27,8 @@ jobs:
         steps:
             - name: Checkout Code
               uses: actions/checkout@v4
-              with:
-                  # frontend/backend are nested repos tracked as gitlinks
-                  submodules: recursive
+              # Do not use submodules: recursive — backend/frontend are broken
+              # gitlinks with no .gitmodules URL, which fails checkout.
 
             - name: Setup Node
               uses: actions/setup-node@v4
