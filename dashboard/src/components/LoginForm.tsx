@@ -1,13 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { apiBaseUrl, type StaffRole } from "../config";
-
-type LoginFormProps = {
-  role: StaffRole;
-  title: string;
-  subtitle: string;
-  successPath: string;
-};
+import { apiBaseUrl } from "../config";
 
 type AuthUser = {
   id: number;
@@ -16,12 +9,13 @@ type AuthUser = {
   role: string;
 };
 
-export default function LoginForm({
-  role,
-  title,
-  subtitle,
-  successPath,
-}: LoginFormProps) {
+function dashboardPathForRole(role: string): string | null {
+  if (role === "admin") return "/admin";
+  if (role === "employer") return "/employee";
+  return null;
+}
+
+export default function LoginForm() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -54,19 +48,17 @@ export default function LoginForm({
       }
 
       const user = data.user as AuthUser | undefined;
-      if (!user || user.role !== role) {
+      const nextPath = user ? dashboardPathForRole(user.role) : null;
+
+      if (!user || !nextPath) {
         setStatus("error");
-        setError(
-          role === "admin"
-            ? "This account does not have admin access."
-            : "This account does not have employee access.",
-        );
+        setError("This account does not have staff dashboard access.");
         return;
       }
 
       localStorage.setItem("dashboard_token", data.token);
       localStorage.setItem("dashboard_user", JSON.stringify(user));
-      navigate(successPath);
+      navigate(nextPath);
     } catch {
       setStatus("error");
       setError("Could not reach the server. Please try again.");
@@ -76,11 +68,11 @@ export default function LoginForm({
   return (
     <form className="login-form" onSubmit={handleSubmit}>
       <div className="login-form__header">
-        <p className="login-form__eyebrow">
-          {role === "admin" ? "Admin Portal" : "Employee Portal"}
+        <p className="login-form__eyebrow">Staff Portal</p>
+        <h1>Sign in</h1>
+        <p className="login-form__subtitle">
+          Access your admin or employee dashboard.
         </p>
-        <h1>{title}</h1>
-        <p className="login-form__subtitle">{subtitle}</p>
       </div>
 
       {error && (

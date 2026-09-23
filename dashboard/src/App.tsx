@@ -1,23 +1,20 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
-import AdminLoginPage from "./pages/AdminLoginPage";
-import EmployeeLoginPage from "./pages/EmployeeLoginPage";
-import PortalHomePage from "./pages/PortalHomePage";
+import LoginPage from "./pages/LoginPage";
 import StaffHomePage from "./pages/StaffHomePage";
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<PortalHomePage />} />
-        <Route path="/admin/login" element={<AdminLoginPage />} />
-        <Route path="/employee/login" element={<EmployeeLoginPage />} />
+        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="/login" element={<LoginPage />} />
         <Route
           path="/admin"
           element={
             <StaffHomePage
               expectedRole="admin"
               title="Admin dashboard"
-              loginPath="/admin/login"
+              loginPath="/login"
             />
           }
         />
@@ -27,11 +24,11 @@ export default function App() {
             <StaffHomePage
               expectedRole="employer"
               title="Employee dashboard"
-              loginPath="/employee/login"
+              loginPath="/login"
             />
           }
         />
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>
   );
