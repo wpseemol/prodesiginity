@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef } from "react";
 import {
   CheckIcon,
   ImagePlusIcon,
@@ -16,6 +16,17 @@ import type { SectionFormProps } from "@/components/homepage/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useAppDispatch, useAppSelector } from "@/lib/store/hooks";
+import {
+  adjustEditIndexAfterDelete,
+  cancelEditor,
+  openCreate,
+  openEdit,
+  setFieldErrors,
+  setFormField,
+  setFormLogo,
+  setUploading,
+} from "@/lib/store/brandsEditorSlice";
 import { cn } from "@/lib/utils";
 import {
   brandFormSchema,
@@ -32,17 +43,11 @@ import {
 
 export type BrandDraft = BrandFormValues;
 
-const EMPTY_BRAND: BrandDraft = {
-  name: "",
-  logo: "",
-  color: "#6366f1",
-};
-
 function normalizeBrand(raw: {
   name?: string;
   logo?: string;
   color?: string;
-}): BrandDraft {
+}): BrandFormValues {
   return {
     name: asStr(raw.name),
     logo: asStr(raw.logo),
@@ -115,58 +120,33 @@ async function uploadLogo(file: File): Promise<string | null> {
 }
 
 export function BrandsSectionForm({ content, onChange }: SectionFormProps) {
+  const dispatch = useAppDispatch();
+  const { mode, editIndex, form, fieldErrors, uploading } = useAppSelector(
+    (s) => s.brandsEditor,
+  );
+
   const brands = asArr<{ name?: string; logo?: string; color?: string }>(
     content.brands,
   ).map(normalizeBrand);
 
   const fileRef = useRef<HTMLInputElement>(null);
-  const [mode, setMode] = useState<"idle" | "create" | "edit">("idle");
-  const [editIndex, setEditIndex] = useState<number | null>(null);
-  const [form, setForm] = useState<BrandDraft>(EMPTY_BRAND);
-  const [fieldErrors, setFieldErrors] = useState<
-    Partial<Record<keyof BrandDraft, string>>
-  >({});
-  const [uploading, setUploading] = useState(false);
 
-  const setBrands = (next: BrandDraft[]) =>
+  const setBrands = (next: BrandFormValues[]) =>
     onChange({ ...content, brands: next });
-
-  const openCreate = () => {
-    setMode("create");
-    setEditIndex(null);
-    setForm(EMPTY_BRAND);
-    setFieldErrors({});
-  };
-
-  const openEdit = (index: number) => {
-    setMode("edit");
-    setEditIndex(index);
-    setForm({ ...brands[index] });
-    setFieldErrors({});
-  };
-
-  const cancelForm = () => {
-    setMode("idle");
-    setEditIndex(null);
-    setForm(EMPTY_BRAND);
-    setFieldErrors({});
-    if (fileRef.current) fileRef.current.value = "";
-  };
 
   const onPickLogo = async (file: File | undefined) => {
     if (!file) return;
-    setUploading(true);
+    dispatch(setUploading(true));
     try {
       const url = await uploadLogo(file);
       if (url) {
-        setForm((f) => ({ ...f, logo: url }));
-        setFieldErrors((e) => ({ ...e, logo: undefined }));
+        dispatch(setFormLogo(url));
         toast.success("Logo uploaded.");
       }
     } catch {
       toast.error("Could not reach the server.");
     } finally {
-      setUploading(false);
+      dispatch(setUploading(false));
       if (fileRef.current) fileRef.current.value = "";
     }
   };
@@ -174,19 +154,19 @@ export function BrandsSectionForm({ content, onChange }: SectionFormProps) {
   const submitForm = () => {
     const parsed = brandFormSchema.safeParse(form);
     if (!parsed.success) {
-      const next: Partial<Record<keyof BrandDraft, string>> = {};
+      const next: Partial<Record<keyof BrandFormValues, string>> = {};
       for (const issue of parsed.error.issues) {
         const key = issue.path[0];
         if (typeof key === "string" && !(key in next)) {
-          next[key as keyof BrandDraft] = issue.message;
+          next[key as keyof BrandFormValues] = issue.message;
         }
       }
-      setFieldErrors(next);
+      dispatch(setFieldErrors(next));
       toast.error(parsed.error.issues[0]?.message ?? "Fix the form errors.");
       return;
     }
 
-    setFieldErrors({});
+    dispatch(setFieldErrors({}));
     const payload = parsed.data;
 
     if (mode === "create") {
@@ -199,16 +179,14 @@ export function BrandsSectionForm({ content, onChange }: SectionFormProps) {
       toast.success("Brand updated — Save section to publish.");
     }
 
-    cancelForm();
+    dispatch(cancelEditor());
+    if (fileRef.current) fileRef.current.value = "";
   };
 
   const deleteBrand = (index: number) => {
     const brand = brands[index];
     if (!window.confirm(`Delete “${brand.name}”?`)) return;
-    if (editIndex === index) cancelForm();
-    else if (editIndex !== null && editIndex > index) {
-      setEditIndex(editIndex - 1);
-    }
+    dispatch(adjustEditIndexAfterDelete({ deletedIndex: index }));
     setBrands(brands.filter((_, i) => i !== index));
     toast.success("Brand removed — Save section to publish.");
   };
@@ -225,7 +203,11 @@ export function BrandsSectionForm({ content, onChange }: SectionFormProps) {
           {brands.length} logo{brands.length === 1 ? "" : "s"}
         </p>
         {!showForm ? (
-          <Button type="button" size="sm" onClick={openCreate}>
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => dispatch(openCreate())}
+          >
             <PlusIcon />
             Add logo
           </Button>
@@ -248,7 +230,7 @@ export function BrandsSectionForm({ content, onChange }: SectionFormProps) {
               type="button"
               size="icon-sm"
               variant="ghost"
-              onClick={cancelForm}
+              onClick={() => dispatch(cancelEditor())}
               aria-label="Close"
             >
               <XIcon />
@@ -315,10 +297,11 @@ export function BrandsSectionForm({ content, onChange }: SectionFormProps) {
                 <Input
                   id="brandName"
                   value={form.name}
-                  onChange={(e) => {
-                    setForm((f) => ({ ...f, name: e.target.value }));
-                    setFieldErrors((err) => ({ ...err, name: undefined }));
-                  }}
+                  onChange={(e) =>
+                    dispatch(
+                      setFormField({ key: "name", value: e.target.value }),
+                    )
+                  }
                   placeholder="Brand name"
                   className={cn("h-9", fieldErrors.name && "border-destructive")}
                   aria-invalid={Boolean(fieldErrors.name)}
@@ -339,18 +322,20 @@ export function BrandsSectionForm({ content, onChange }: SectionFormProps) {
                     id="brandColor"
                     type="color"
                     value={form.color || "#6366f1"}
-                    onChange={(e) => {
-                      setForm((f) => ({ ...f, color: e.target.value }));
-                      setFieldErrors((err) => ({ ...err, color: undefined }));
-                    }}
+                    onChange={(e) =>
+                      dispatch(
+                        setFormField({ key: "color", value: e.target.value }),
+                      )
+                    }
                     className="size-9 shrink-0 cursor-pointer rounded-md border bg-transparent p-0.5"
                   />
                   <Input
                     value={form.color}
-                    onChange={(e) => {
-                      setForm((f) => ({ ...f, color: e.target.value }));
-                      setFieldErrors((err) => ({ ...err, color: undefined }));
-                    }}
+                    onChange={(e) =>
+                      dispatch(
+                        setFormField({ key: "color", value: e.target.value }),
+                      )
+                    }
                     placeholder="#6366f1"
                     className={cn(
                       "h-9 font-mono text-xs",
@@ -380,7 +365,7 @@ export function BrandsSectionForm({ content, onChange }: SectionFormProps) {
                   type="button"
                   size="sm"
                   variant="ghost"
-                  onClick={cancelForm}
+                  onClick={() => dispatch(cancelEditor())}
                 >
                   Cancel
                 </Button>
@@ -394,7 +379,11 @@ export function BrandsSectionForm({ content, onChange }: SectionFormProps) {
         <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed py-12">
           <ImagePlusIcon className="size-8 text-muted-foreground/50" />
           <p className="text-sm text-muted-foreground">No brand logos yet</p>
-          <Button type="button" size="sm" onClick={openCreate}>
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => dispatch(openCreate())}
+          >
             <PlusIcon />
             Add first logo
           </Button>
@@ -445,7 +434,9 @@ export function BrandsSectionForm({ content, onChange }: SectionFormProps) {
                     type="button"
                     size="icon-sm"
                     variant={isEditing ? "secondary" : "ghost"}
-                    onClick={() => openEdit(index)}
+                    onClick={() =>
+                      dispatch(openEdit({ index, brand }))
+                    }
                     aria-label={`Edit ${brand.name}`}
                   >
                     <PencilIcon />

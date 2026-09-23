@@ -5,7 +5,6 @@ export const HOMEPAGE_SECTION_KEYS = [
   "process",
   "recentProjects",
   "pricing",
-  "team",
 ] as const;
 
 export type HomepageSectionKey = (typeof HOMEPAGE_SECTION_KEYS)[number];
@@ -28,7 +27,6 @@ export const SECTION_HINTS: Record<HomepageSectionKey, string> = {
   process: "How we work steps",
   recentProjects: "Add or edit videos — upload file + thumbnail",
   pricing: "Pricing plans and footer CTA",
-  team: "Team section headings + member cards (photos)",
 };
 
 export const TEXTAREA_CLASS =

@@ -1,29 +1,30 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   CheckIcon,
+  FilmIcon,
+  ImagePlusIcon,
+  Loader2Icon,
   PencilIcon,
-  PlusIcon,
   Trash2Icon,
-  XIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { mediaUrl } from "@/config";
+import { apiFetch } from "@/lib/api";
 import { asArr, asStr } from "@/components/homepage/helpers";
-import { MediaUploadField } from "@/components/homepage/MediaUploadField";
+import {
+  ContentCard,
+  EditorPanel,
+  EmptyState,
+  FIELD_TEXTAREA,
+  Field,
+  FieldGrid,
+  ItemCard,
+  SectionToolbar,
+} from "@/components/homepage/FormUi";
 import type { SectionFormProps } from "@/components/homepage/types";
-import { TEXTAREA_CLASS } from "@/components/homepage/types";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { cn } from "@/lib/utils";
 
 type ProjectDraft = {
   id: string;
@@ -57,6 +58,34 @@ function normalizeProject(raw: {
   };
 }
 
+async function uploadMedia(
+  file: File,
+  kind: "image" | "video",
+): Promise<string | null> {
+  if (kind === "image" && !file.type.startsWith("image/")) {
+    toast.error("Choose an image file.");
+    return null;
+  }
+  if (kind === "video" && !file.type.startsWith("video/")) {
+    toast.error("Choose a video file (MP4, WebM, or MOV).");
+    return null;
+  }
+  const body = new FormData();
+  body.append("file", file);
+  const res = await apiFetch("/admin/homepage/media", {
+    method: "POST",
+    body,
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    toast.error(
+      typeof data.message === "string" ? data.message : "Upload failed.",
+    );
+    return null;
+  }
+  return String(data.url ?? "");
+}
+
 export function RecentProjectsSectionForm({
   content,
   onChange,
@@ -69,9 +98,12 @@ export function RecentProjectsSectionForm({
     thumbnail?: string;
   }>(content.projects).map(normalizeProject);
 
+  const videoRef = useRef<HTMLInputElement>(null);
+  const thumbRef = useRef<HTMLInputElement>(null);
   const [mode, setMode] = useState<"idle" | "create" | "edit">("idle");
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [form, setForm] = useState<ProjectDraft>(emptyProject);
+  const [uploading, setUploading] = useState<"video" | "thumb" | null>(null);
 
   const set = (patch: Record<string, unknown>) =>
     onChange({ ...content, ...patch });
@@ -94,6 +126,31 @@ export function RecentProjectsSectionForm({
     setMode("idle");
     setEditIndex(null);
     setForm(emptyProject());
+    if (videoRef.current) videoRef.current.value = "";
+    if (thumbRef.current) thumbRef.current.value = "";
+  };
+
+  const onUpload = async (
+    file: File | undefined,
+    kind: "video" | "thumb",
+  ) => {
+    if (!file) return;
+    setUploading(kind);
+    try {
+      const url = await uploadMedia(file, kind === "video" ? "video" : "image");
+      if (url) {
+        setForm((f) =>
+          kind === "video" ? { ...f, videoUrl: url } : { ...f, thumbnail: url },
+        );
+        toast.success(kind === "video" ? "Video uploaded." : "Thumbnail uploaded.");
+      }
+    } catch {
+      toast.error("Could not reach the server.");
+    } finally {
+      setUploading(null);
+      if (kind === "video" && videoRef.current) videoRef.current.value = "";
+      if (kind === "thumb" && thumbRef.current) thumbRef.current.value = "";
+    }
   };
 
   const submitForm = () => {
@@ -116,12 +173,12 @@ export function RecentProjectsSectionForm({
 
     if (mode === "create") {
       setProjects([...projects, payload]);
-      toast.success("Video added — click Save section to publish.");
+      toast.success("Video added — Save section to publish.");
     } else if (mode === "edit" && editIndex !== null) {
       const next = [...projects];
       next[editIndex] = payload;
       setProjects(next);
-      toast.success("Video updated — click Save section to publish.");
+      toast.success("Video updated — Save section to publish.");
     }
     cancelForm();
   };
@@ -134,243 +191,254 @@ export function RecentProjectsSectionForm({
       setEditIndex(editIndex - 1);
     }
     setProjects(projects.filter((_, i) => i !== index));
-    toast.success("Video removed — click Save section to publish.");
+    toast.success("Video removed — Save section to publish.");
   };
 
-  return (
-    <div className="grid gap-6">
-      <div className="grid gap-2 sm:grid-cols-2">
-        <div className="grid gap-2">
-          <Label>Eyebrow</Label>
-          <Input
-            value={asStr(content.eyebrow)}
-            onChange={(e) => set({ eyebrow: e.target.value })}
-          />
-        </div>
-        <div className="grid gap-2">
-          <Label>Headline</Label>
-          <Input
-            value={asStr(content.headline)}
-            onChange={(e) => set({ headline: e.target.value })}
-          />
-        </div>
-        <div className="grid gap-2">
-          <Label>Headline accent</Label>
-          <Input
-            value={asStr(content.headlineAccent)}
-            onChange={(e) => set({ headlineAccent: e.target.value })}
-          />
-        </div>
-      </div>
-      <div className="grid gap-2">
-        <Label>Description</Label>
-        <textarea
-          className={TEXTAREA_CLASS}
-          value={asStr(content.description)}
-          onChange={(e) => set({ description: e.target.value })}
-        />
-      </div>
+  const showForm = mode === "create" || mode === "edit";
+  const thumbPreview = mediaUrl(form.thumbnail);
+  const videoPreview = mediaUrl(form.videoUrl);
 
-      <div className="grid gap-6 lg:grid-cols-[380px_1fr]">
-        <div
-          className={
-            mode === "edit"
-              ? "grid gap-4 rounded-xl border border-amber-500/40 bg-amber-500/5 p-4"
-              : mode === "create"
-                ? "grid gap-4 rounded-xl border border-primary/40 bg-primary/5 p-4"
-                : "grid gap-4 rounded-xl border border-dashed bg-muted/20 p-4"
-          }
+  return (
+    <div className="grid gap-4">
+      <ContentCard title="Section header">
+        <FieldGrid cols={2}>
+          <Field label="Eyebrow">
+            <Input
+              className="h-9"
+              value={asStr(content.eyebrow)}
+              onChange={(e) => set({ eyebrow: e.target.value })}
+            />
+          </Field>
+          <Field label="Headline">
+            <Input
+              className="h-9"
+              value={asStr(content.headline)}
+              onChange={(e) => set({ headline: e.target.value })}
+            />
+          </Field>
+          <Field label="Headline accent">
+            <Input
+              className="h-9"
+              value={asStr(content.headlineAccent)}
+              onChange={(e) => set({ headlineAccent: e.target.value })}
+            />
+          </Field>
+        </FieldGrid>
+        <div className="mt-3">
+          <Field label="Description">
+            <textarea
+              className={FIELD_TEXTAREA}
+              value={asStr(content.description)}
+              onChange={(e) => set({ description: e.target.value })}
+            />
+          </Field>
+        </div>
+      </ContentCard>
+
+      <SectionToolbar
+        countLabel={`${projects.length} video${projects.length === 1 ? "" : "s"}`}
+        addLabel="Add video"
+        showAdd={!showForm}
+        onAdd={openCreate}
+      />
+
+      {showForm ? (
+        <EditorPanel
+          mode={mode === "edit" ? "edit" : "create"}
+          title={mode === "create" ? "New video" : "Edit video"}
+          onClose={cancelForm}
         >
-          {mode === "idle" ? (
-            <>
-              <div className="space-y-1">
-                <p className="text-sm font-semibold">Videos</p>
-                <p className="text-xs text-muted-foreground">
-                  Create a new video, or Edit an existing one to change title,
-                  file, or thumbnail.
-                </p>
-              </div>
-              <Button type="button" onClick={openCreate}>
-                <PlusIcon />
-                Create video
-              </Button>
-            </>
-          ) : (
-            <>
-              <div className="flex items-start justify-between gap-2">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-semibold">
-                      {mode === "create" ? "Create video" : "Update video"}
-                    </p>
-                    <Badge
-                      variant={mode === "create" ? "default" : "secondary"}
-                    >
-                      {mode === "create" ? "New" : "Editing"}
-                    </Badge>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {mode === "create"
-                      ? "Upload a video file and optional thumbnail."
-                      : `Editing “${projects[editIndex ?? 0]?.title ?? "video"}”.`}
-                  </p>
-                </div>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+            <div className="flex shrink-0 flex-col gap-3">
+              <button
+                type="button"
+                disabled={uploading === "video"}
+                onClick={() => videoRef.current?.click()}
+                className={cn(
+                  "group relative flex size-28 flex-col items-center justify-center gap-1 overflow-hidden rounded-xl border border-dashed bg-background/60 transition-colors hover:border-primary hover:bg-primary/5",
+                  uploading === "video" && "pointer-events-none opacity-60",
+                )}
+              >
+                {videoPreview ? (
+                  <video
+                    src={videoPreview}
+                    className="size-full object-cover"
+                    muted
+                    playsInline
+                  />
+                ) : uploading === "video" ? (
+                  <Loader2Icon className="size-5 animate-spin text-muted-foreground" />
+                ) : (
+                  <>
+                    <FilmIcon className="size-6 text-muted-foreground" />
+                    <span className="text-[11px] text-muted-foreground">
+                      Video
+                    </span>
+                  </>
+                )}
+              </button>
+              <button
+                type="button"
+                disabled={uploading === "thumb"}
+                onClick={() => thumbRef.current?.click()}
+                className={cn(
+                  "group relative flex size-28 flex-col items-center justify-center gap-1 overflow-hidden rounded-xl border border-dashed bg-background/60 transition-colors hover:border-primary hover:bg-primary/5",
+                  uploading === "thumb" && "pointer-events-none opacity-60",
+                )}
+              >
+                {thumbPreview ? (
+                  <img
+                    src={thumbPreview}
+                    alt=""
+                    className="size-full object-cover"
+                  />
+                ) : uploading === "thumb" ? (
+                  <Loader2Icon className="size-5 animate-spin text-muted-foreground" />
+                ) : (
+                  <>
+                    <ImagePlusIcon className="size-6 text-muted-foreground" />
+                    <span className="text-[11px] text-muted-foreground">
+                      Thumb
+                    </span>
+                  </>
+                )}
+              </button>
+              <p className="max-w-28 text-[10px] leading-snug text-muted-foreground">
+                MP4/WebM · thumb image
+              </p>
+              <input
+                ref={videoRef}
+                type="file"
+                accept="video/mp4,video/webm,video/quicktime"
+                className="sr-only"
+                onChange={(e) => void onUpload(e.target.files?.[0], "video")}
+              />
+              <input
+                ref={thumbRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                className="sr-only"
+                onChange={(e) => void onUpload(e.target.files?.[0], "thumb")}
+              />
+            </div>
+
+            <div className="grid min-w-0 flex-1 gap-3">
+              <Field label="Title">
+                <Input
+                  className="h-9"
+                  value={form.title}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, title: e.target.value }))
+                  }
+                />
+              </Field>
+              <FieldGrid cols={2}>
+                <Field label="Id">
+                  <Input
+                    className="h-9"
+                    value={form.id}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, id: e.target.value }))
+                    }
+                  />
+                </Field>
+                <Field label="YouTube id">
+                  <Input
+                    className="h-9"
+                    value={form.youtubeId}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, youtubeId: e.target.value }))
+                    }
+                    placeholder="Optional"
+                  />
+                </Field>
+              </FieldGrid>
+              <div className="flex flex-wrap gap-2 pt-1">
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={submitForm}
+                  disabled={Boolean(uploading)}
+                >
+                  <CheckIcon />
+                  {mode === "create" ? "Add" : "Save"}
+                </Button>
                 <Button
                   type="button"
                   size="sm"
                   variant="ghost"
                   onClick={cancelForm}
                 >
-                  <XIcon />
-                </Button>
-              </div>
-
-              <div className="grid gap-2">
-                <Label>Title</Label>
-                <Input
-                  value={form.title}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, title: e.target.value }))
-                  }
-                  placeholder="Video title"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label>Id (slug)</Label>
-                <Input
-                  value={form.id}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, id: e.target.value }))
-                  }
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label>YouTube id (optional)</Label>
-                <Input
-                  value={form.youtubeId}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, youtubeId: e.target.value }))
-                  }
-                  placeholder="Leave empty if uploading a file"
-                />
-              </div>
-              <MediaUploadField
-                label="Video file"
-                kind="video"
-                value={form.videoUrl}
-                hint="MP4 / WebM / MOV, or paste an external URL"
-                onChange={(url) => setForm((f) => ({ ...f, videoUrl: url }))}
-              />
-              <MediaUploadField
-                label="Thumbnail image"
-                kind="image"
-                value={form.thumbnail}
-                hint="Poster shown before play"
-                onChange={(url) => setForm((f) => ({ ...f, thumbnail: url }))}
-              />
-              <div className="flex flex-wrap gap-2">
-                <Button type="button" onClick={submitForm}>
-                  <CheckIcon />
-                  {mode === "create" ? "Add video" : "Update video"}
-                </Button>
-                <Button type="button" variant="outline" onClick={cancelForm}>
                   Cancel
                 </Button>
               </div>
-            </>
-          )}
-        </div>
-
-        <div className="rounded-xl border">
-          <div className="flex items-center justify-between border-b px-4 py-3">
-            <div>
-              <p className="text-sm font-semibold">Video roster</p>
-              <p className="text-xs text-muted-foreground">
-                {projects.length} video{projects.length === 1 ? "" : "s"}
-              </p>
             </div>
-            {mode === "idle" ? (
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={openCreate}
-              >
-                <PlusIcon />
-                Create
-              </Button>
-            ) : null}
           </div>
+        </EditorPanel>
+      ) : null}
 
-          {projects.length === 0 ? (
-            <p className="px-4 py-10 text-center text-sm text-muted-foreground">
-              No videos yet. Create the first one.
-            </p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Thumb</TableHead>
-                  <TableHead>Title</TableHead>
-                  <TableHead className="w-[160px]" />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {projects.map((project, index) => {
-                  const isEditing = mode === "edit" && editIndex === index;
-                  const thumb = mediaUrl(project.thumbnail);
-                  return (
-                    <TableRow
-                      key={project.id}
-                      className={isEditing ? "bg-amber-500/10" : undefined}
+      {projects.length === 0 && !showForm ? (
+        <EmptyState
+          message="No videos yet"
+          actionLabel="Add first video"
+          onAction={openCreate}
+        />
+      ) : (
+        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+          {projects.map((project, index) => {
+            const isEditing = mode === "edit" && editIndex === index;
+            const thumb = mediaUrl(project.thumbnail);
+            return (
+              <ItemCard key={project.id} active={isEditing}>
+                <div className="flex items-center gap-3">
+                  <div className="size-12 shrink-0 overflow-hidden rounded-lg border bg-muted">
+                    {thumb ? (
+                      <img
+                        src={thumb}
+                        alt=""
+                        className="size-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex size-full items-center justify-center">
+                        <FilmIcon className="size-4 text-muted-foreground" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">
+                      {project.title}
+                    </p>
+                    <p className="truncate text-[10px] text-muted-foreground">
+                      {project.videoUrl || project.youtubeId || "No media"}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 gap-1">
+                    <Button
+                      type="button"
+                      size="icon-sm"
+                      variant={isEditing ? "secondary" : "ghost"}
+                      onClick={() => openEdit(index)}
+                      aria-label={`Edit ${project.title}`}
                     >
-                      <TableCell>
-                        <div className="size-14 overflow-hidden rounded-lg border bg-muted">
-                          {thumb ? (
-                            <img
-                              src={thumb}
-                              alt=""
-                              className="size-full object-cover"
-                            />
-                          ) : null}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <p className="font-medium">{project.title}</p>
-                        <p className="truncate text-xs text-muted-foreground">
-                          {project.videoUrl || project.youtubeId || "No media"}
-                        </p>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1.5">
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant={isEditing ? "secondary" : "outline"}
-                            onClick={() => openEdit(index)}
-                          >
-                            <PencilIcon />
-                            Edit
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => deleteProject(index)}
-                          >
-                            <Trash2Icon />
-                            Delete
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          )}
+                      <PencilIcon />
+                    </Button>
+                    <Button
+                      type="button"
+                      size="icon-sm"
+                      variant="ghost"
+                      className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      onClick={() => deleteProject(index)}
+                      aria-label={`Delete ${project.title}`}
+                    >
+                      <Trash2Icon />
+                    </Button>
+                  </div>
+                </div>
+              </ItemCard>
+            );
+          })}
         </div>
-      </div>
+      )}
     </div>
   );
 }

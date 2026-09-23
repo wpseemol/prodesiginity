@@ -4,7 +4,6 @@ import { PricingSectionForm } from "@/components/homepage/forms/PricingSectionFo
 import { ProcessSectionForm } from "@/components/homepage/forms/ProcessSectionForm";
 import { RecentProjectsSectionForm } from "@/components/homepage/forms/RecentProjectsSectionForm";
 import { StatsSectionForm } from "@/components/homepage/forms/StatsSectionForm";
-import { TeamSectionForm } from "@/components/homepage/forms/TeamSectionForm";
 import type {
   HomepageSectionKey,
   SectionFormProps,
@@ -34,8 +33,6 @@ export function SectionEditor({
       );
     case "pricing":
       return <PricingSectionForm content={content} onChange={onChange} />;
-    case "team":
-      return <TeamSectionForm content={content} onChange={onChange} />;
     default:
       return null;
   }

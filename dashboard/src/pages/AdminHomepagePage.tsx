@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   Loader2Icon,
@@ -7,14 +7,11 @@ import {
   LayoutTemplateIcon,
 } from "lucide-react";
 import { toast } from "sonner";
-import { apiFetch } from "@/lib/api";
-import { asObj, cloneContent } from "@/components/homepage/helpers";
 import { SectionEditor } from "@/components/homepage/SectionEditor";
 import {
   HOMEPAGE_SECTION_KEYS,
   SECTION_HINTS,
   type HomepageSectionKey,
-  type SectionPayload,
 } from "@/components/homepage/types";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -29,110 +26,47 @@ import {
 } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { useAppDispatch, useAppSelector } from "@/lib/store/hooks";
+import {
+  fetchHomepageSections,
+  resetDraft,
+  saveHomepageSection,
+  selectHomepageDirty,
+  setActiveKey,
+  setDraft,
+} from "@/lib/store/homepageSlice";
 import { cn } from "@/lib/utils";
 
 function HomepageCmsManager() {
-  const [sections, setSections] = useState<Record<string, SectionPayload>>({});
-  const [activeKey, setActiveKey] = useState<HomepageSectionKey>("hero");
-  const [draft, setDraft] = useState<Record<string, unknown>>({});
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const dispatch = useAppDispatch();
+  const {
+    sections,
+    activeKey,
+    draft,
+    loading,
+    saving,
+    loadError,
+  } = useAppSelector((s) => s.homepage);
+  const dirty = useAppSelector(selectHomepageDirty);
 
   const active = sections[activeKey];
   const activeLabel = active?.label ?? activeKey;
 
-  const dirty = useMemo(() => {
-    if (!active) return false;
-    try {
-      return JSON.stringify(draft) !== JSON.stringify(active.content);
-    } catch {
-      return true;
-    }
-  }, [draft, active]);
-
-  const load = async () => {
-    setLoading(true);
-    setLoadError(null);
-    try {
-      const res = await apiFetch("/admin/homepage");
-      const data = await res.json();
-      if (!res.ok) {
-        setLoadError(
-          typeof data.message === "string"
-            ? data.message
-            : "Could not load homepage sections.",
-        );
-        return;
-      }
-      const raw = (data.sections ?? {}) as Record<
-        string,
-        { label: string; content: unknown; updatedAt: string }
-      >;
-      const next: Record<string, SectionPayload> = {};
-      for (const [key, value] of Object.entries(raw)) {
-        next[key] = {
-          label: value.label,
-          content: asObj(value.content),
-          updatedAt: value.updatedAt,
-        };
-      }
-      setSections(next);
-      setDraft(cloneContent(next[activeKey]?.content));
-    } catch {
-      setLoadError("Could not reach the server.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    void load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount once
-  }, []);
+    void dispatch(fetchHomepageSections());
+  }, [dispatch]);
 
-  useEffect(() => {
-    const content = sections[activeKey]?.content;
-    if (content !== undefined) {
-      setDraft(cloneContent(content));
-    }
-  }, [activeKey, sections]);
-
-  const resetDraft = () => {
-    if (active) setDraft(cloneContent(active.content));
-  };
-
-  const save = async () => {
-    setSaving(true);
-    try {
-      const res = await apiFetch(`/admin/homepage/${activeKey}`, {
-        method: "PUT",
-        body: JSON.stringify({ content: draft }),
-      });
-      const body = await res.json();
-      if (!res.ok) {
-        toast.error(
-          typeof body.message === "string" ? body.message : "Save failed.",
-        );
-        return;
-      }
-
-      const saved = asObj(body.content);
-      setSections((prev) => ({
-        ...prev,
-        [activeKey]: {
-          label: body.label ?? prev[activeKey]?.label ?? activeKey,
-          content: saved,
-          updatedAt: body.updatedAt,
-        },
-      }));
-      setDraft(cloneContent(saved));
+  const handleSave = async () => {
+    const result = await dispatch(saveHomepageSection());
+    if (saveHomepageSection.fulfilled.match(result)) {
       toast.success(`Saved “${activeLabel}”. Live site refreshes within ~60s.`);
-    } catch {
-      toast.error("Could not reach the server.");
-    } finally {
-      setSaving(false);
+      return;
     }
+    const message =
+      typeof result.payload === "string"
+        ? result.payload
+        : "Could not reach the server.";
+    toast.error(message);
   };
 
   if (loading) {
@@ -154,7 +88,7 @@ function HomepageCmsManager() {
             type="button"
             size="sm"
             variant="outline"
-            onClick={() => void load()}
+            onClick={() => void dispatch(fetchHomepageSections())}
           >
             Retry
           </Button>
@@ -181,7 +115,7 @@ function HomepageCmsManager() {
             <Button
               type="button"
               variant="outline"
-              onClick={resetDraft}
+              onClick={() => dispatch(resetDraft())}
               disabled={!dirty || saving}
             >
               <RotateCcwIcon />
@@ -189,7 +123,7 @@ function HomepageCmsManager() {
             </Button>
             <Button
               type="button"
-              onClick={() => void save()}
+              onClick={() => void handleSave()}
               disabled={saving || !dirty}
             >
               {saving ? (
@@ -215,7 +149,9 @@ function HomepageCmsManager() {
                 <button
                   key={key}
                   type="button"
-                  onClick={() => setActiveKey(key)}
+                  onClick={() =>
+                    dispatch(setActiveKey(key as HomepageSectionKey))
+                  }
                   className={cn(
                     "rounded-full px-3.5 py-1.5 text-xs font-semibold tracking-wide transition-colors",
                     isActive
@@ -256,7 +192,7 @@ function HomepageCmsManager() {
           <SectionEditor
             sectionKey={activeKey}
             content={draft}
-            onChange={setDraft}
+            onChange={(next) => dispatch(setDraft(next))}
           />
         </CardContent>
       </Card>
