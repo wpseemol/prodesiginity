@@ -1,12 +1,40 @@
-import { useEffect, useState, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
-import { apiBaseUrl } from "../config";
+import { useEffect, useState, type ComponentType, type FormEvent } from "react";
 import {
-  clearDashboardSession,
-  getDashboardToken,
-  getDashboardUser,
-  type DashboardUser,
-} from "../lib/session";
+  Loader2Icon,
+  ShieldCheckIcon,
+  UserPlusIcon,
+  UsersIcon,
+} from "lucide-react";
+import { toast } from "sonner";
+import { apiBaseUrl } from "@/config";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 type StaffUser = {
   id: number;
@@ -16,49 +44,184 @@ type StaffUser = {
   created_at: string;
 };
 
-export default function AdminDashboardPage() {
-  const navigate = useNavigate();
-  const [token, setToken] = useState<string | null>(null);
-  const [user, setUser] = useState<DashboardUser | null>(null);
-  const [authReady, setAuthReady] = useState(false);
+function StatCard({
+  title,
+  value,
+  hint,
+  icon: Icon,
+}: {
+  title: string;
+  value: string | number;
+  hint: string;
+  icon: ComponentType<{ className?: string }>;
+}) {
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-sm font-medium">{title}</CardTitle>
+        <Icon className="size-4 text-muted-foreground" />
+      </CardHeader>
+      <CardContent>
+        <div className="text-2xl font-semibold tracking-tight">{value}</div>
+        <p className="text-xs text-muted-foreground">{hint}</p>
+      </CardContent>
+    </Card>
+  );
+}
 
+function AdminOverview({
+  token,
+  userName,
+}: {
+  token: string;
+  userName: string;
+}) {
+  const [staff, setStaff] = useState<StaffUser[]>([]);
+  const [listError, setListError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch(`${apiBaseUrl}/admin/users`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        if (cancelled) return;
+        if (!res.ok) {
+          setListError(
+            typeof data.message === "string"
+              ? data.message
+              : "Could not load staff accounts.",
+          );
+          return;
+        }
+        setListError(null);
+        setStaff(data.users ?? []);
+      } catch {
+        if (!cancelled) setListError("Could not reach the server.");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
+
+  const adminCount = staff.filter((member) => member.role === "admin").length;
+  const employeeCount = staff.filter(
+    (member) => member.role === "employer",
+  ).length;
+
+  return (
+    <div className="grid gap-6">
+      <div>
+        <h2 className="text-xl font-semibold tracking-tight">
+          Welcome back, {userName.split(" ")[0]}
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          Manage staff accounts and keep your team organized.
+        </p>
+      </div>
+
+      {listError ? (
+        <Alert variant="destructive">
+          <AlertTitle>Could not load overview</AlertTitle>
+          <AlertDescription>{listError}</AlertDescription>
+        </Alert>
+      ) : null}
+
+      <div className="grid gap-4 sm:grid-cols-3">
+        <StatCard
+          title="Total staff"
+          value={staff.length}
+          hint="Admins and employees"
+          icon={UsersIcon}
+        />
+        <StatCard
+          title="Admins"
+          value={adminCount}
+          hint="Full console access"
+          icon={ShieldCheckIcon}
+        />
+        <StatCard
+          title="Employees"
+          value={employeeCount}
+          hint="Employer role accounts"
+          icon={UserPlusIcon}
+        />
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Recent team</CardTitle>
+          <CardDescription>
+            Latest accounts currently in the system.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <StaffTable staff={staff.slice(0, 5)} emptyLabel="No staff yet." />
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function StaffTable({
+  staff,
+  emptyLabel,
+}: {
+  staff: StaffUser[];
+  emptyLabel: string;
+}) {
+  if (staff.length === 0) {
+    return (
+      <p className="py-8 text-center text-sm text-muted-foreground">
+        {emptyLabel}
+      </p>
+    );
+  }
+
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Name</TableHead>
+          <TableHead>Email</TableHead>
+          <TableHead>Role</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {staff.map((member) => (
+          <TableRow key={member.id}>
+            <TableCell className="font-medium">{member.fullName}</TableCell>
+            <TableCell className="text-muted-foreground">
+              {member.email}
+            </TableCell>
+            <TableCell>
+              <Badge variant={member.role === "admin" ? "default" : "secondary"}>
+                {member.role === "admin" ? "Admin" : "Employee"}
+              </Badge>
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
+}
+
+function AdminStaffManager({ token }: { token: string }) {
   const [staff, setStaff] = useState<StaffUser[]>([]);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<"admin" | "employer">("employer");
-  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">(
-    "idle",
-  );
-  const [message, setMessage] = useState<string | null>(null);
+  const [status, setStatus] = useState<"idle" | "loading">("idle");
   const [listError, setListError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    void (async () => {
-      const nextToken = getDashboardToken();
-      const nextUser = await getDashboardUser();
-      if (cancelled) return;
-
-      setToken(nextToken);
-      setUser(nextUser);
-      setAuthReady(true);
-
-      if (!nextToken || nextUser?.role !== "admin") {
-        navigate("/login", { replace: true });
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [navigate]);
-
-  const loadStaff = async (authToken: string) => {
+  const loadStaff = async () => {
     try {
       const res = await fetch(`${apiBaseUrl}/admin/users`, {
-        headers: { Authorization: `Bearer ${authToken}` },
+        headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
       if (!res.ok) {
@@ -77,24 +240,12 @@ export default function AdminDashboardPage() {
   };
 
   useEffect(() => {
-    if (token && user?.role === "admin") {
-      void loadStaff(token);
-    }
-  }, [token, user?.role]);
-
-  if (!authReady || !token || !user || user.role !== "admin") {
-    return null;
-  }
-
-  const handleLogout = () => {
-    clearDashboardSession();
-    navigate("/login");
-  };
+    void loadStaff();
+  }, [token]);
 
   const handleCreate = async (e: FormEvent) => {
     e.preventDefault();
     setStatus("loading");
-    setMessage(null);
 
     try {
       const res = await fetch(`${apiBaseUrl}/admin/users`, {
@@ -109,17 +260,16 @@ export default function AdminDashboardPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setStatus("error");
-        setMessage(
+        toast.error(
           typeof data.message === "string"
             ? data.message
             : "Failed to create account.",
         );
+        setStatus("idle");
         return;
       }
 
-      setStatus("success");
-      setMessage(
+      toast.success(
         typeof data.message === "string"
           ? data.message
           : "Account created successfully.",
@@ -128,138 +278,133 @@ export default function AdminDashboardPage() {
       setEmail("");
       setPassword("");
       setRole("employer");
-      await loadStaff(token);
+      await loadStaff();
     } catch {
-      setStatus("error");
-      setMessage("Could not reach the server. Please try again.");
+      toast.error("Could not reach the server. Please try again.");
+    } finally {
+      setStatus("idle");
     }
   };
 
   return (
-    <div className="admin-page">
-      <header className="admin-page__header">
-        <div>
-          <p className="admin-page__eyebrow">Admin dashboard</p>
-          <h1>Welcome, {user.fullName}</h1>
-          <p className="admin-page__meta">{user.email}</p>
-        </div>
-        <button type="button" className="admin-page__logout" onClick={handleLogout}>
-          Sign out
-        </button>
-      </header>
-
-      <div className="admin-page__grid">
-        <section className="admin-card">
-          <h2>Create staff account</h2>
-          <p className="admin-card__lead">
+    <div className="grid gap-6 xl:grid-cols-[360px_1fr]">
+      <Card>
+        <CardHeader>
+          <CardTitle>Create staff account</CardTitle>
+          <CardDescription>
             Add a new admin or employee (employer) account.
-          </p>
-
-          <form className="admin-form" onSubmit={handleCreate}>
-            {message && (
-              <div
-                className={
-                  status === "error"
-                    ? "admin-form__alert admin-form__alert--error"
-                    : "admin-form__alert admin-form__alert--success"
-                }
-                role="status"
-              >
-                {message}
-              </div>
-            )}
-
-            <label className="admin-form__field">
-              <span>Full name</span>
-              <input
-                type="text"
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form className="grid gap-4" onSubmit={handleCreate}>
+            <div className="grid gap-2">
+              <Label htmlFor="fullName">Full name</Label>
+              <Input
+                id="fullName"
                 required
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 placeholder="Jane Doe"
               />
-            </label>
-
-            <label className="admin-form__field">
-              <span>Email</span>
-              <input
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="staffEmail">Email</Label>
+              <Input
+                id="staffEmail"
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="name@prodesignity.com"
               />
-            </label>
-
-            <label className="admin-form__field">
-              <span>Password</span>
-              <input
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="staffPassword">Password</Label>
+              <Input
+                id="staffPassword"
                 type="password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Min 8 chars, upper, lower, number, symbol"
               />
-            </label>
-
-            <label className="admin-form__field">
-              <span>Role</span>
-              <select
-                value={role}
-                onChange={(e) =>
-                  setRole(e.target.value as "admin" | "employer")
-                }
-              >
-                <option value="employer">Employee</option>
-                <option value="admin">Admin</option>
-              </select>
-            </label>
-
-            <button
-              type="submit"
-              className="admin-form__submit"
-              disabled={status === "loading"}
-            >
-              {status === "loading" ? "Creating…" : "Create account"}
-            </button>
-          </form>
-        </section>
-
-        <section className="admin-card">
-          <h2>Staff accounts</h2>
-          <p className="admin-card__lead">Admins and employees currently in the system.</p>
-
-          {listError && (
-            <div className="admin-form__alert admin-form__alert--error">
-              {listError}
             </div>
-          )}
+            <div className="grid gap-2">
+              <Label>Role</Label>
+              <Select
+                value={role}
+                onValueChange={(value) => {
+                  if (value === "admin" || value === "employer") {
+                    setRole(value);
+                  }
+                }}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="employer">Employee</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button type="submit" disabled={status === "loading"}>
+              {status === "loading" ? (
+                <>
+                  <Loader2Icon className="animate-spin" />
+                  Creating…
+                </>
+              ) : (
+                "Create account"
+              )}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
 
-          <ul className="staff-list">
-            {staff.length === 0 && !listError ? (
-              <li className="staff-list__empty">No staff accounts yet.</li>
-            ) : (
-              staff.map((member) => (
-                <li key={member.id} className="staff-list__item">
-                  <div>
-                    <p className="staff-list__name">{member.fullName}</p>
-                    <p className="staff-list__email">{member.email}</p>
-                  </div>
-                  <span
-                    className={
-                      member.role === "admin"
-                        ? "staff-list__badge staff-list__badge--admin"
-                        : "staff-list__badge staff-list__badge--employee"
-                    }
-                  >
-                    {member.role === "admin" ? "Admin" : "Employee"}
-                  </span>
-                </li>
-              ))
-            )}
-          </ul>
-        </section>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Staff accounts</CardTitle>
+          <CardDescription>
+            Admins and employees currently in the system.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {listError ? (
+            <Alert variant="destructive" className="mb-4">
+              <AlertTitle>Error</AlertTitle>
+              <AlertDescription>{listError}</AlertDescription>
+            </Alert>
+          ) : null}
+          <StaffTable staff={staff} emptyLabel="No staff accounts yet." />
+        </CardContent>
+      </Card>
     </div>
+  );
+}
+
+export default function AdminDashboardPage() {
+  return (
+    <DashboardLayout
+      expectedRole="admin"
+      title="Overview"
+      description="Admin dashboard home"
+    >
+      {({ token, user }) => (
+        <AdminOverview token={token} userName={user.fullName} />
+      )}
+    </DashboardLayout>
+  );
+}
+
+export function AdminStaffPage() {
+  return (
+    <DashboardLayout
+      expectedRole="admin"
+      title="Staff"
+      description="Create and review team accounts"
+    >
+      {({ token }) => <AdminStaffManager token={token} />}
+    </DashboardLayout>
   );
 }

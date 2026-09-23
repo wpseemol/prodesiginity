@@ -1,3 +1,4 @@
+import type { ComponentType } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboardIcon,
@@ -25,7 +26,7 @@ import { Separator } from "@/components/ui/separator";
 type NavItem = {
   title: string;
   to: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: ComponentType<{ className?: string }>;
 };
 
 type AppSidebarProps = {

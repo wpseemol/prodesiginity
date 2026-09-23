@@ -1,78 +1,77 @@
-import { useEffect, useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
-import type { StaffRole } from "../config";
+import { BriefcaseIcon, CheckCircle2Icon } from "lucide-react";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import {
-  clearDashboardSession,
-  getDashboardToken,
-  getDashboardUser,
-  type DashboardUser,
-} from "../lib/session";
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
-type StaffHomePageProps = {
-  expectedRole: StaffRole;
-  title: string;
-  loginPath: string;
-};
-
-export default function StaffHomePage({
-  expectedRole,
-  title,
-  loginPath,
-}: StaffHomePageProps) {
-  const navigate = useNavigate();
-  const [token, setToken] = useState<string | null>(null);
-  const [user, setUser] = useState<DashboardUser | null>(null);
-  const [authReady, setAuthReady] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    void (async () => {
-      const nextToken = getDashboardToken();
-      const nextUser = await getDashboardUser();
-      if (cancelled) return;
-
-      setToken(nextToken);
-      setUser(nextUser);
-      setAuthReady(true);
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  if (!authReady) {
-    return null;
-  }
-
-  if (!token || !user || user.role !== expectedRole) {
-    return <Navigate to={loginPath} replace />;
-  }
-
-  const handleLogout = () => {
-    clearDashboardSession();
-    navigate(loginPath);
-  };
-
+export default function StaffHomePage() {
   return (
-    <div className="staff-home">
-      <header className="staff-home__header">
-        <div>
-          <p className="staff-home__eyebrow">{title}</p>
-          <h1>Welcome, {user.fullName}</h1>
-          <p className="staff-home__meta">{user.email}</p>
+    <DashboardLayout
+      expectedRole="employer"
+      title="Workspace"
+      description="Employee dashboard"
+    >
+      {({ user }) => (
+        <div className="grid gap-6">
+          <div>
+            <h2 className="text-xl font-semibold tracking-tight">
+              Welcome, {user.fullName}
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Your staff workspace is ready. Tools will appear here as they are
+              built.
+            </p>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Role</CardTitle>
+                <BriefcaseIcon className="size-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-semibold tracking-tight">
+                  Employee
+                </div>
+                <p className="text-xs text-muted-foreground">{user.email}</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Status</CardTitle>
+                <CheckCircle2Icon className="size-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-semibold tracking-tight">
+                  Signed in
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Session stored securely in cookies
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Getting started</CardTitle>
+              <CardDescription>
+                This portal will grow with staffing tools, assignments, and
+                project workflows.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="text-sm text-muted-foreground">
+              For now, confirm your sign-in works and check back as new modules
+              are added for the employee role.
+            </CardContent>
+          </Card>
         </div>
-        <button type="button" className="staff-home__logout" onClick={handleLogout}>
-          Sign out
-        </button>
-      </header>
-      <section className="staff-home__body">
-        <p>
-          You are signed in to the {title.toLowerCase()}. More tools will appear
-          here as they are built.
-        </p>
-      </section>
-    </div>
+      )}
+    </DashboardLayout>
   );
 }
