@@ -5,10 +5,8 @@
   --ink: #101820;
   --muted: #5c6b7a;
   --line: #d5dde5;
-  --admin: #0d7377;
-  --admin-deep: #095456;
-  --employee: #c45c26;
-  --employee-deep: #9a471c;
+  --accent: #c45c26;
+  --accent-deep: #9a471c;
   --danger: #b42318;
   --danger-bg: #fef3f2;
   --radius: 14px;
@@ -38,8 +36,8 @@ body,
 body {
   min-height: 100vh;
   background:
-    radial-gradient(ellipse 80% 50% at 10% 0%, rgba(13, 115, 119, 0.28), transparent),
-    radial-gradient(ellipse 60% 40% at 90% 10%, rgba(196, 92, 38, 0.2), transparent),
+    radial-gradient(ellipse 80% 50% at 10% 0%, rgba(196, 92, 38, 0.22), transparent),
+    radial-gradient(ellipse 60% 40% at 90% 10%, rgba(26, 34, 45, 0.9), transparent),
     var(--bg);
 }
 
@@ -52,7 +50,6 @@ input {
   font: inherit;
 }
 
-.portal-home,
 .auth-shell,
 .staff-home {
   min-height: 100vh;
@@ -61,7 +58,6 @@ input {
   padding: 1.5rem;
 }
 
-.portal-home__card,
 .auth-shell__panel,
 .staff-home {
   width: min(100%, 420px);
@@ -70,12 +66,10 @@ input {
   box-shadow: var(--shadow);
 }
 
-.portal-home__card {
+.auth-shell__panel {
   padding: 2rem;
-  text-align: center;
 }
 
-.portal-home__eyebrow,
 .login-form__eyebrow,
 .staff-home__eyebrow {
   margin: 0 0 0.5rem;
@@ -86,7 +80,6 @@ input {
   color: var(--muted);
 }
 
-.portal-home h1,
 .login-form h1,
 .staff-home h1 {
   margin: 0;
@@ -94,7 +87,6 @@ input {
   letter-spacing: -0.02em;
 }
 
-.portal-home__lead,
 .login-form__subtitle,
 .staff-home__meta,
 .staff-home__body p {
@@ -103,13 +95,6 @@ input {
   font-size: 0.95rem;
 }
 
-.portal-home__actions {
-  display: grid;
-  gap: 0.75rem;
-  margin-top: 1.75rem;
-}
-
-.portal-home__btn,
 .login-form__submit,
 .staff-home__logout {
   display: inline-flex;
@@ -125,36 +110,18 @@ input {
   transition: transform 0.15s ease, opacity 0.15s ease, background 0.15s ease;
 }
 
-.portal-home__btn:hover,
 .login-form__submit:hover,
 .staff-home__logout:hover {
   transform: translateY(-1px);
 }
 
-.portal-home__btn--admin,
 .login-form__submit {
-  background: var(--admin);
+  background: var(--accent);
   color: #fff;
 }
 
-.auth-shell--employee .login-form__submit,
-.portal-home__btn--employee {
-  background: var(--employee);
-  color: #fff;
-}
-
-.portal-home__btn--admin:hover,
-.auth-shell--admin .login-form__submit:hover {
-  background: var(--admin-deep);
-}
-
-.portal-home__btn--employee:hover,
-.auth-shell--employee .login-form__submit:hover {
-  background: var(--employee-deep);
-}
-
-.auth-shell__panel {
-  padding: 2rem;
+.login-form__submit:hover {
+  background: var(--accent-deep);
 }
 
 .login-form {
@@ -198,14 +165,8 @@ input {
 
 .login-form__field input:focus,
 .login-form__password input:focus {
-  outline: 2px solid color-mix(in srgb, var(--admin) 45%, transparent);
-  border-color: var(--admin);
-}
-
-.auth-shell--employee .login-form__field input:focus,
-.auth-shell--employee .login-form__password input:focus {
-  outline-color: color-mix(in srgb, var(--employee) 45%, transparent);
-  border-color: var(--employee);
+  outline: 2px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  border-color: var(--accent);
 }
 
 .login-form__password {
@@ -235,22 +196,6 @@ input {
   transform: none;
 }
 
-.auth-shell__switch {
-  margin: 1.25rem 0 0;
-  text-align: center;
-  font-size: 0.875rem;
-  color: var(--muted);
-}
-
-.auth-shell__switch a {
-  color: var(--admin);
-  font-weight: 650;
-}
-
-.auth-shell--employee .auth-shell__switch a {
-  color: var(--employee);
-}
-
 .staff-home {
   width: min(100%, 640px);
   padding: 1.75rem;
@@ -273,4 +218,220 @@ input {
 
 .staff-home__body {
   padding-top: 1.25rem;
+}
+
+.admin-page {
+  min-height: 100vh;
+  padding: 1.5rem;
+  color: #f4f6f8;
+}
+
+.admin-page__header,
+.admin-card {
+  background: var(--bg-panel);
+  color: var(--ink);
+  border-radius: calc(var(--radius) + 4px);
+  box-shadow: var(--shadow);
+}
+
+.admin-page__header {
+  width: min(100%, 960px);
+  margin: 0 auto 1.25rem;
+  padding: 1.5rem 1.75rem;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.admin-page__eyebrow {
+  margin: 0 0 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.admin-page h1 {
+  margin: 0;
+  font-size: 1.6rem;
+  letter-spacing: -0.02em;
+}
+
+.admin-page__meta {
+  margin: 0.4rem 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.admin-page__logout,
+.admin-form__submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.5rem;
+  padding: 0.65rem 1rem;
+  border: 0;
+  border-radius: 10px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease, opacity 0.15s ease;
+}
+
+.admin-page__logout {
+  background: var(--bg-elevated);
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.admin-page__logout:hover,
+.admin-form__submit:hover {
+  transform: translateY(-1px);
+}
+
+.admin-page__grid {
+  width: min(100%, 960px);
+  margin: 0 auto;
+  display: grid;
+  gap: 1.25rem;
+}
+
+@media (min-width: 860px) {
+  .admin-page__grid {
+    grid-template-columns: 1.05fr 0.95fr;
+    align-items: start;
+  }
+}
+
+.admin-card {
+  padding: 1.5rem;
+}
+
+.admin-card h2 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.admin-card__lead {
+  margin: 0.4rem 0 1.1rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.admin-form {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.admin-form__field {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.admin-form__field > span {
+  font-size: 0.8rem;
+  font-weight: 650;
+  color: var(--muted);
+}
+
+.admin-form__field input,
+.admin-form__field select {
+  width: 100%;
+  min-height: 2.6rem;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--ink);
+}
+
+.admin-form__field input:focus,
+.admin-form__field select:focus {
+  outline: 2px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  border-color: var(--accent);
+}
+
+.admin-form__submit {
+  background: var(--accent);
+  color: #fff;
+  margin-top: 0.25rem;
+}
+
+.admin-form__submit:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.admin-form__alert {
+  padding: 0.7rem 0.85rem;
+  border-radius: 10px;
+  font-size: 0.875rem;
+}
+
+.admin-form__alert--error {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.admin-form__alert--success {
+  background: #ecfdf3;
+  color: #067647;
+}
+
+.staff-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.7rem;
+}
+
+.staff-list__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.staff-list__name {
+  margin: 0;
+  font-weight: 650;
+  font-size: 0.95rem;
+}
+
+.staff-list__email {
+  margin: 0.15rem 0 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.staff-list__badge {
+  flex-shrink: 0;
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.staff-list__badge--admin {
+  background: #ecfdf3;
+  color: #067647;
+}
+
+.staff-list__badge--employee {
+  background: #fff4ed;
+  color: #9a471c;
+}
+
+.staff-list__empty {
+  color: var(--muted);
+  font-size: 0.9rem;
 }
