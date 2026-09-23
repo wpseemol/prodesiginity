@@ -1,12 +1,12 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiBaseUrl } from "../config";
-
-type StoredUser = {
-  fullName: string;
-  email: string;
-  role: string;
-};
+import {
+  clearDashboardSession,
+  getDashboardToken,
+  getDashboardUser,
+  type DashboardUser,
+} from "../lib/session";
 
 type StaffUser = {
   id: number;
@@ -16,20 +16,11 @@ type StaffUser = {
   created_at: string;
 };
 
-function readUser(): StoredUser | null {
-  try {
-    const raw = localStorage.getItem("dashboard_user");
-    if (!raw) return null;
-    return JSON.parse(raw) as StoredUser;
-  } catch {
-    return null;
-  }
-}
-
 export default function AdminDashboardPage() {
   const navigate = useNavigate();
-  const token = localStorage.getItem("dashboard_token");
-  const user = readUser();
+  const [token, setToken] = useState<string | null>(null);
+  const [user, setUser] = useState<DashboardUser | null>(null);
+  const [authReady, setAuthReady] = useState(false);
 
   const [staff, setStaff] = useState<StaffUser[]>([]);
   const [fullName, setFullName] = useState("");
@@ -43,16 +34,31 @@ export default function AdminDashboardPage() {
   const [listError, setListError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!token || user?.role !== "admin") {
-      navigate("/login", { replace: true });
-    }
-  }, [token, user?.role, navigate]);
+    let cancelled = false;
 
-  const loadStaff = async () => {
-    if (!token) return;
+    void (async () => {
+      const nextToken = getDashboardToken();
+      const nextUser = await getDashboardUser();
+      if (cancelled) return;
+
+      setToken(nextToken);
+      setUser(nextUser);
+      setAuthReady(true);
+
+      if (!nextToken || nextUser?.role !== "admin") {
+        navigate("/login", { replace: true });
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [navigate]);
+
+  const loadStaff = async (authToken: string) => {
     try {
       const res = await fetch(`${apiBaseUrl}/admin/users`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${authToken}` },
       });
       const data = await res.json();
       if (!res.ok) {
@@ -72,17 +78,16 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     if (token && user?.role === "admin") {
-      void loadStaff();
+      void loadStaff(token);
     }
   }, [token, user?.role]);
 
-  if (!token || !user || user.role !== "admin") {
+  if (!authReady || !token || !user || user.role !== "admin") {
     return null;
   }
 
   const handleLogout = () => {
-    localStorage.removeItem("dashboard_token");
-    localStorage.removeItem("dashboard_user");
+    clearDashboardSession();
     navigate("/login");
   };
 
@@ -123,7 +128,7 @@ export default function AdminDashboardPage() {
       setEmail("");
       setPassword("");
       setRole("employer");
-      await loadStaff();
+      await loadStaff(token);
     } catch {
       setStatus("error");
       setMessage("Could not reach the server. Please try again.");

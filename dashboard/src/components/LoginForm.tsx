@@ -1,13 +1,12 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { apiBaseUrl } from "../config";
-
-type AuthUser = {
-  id: number;
-  fullName: string;
-  email: string;
-  role: string;
-};
+import { EyeIcon, EyeOffIcon, Loader2Icon } from "lucide-react";
+import { apiBaseUrl } from "@/config";
+import { setDashboardSession, type DashboardUser } from "@/lib/session";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 function dashboardPathForRole(role: string): string | null {
   if (role === "admin") return "/admin";
@@ -47,7 +46,7 @@ export default function LoginForm() {
         return;
       }
 
-      const user = data.user as AuthUser | undefined;
+      const user = data.user as DashboardUser | undefined;
       const nextPath = user ? dashboardPathForRole(user.role) : null;
 
       if (!user || !nextPath) {
@@ -56,8 +55,7 @@ export default function LoginForm() {
         return;
       }
 
-      localStorage.setItem("dashboard_token", data.token);
-      localStorage.setItem("dashboard_user", JSON.stringify(user));
+      await setDashboardSession(data.token, user);
       navigate(nextPath);
     } catch {
       setStatus("error");
@@ -66,24 +64,28 @@ export default function LoginForm() {
   };
 
   return (
-    <form className="login-form" onSubmit={handleSubmit}>
-      <div className="login-form__header">
-        <p className="login-form__eyebrow">Staff Portal</p>
-        <h1>Sign in</h1>
-        <p className="login-form__subtitle">
+    <form className="grid gap-5" onSubmit={handleSubmit}>
+      <div className="grid gap-1.5 text-center sm:text-left">
+        <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
+          Staff portal
+        </p>
+        <h1 className="text-2xl font-semibold tracking-tight">Sign in</h1>
+        <p className="text-sm text-muted-foreground">
           Access your admin or employee dashboard.
         </p>
       </div>
 
-      {error && (
-        <div className="login-form__alert" role="alert">
-          {error}
-        </div>
-      )}
+      {error ? (
+        <Alert variant="destructive">
+          <AlertTitle>Sign in failed</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      ) : null}
 
-      <label className="login-form__field">
-        <span>Email</span>
-        <input
+      <div className="grid gap-2">
+        <Label htmlFor="email">Email</Label>
+        <Input
+          id="email"
           type="email"
           name="email"
           autoComplete="email"
@@ -92,12 +94,13 @@ export default function LoginForm() {
           onChange={(e) => setEmail(e.target.value)}
           placeholder="you@prodesignity.com"
         />
-      </label>
+      </div>
 
-      <label className="login-form__field">
-        <span>Password</span>
-        <div className="login-form__password">
-          <input
+      <div className="grid gap-2">
+        <Label htmlFor="password">Password</Label>
+        <div className="relative">
+          <Input
+            id="password"
             type={showPassword ? "text" : "password"}
             name="password"
             autoComplete="current-password"
@@ -105,25 +108,31 @@ export default function LoginForm() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Enter your password"
+            className="pr-10"
           />
-          <button
+          <Button
             type="button"
-            className="login-form__toggle"
+            variant="ghost"
+            size="icon-sm"
+            className="absolute top-1/2 right-1 -translate-y-1/2"
             onClick={() => setShowPassword((v) => !v)}
             aria-label={showPassword ? "Hide password" : "Show password"}
           >
-            {showPassword ? "Hide" : "Show"}
-          </button>
+            {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+          </Button>
         </div>
-      </label>
+      </div>
 
-      <button
-        type="submit"
-        className="login-form__submit"
-        disabled={status === "loading"}
-      >
-        {status === "loading" ? "Signing in…" : "Sign in"}
-      </button>
+      <Button type="submit" className="w-full" disabled={status === "loading"}>
+        {status === "loading" ? (
+          <>
+            <Loader2Icon className="animate-spin" />
+            Signing in…
+          </>
+        ) : (
+          "Sign in"
+        )}
+      </Button>
     </form>
   );
 }

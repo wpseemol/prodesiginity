@@ -1,5 +1,12 @@
+import { useEffect, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import type { StaffRole } from "../config";
+import {
+  clearDashboardSession,
+  getDashboardToken,
+  getDashboardUser,
+  type DashboardUser,
+} from "../lib/session";
 
 type StaffHomePageProps = {
   expectedRole: StaffRole;
@@ -7,38 +14,44 @@ type StaffHomePageProps = {
   loginPath: string;
 };
 
-type StoredUser = {
-  fullName: string;
-  email: string;
-  role: string;
-};
-
-function readUser(): StoredUser | null {
-  try {
-    const raw = localStorage.getItem("dashboard_user");
-    if (!raw) return null;
-    return JSON.parse(raw) as StoredUser;
-  } catch {
-    return null;
-  }
-}
-
 export default function StaffHomePage({
   expectedRole,
   title,
   loginPath,
 }: StaffHomePageProps) {
   const navigate = useNavigate();
-  const token = localStorage.getItem("dashboard_token");
-  const user = readUser();
+  const [token, setToken] = useState<string | null>(null);
+  const [user, setUser] = useState<DashboardUser | null>(null);
+  const [authReady, setAuthReady] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    void (async () => {
+      const nextToken = getDashboardToken();
+      const nextUser = await getDashboardUser();
+      if (cancelled) return;
+
+      setToken(nextToken);
+      setUser(nextUser);
+      setAuthReady(true);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (!authReady) {
+    return null;
+  }
 
   if (!token || !user || user.role !== expectedRole) {
     return <Navigate to={loginPath} replace />;
   }
 
   const handleLogout = () => {
-    localStorage.removeItem("dashboard_token");
-    localStorage.removeItem("dashboard_user");
+    clearDashboardSession();
     navigate(loginPath);
   };
 
