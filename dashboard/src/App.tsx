@@ -1,5 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { ThemeProvider } from "@/components/theme-provider";
+import { ReduxProvider } from "@/components/providers/ReduxProvider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import AdminDashboardPage, {
@@ -14,36 +15,38 @@ import StaffHomePage from "@/pages/StaffHomePage";
 
 export default function App() {
   return (
-    <ThemeProvider
-      attribute="class"
-      defaultTheme="system"
-      enableSystem
-      disableTransitionOnChange
-    >
-      <TooltipProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Navigate to="/login" replace />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/admin" element={<AdminDashboardPage />} />
-            <Route path="/admin/staff" element={<AdminStaffPage />} />
-            <Route path="/admin/homepage" element={<AdminHomepagePage />} />
-            <Route path="/admin/team" element={<AdminTeamPage />} />
-            <Route path="/admin/settings" element={<AdminSettingsPage />} />
-            <Route
-              path="/admin/profile"
-              element={<ProfilePage expectedRole="admin" />}
-            />
-            <Route path="/employee" element={<StaffHomePage />} />
-            <Route
-              path="/employee/profile"
-              element={<ProfilePage expectedRole="employer" />}
-            />
-            <Route path="*" element={<Navigate to="/login" replace />} />
-          </Routes>
-        </BrowserRouter>
-        <Toaster richColors position="top-right" />
-      </TooltipProvider>
-    </ThemeProvider>
+    <ReduxProvider>
+      <ThemeProvider
+        attribute="class"
+        defaultTheme="system"
+        enableSystem
+        disableTransitionOnChange
+      >
+        <TooltipProvider>
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Navigate to="/login" replace />} />
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/admin" element={<AdminDashboardPage />} />
+              <Route path="/admin/staff" element={<AdminStaffPage />} />
+              <Route path="/admin/homepage" element={<AdminHomepagePage />} />
+              <Route path="/admin/team" element={<AdminTeamPage />} />
+              <Route path="/admin/settings" element={<AdminSettingsPage />} />
+              <Route
+                path="/admin/profile"
+                element={<ProfilePage expectedRole="admin" />}
+              />
+              <Route path="/employee" element={<StaffHomePage />} />
+              <Route
+                path="/employee/profile"
+                element={<ProfilePage expectedRole="employer" />}
+              />
+              <Route path="*" element={<Navigate to="/login" replace />} />
+            </Routes>
+          </BrowserRouter>
+          <Toaster richColors position="top-right" />
+        </TooltipProvider>
+      </ThemeProvider>
+    </ReduxProvider>
   );
 }
