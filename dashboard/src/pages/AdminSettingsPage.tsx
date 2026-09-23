@@ -1,3 +1,6 @@
+/**
+ * Admin settings — brand/login/favicon/tracking + full frontend siteConfig.
+ */
 import {
   useEffect,
   useRef,
@@ -15,11 +18,21 @@ import {
   LogInIcon,
   CheckCircle2Icon,
   CircleIcon,
+  MailIcon,
+  Share2Icon,
+  ScaleIcon,
+  GlobeIcon,
+  MapPinIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { mediaUrl } from "@/config";
 import { apiFetch } from "@/lib/api";
 import { WEBSITE_LOGOS } from "@/lib/brand";
+import {
+  EMPTY_SITE_CONFIG,
+  normalizeSiteConfig,
+  type SiteConfigForm,
+} from "@/lib/siteConfigForm";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -35,6 +48,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+
+const TEXTAREA =
+  "min-h-[88px] w-full resize-y rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50";
 
 type SiteSettings = {
   id: number;
@@ -55,10 +71,19 @@ type SiteSettings = {
   metaCapiAccessTokenMasked: string | null;
   googleEnhancedConversionsApiKeySet: boolean;
   googleEnhancedConversionsApiKeyMasked: string | null;
+  siteConfig?: SiteConfigForm;
   updatedAt: string;
 };
 
-type SettingsTab = "brand" | "login" | "favicon" | "tracking";
+type SettingsTab =
+  | "brand"
+  | "contact"
+  | "social"
+  | "commercial"
+  | "legal"
+  | "login"
+  | "favicon"
+  | "tracking";
 
 const TABS: {
   id: SettingsTab;
@@ -70,25 +95,49 @@ const TABS: {
     id: "brand",
     label: "Brand",
     icon: SettingsIcon,
-    hint: "Site name and logos shown on the website and dashboard.",
+    hint: "Site name, tagline, description, logos, OG image.",
+  },
+  {
+    id: "contact",
+    label: "Contact",
+    icon: MailIcon,
+    hint: "Email, phone, WhatsApp, and address.",
+  },
+  {
+    id: "social",
+    label: "Social",
+    icon: Share2Icon,
+    hint: "LinkedIn, Instagram, Behance, Dribbble, YouTube.",
+  },
+  {
+    id: "commercial",
+    label: "Commercial",
+    icon: GlobeIcon,
+    hint: "Service areas, languages, price range.",
+  },
+  {
+    id: "legal",
+    label: "Legal",
+    icon: ScaleIcon,
+    hint: "Jurisdiction and policy variables for Terms / Privacy.",
   },
   {
     id: "login",
-    label: "Login screen",
+    label: "Login",
     icon: LogInIcon,
-    hint: "Copy shown on the staff login page.",
+    hint: "Staff login screen copy.",
   },
   {
     id: "favicon",
     label: "Favicon",
     icon: ImageIcon,
-    hint: "Browser tab icon for site and dashboard.",
+    hint: "Browser tab icon.",
   },
   {
     id: "tracking",
-    label: "Ads tracking",
+    label: "Tracking",
     icon: ActivityIcon,
-    hint: "Meta Pixel, Google Tag, and server credentials.",
+    hint: "Meta Pixel, Google Tag, CAPI credentials.",
   },
 ];
 
@@ -116,13 +165,7 @@ function Field({
   );
 }
 
-function TrackChip({
-  on,
-  label,
-}: {
-  on: boolean;
-  label: string;
-}) {
+function TrackChip({ on, label }: { on: boolean; label: string }) {
   return (
     <span
       className={cn(
@@ -151,6 +194,7 @@ function SettingsManager() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [savingTracking, setSavingTracking] = useState(false);
+  const [savingConfig, setSavingConfig] = useState(false);
   const [uploadingFavicon, setUploadingFavicon] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [resettingLogo, setResettingLogo] = useState(false);
@@ -160,6 +204,7 @@ function SettingsManager() {
   const [loginTitle, setLoginTitle] = useState("");
   const [loginSubtitle, setLoginSubtitle] = useState("");
   const [loginBadgeText, setLoginBadgeText] = useState("");
+  const [cfg, setCfg] = useState<SiteConfigForm>(EMPTY_SITE_CONFIG);
 
   const [trackingEnabled, setTrackingEnabled] = useState(false);
   const [metaPixelId, setMetaPixelId] = useState("");
@@ -176,12 +221,16 @@ function SettingsManager() {
   const usingWebsiteLogo = !settings?.loginLogoUrl;
   const activeTab = TABS.find((t) => t.id === tab) ?? TABS[0];
 
+  const patchCfg = (partial: Partial<SiteConfigForm>) =>
+    setCfg((prev) => ({ ...prev, ...partial }));
+
   const applySettings = (next: SiteSettings) => {
     setSettings(next);
     setSiteName(next.siteName ?? "");
     setLoginTitle(next.loginTitle ?? "");
     setLoginSubtitle(next.loginSubtitle ?? "");
     setLoginBadgeText(next.loginBadgeText ?? "");
+    setCfg(normalizeSiteConfig(next.siteConfig));
     setTrackingEnabled(Boolean(next.trackingEnabled));
     setMetaPixelId(next.metaPixelId ?? "");
     setGoogleMeasurementId(next.googleMeasurementId ?? "");
@@ -221,14 +270,46 @@ function SettingsManager() {
     void load();
   }, []);
 
-  const handleSaveGeneral = async (e: FormEvent) => {
+  const saveSiteConfig = async (e: FormEvent) => {
+    e.preventDefault();
+    setSavingConfig(true);
+    try {
+      const res = await apiFetch("/admin/settings", {
+        method: "PUT",
+        body: JSON.stringify({
+          siteName: cfg.name || siteName,
+          siteConfig: {
+            ...cfg,
+            serviceAreas: cfg.serviceAreas,
+            languages: cfg.languages,
+          },
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(
+          typeof data.message === "string"
+            ? data.message
+            : "Could not save site config.",
+        );
+        return;
+      }
+      applySettings(data.settings as SiteSettings);
+      toast.success("Site config saved — live site updates within ~60s.");
+    } catch {
+      toast.error("Could not reach the server.");
+    } finally {
+      setSavingConfig(false);
+    }
+  };
+
+  const handleSaveLogin = async (e: FormEvent) => {
     e.preventDefault();
     setSaving(true);
     try {
       const res = await apiFetch("/admin/settings", {
         method: "PUT",
         body: JSON.stringify({
-          siteName,
           loginTitle,
           loginSubtitle,
           loginBadgeText,
@@ -244,7 +325,7 @@ function SettingsManager() {
         return;
       }
       applySettings(data.settings as SiteSettings);
-      toast.success("Saved.");
+      toast.success("Login copy saved.");
     } catch {
       toast.error("Could not reach the server.");
     } finally {
@@ -419,9 +500,16 @@ function SettingsManager() {
     ? mediaUrl(settings.faviconUrl)
     : mediaUrl(WEBSITE_LOGOS.mark);
 
+  const saveConfigButton = (
+    <Button type="submit" disabled={savingConfig} className="w-fit">
+      {savingConfig ? <Loader2Icon className="animate-spin" /> : <SaveIcon />}
+      Save site config
+    </Button>
+  );
+
   return (
     <div className="grid gap-6">
-      <Card className="border-border/70 bg-card/90 overflow-hidden">
+      <Card className="overflow-hidden border-border/70 bg-card/90">
         <CardHeader className="gap-3 border-b border-border/60 bg-muted/20 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-1">
             <CardTitle className="flex items-center gap-2 text-base">
@@ -467,125 +555,402 @@ function SettingsManager() {
 
           {/* Brand */}
           {tab === "brand" ? (
-            <form
-              className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]"
-              onSubmit={handleSaveGeneral}
-            >
-              <div className="grid gap-5 content-start">
-                <Field id="siteName" label="Site name">
+            <form className="grid gap-5" onSubmit={saveSiteConfig}>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field id="cfgName" label="Site name">
                   <Input
-                    id="siteName"
-                    value={siteName}
-                    onChange={(e) => setSiteName(e.target.value)}
+                    id="cfgName"
+                    value={cfg.name}
+                    onChange={(e) => patchCfg({ name: e.target.value })}
                     required
                   />
                 </Field>
+                <Field id="cfgLegal" label="Legal name">
+                  <Input
+                    id="cfgLegal"
+                    value={cfg.legalName}
+                    onChange={(e) => patchCfg({ legalName: e.target.value })}
+                    required
+                  />
+                </Field>
+                <Field id="cfgDomain" label="Domain">
+                  <Input
+                    id="cfgDomain"
+                    value={cfg.domain}
+                    onChange={(e) => patchCfg({ domain: e.target.value })}
+                  />
+                </Field>
+                <Field id="cfgUrl" label="Public site URL">
+                  <Input
+                    id="cfgUrl"
+                    value={cfg.url}
+                    onChange={(e) => patchCfg({ url: e.target.value })}
+                    placeholder="https://prodesignity.com"
+                  />
+                </Field>
+                <Field id="cfgFounded" label="Founded year">
+                  <Input
+                    id="cfgFounded"
+                    value={cfg.founded}
+                    onChange={(e) => patchCfg({ founded: e.target.value })}
+                  />
+                </Field>
+                <Field id="cfgOg" label="OG image path" hint="Path or full URL">
+                  <Input
+                    id="cfgOg"
+                    value={cfg.ogImage}
+                    onChange={(e) => patchCfg({ ogImage: e.target.value })}
+                  />
+                </Field>
+                <Field
+                  id="cfgLogo"
+                  label="Logo path"
+                  hint="Used in schema / absolute URLs"
+                  className="sm:col-span-2"
+                >
+                  <Input
+                    id="cfgLogo"
+                    value={cfg.logo}
+                    onChange={(e) => patchCfg({ logo: e.target.value })}
+                  />
+                </Field>
+                <Field id="cfgTagline" label="Tagline" className="sm:col-span-2">
+                  <Input
+                    id="cfgTagline"
+                    value={cfg.tagline}
+                    onChange={(e) => patchCfg({ tagline: e.target.value })}
+                  />
+                </Field>
+                <Field
+                  id="cfgDesc"
+                  label="Description"
+                  hint="Meta description & JSON-LD"
+                  className="sm:col-span-2"
+                >
+                  <textarea
+                    id="cfgDesc"
+                    className={TEXTAREA}
+                    value={cfg.description}
+                    onChange={(e) => patchCfg({ description: e.target.value })}
+                  />
+                </Field>
+              </div>
 
-                <div className="grid gap-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-sm font-medium">Logo</p>
-                    {usingWebsiteLogo ? (
-                      <Badge variant="secondary">Website logo</Badge>
-                    ) : (
-                      <Badge>Custom logo</Badge>
-                    )}
-                  </div>
+              <Separator />
 
-                  {!usingWebsiteLogo && settings?.loginLogoUrl ? (
-                    <div className="flex items-center gap-3 rounded-2xl border bg-muted/30 p-3">
-                      <img
-                        src={mediaUrl(settings.loginLogoUrl)}
-                        alt="Custom logo"
-                        className="h-9 w-auto object-contain"
-                      />
-                      <p className="truncate text-xs text-muted-foreground">
-                        {settings.loginLogoUrl}
-                      </p>
-                    </div>
-                  ) : null}
-
-                  <Field id="customLogo" label="Upload custom logo" hint="JPEG, PNG, WebP, SVG">
-                    <Input
-                      id="customLogo"
-                      ref={logoRef}
-                      type="file"
-                      accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml"
+              <div className="grid gap-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-sm font-medium">Dashboard / login logo</p>
+                  {usingWebsiteLogo ? (
+                    <Badge variant="secondary">Website logo</Badge>
+                  ) : (
+                    <Badge>Custom logo</Badge>
+                  )}
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-2xl border bg-white p-4">
+                    <p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                      Light
+                    </p>
+                    <img
+                      src={mediaUrl(WEBSITE_LOGOS.light)}
+                      alt="Light logo"
+                      className="h-9 w-auto object-contain"
                     />
-                  </Field>
-
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      disabled={uploadingLogo}
-                      onClick={() => void uploadCustomLogo()}
-                    >
-                      {uploadingLogo ? (
-                        <Loader2Icon className="animate-spin" />
-                      ) : (
-                        <ImageIcon />
-                      )}
-                      Upload
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      disabled={resettingLogo || usingWebsiteLogo}
-                      onClick={() => void restoreWebsiteLogo()}
-                    >
-                      {resettingLogo ? (
-                        <Loader2Icon className="animate-spin" />
-                      ) : (
-                        <RotateCcwIcon />
-                      )}
-                      Use website logo
-                    </Button>
+                  </div>
+                  <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4">
+                    <p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                      Dark
+                    </p>
+                    <img
+                      src={mediaUrl(WEBSITE_LOGOS.dark)}
+                      alt="Dark logo"
+                      className="h-9 w-auto object-contain"
+                    />
                   </div>
                 </div>
-
-                <Button type="submit" disabled={saving} className="w-fit">
-                  {saving ? (
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={resettingLogo || usingWebsiteLogo}
+                    onClick={() => void restoreWebsiteLogo()}
+                  >
+                    {resettingLogo ? (
+                      <Loader2Icon className="animate-spin" />
+                    ) : (
+                      <RotateCcwIcon />
+                    )}
+                    Use website logo
+                  </Button>
+                </div>
+                <Field id="customLogo" label="Upload custom logo" hint="Optional override">
+                  <Input
+                    id="customLogo"
+                    ref={logoRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml"
+                  />
+                </Field>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={uploadingLogo}
+                  onClick={() => void uploadCustomLogo()}
+                  className="w-fit"
+                >
+                  {uploadingLogo ? (
                     <Loader2Icon className="animate-spin" />
                   ) : (
-                    <SaveIcon />
+                    <ImageIcon />
                   )}
-                  Save brand
+                  Upload custom logo
                 </Button>
               </div>
 
-              <div className="grid gap-3 content-start">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Live preview
-                </p>
-                <div className="rounded-2xl border bg-white p-5 shadow-sm">
-                  <p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-                    Light header
-                  </p>
-                  <img
-                    src={mediaUrl(WEBSITE_LOGOS.light)}
-                    alt="Light logo"
-                    className="h-9 w-auto object-contain"
+              {saveConfigButton}
+            </form>
+          ) : null}
+
+          {/* Contact */}
+          {tab === "contact" ? (
+            <form className="grid gap-5" onSubmit={saveSiteConfig}>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field id="email" label="Email">
+                  <Input
+                    id="email"
+                    type="email"
+                    value={cfg.email}
+                    onChange={(e) => patchCfg({ email: e.target.value })}
                   />
-                </div>
-                <div className="rounded-2xl border border-slate-800 bg-slate-950 p-5 shadow-sm">
-                  <p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-                    Dark header
-                  </p>
-                  <img
-                    src={mediaUrl(WEBSITE_LOGOS.dark)}
-                    alt="Dark logo"
-                    className="h-9 w-auto object-contain"
+                </Field>
+                <Field id="privacyEmail" label="Privacy email">
+                  <Input
+                    id="privacyEmail"
+                    type="email"
+                    value={cfg.privacyEmail}
+                    onChange={(e) => patchCfg({ privacyEmail: e.target.value })}
                   />
-                </div>
-                <div className="rounded-2xl border border-dashed border-border/80 bg-muted/20 p-4">
-                  <p className="text-xs text-muted-foreground">
-                    Site name preview
-                  </p>
-                  <p className="mt-1 text-lg font-semibold tracking-tight">
-                    {siteName || "ProDesignity"}
-                  </p>
-                </div>
+                </Field>
+                <Field id="phone" label="Phone">
+                  <Input
+                    id="phone"
+                    value={cfg.phone}
+                    onChange={(e) => patchCfg({ phone: e.target.value })}
+                  />
+                </Field>
+                <Field id="whatsapp" label="WhatsApp URL">
+                  <Input
+                    id="whatsapp"
+                    value={cfg.whatsapp}
+                    onChange={(e) => patchCfg({ whatsapp: e.target.value })}
+                    placeholder="https://wa.me/8801..."
+                  />
+                </Field>
+                <Field id="contactPath" label="Contact path">
+                  <Input
+                    id="contactPath"
+                    value={cfg.contactPath}
+                    onChange={(e) => patchCfg({ contactPath: e.target.value })}
+                  />
+                </Field>
               </div>
+              <Separator />
+              <p className="flex items-center gap-2 text-sm font-semibold">
+                <MapPinIcon className="size-4 text-primary" />
+                Address
+              </p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field id="street" label="Street" className="sm:col-span-2">
+                  <Input
+                    id="street"
+                    value={cfg.address.street}
+                    onChange={(e) =>
+                      patchCfg({
+                        address: { ...cfg.address, street: e.target.value },
+                      })
+                    }
+                  />
+                </Field>
+                <Field id="city" label="City">
+                  <Input
+                    id="city"
+                    value={cfg.address.city}
+                    onChange={(e) =>
+                      patchCfg({
+                        address: { ...cfg.address, city: e.target.value },
+                      })
+                    }
+                  />
+                </Field>
+                <Field id="region" label="Region / division">
+                  <Input
+                    id="region"
+                    value={cfg.address.region}
+                    onChange={(e) =>
+                      patchCfg({
+                        address: { ...cfg.address, region: e.target.value },
+                      })
+                    }
+                  />
+                </Field>
+                <Field id="postal" label="Postal code">
+                  <Input
+                    id="postal"
+                    value={cfg.address.postalCode}
+                    onChange={(e) =>
+                      patchCfg({
+                        address: {
+                          ...cfg.address,
+                          postalCode: e.target.value,
+                        },
+                      })
+                    }
+                  />
+                </Field>
+                <Field id="country" label="Country code">
+                  <Input
+                    id="country"
+                    value={cfg.address.country}
+                    onChange={(e) =>
+                      patchCfg({
+                        address: { ...cfg.address, country: e.target.value },
+                      })
+                    }
+                    placeholder="BD"
+                  />
+                </Field>
+                <Field id="countryName" label="Country name" className="sm:col-span-2">
+                  <Input
+                    id="countryName"
+                    value={cfg.address.countryName}
+                    onChange={(e) =>
+                      patchCfg({
+                        address: {
+                          ...cfg.address,
+                          countryName: e.target.value,
+                        },
+                      })
+                    }
+                  />
+                </Field>
+              </div>
+              {saveConfigButton}
+            </form>
+          ) : null}
+
+          {/* Social */}
+          {tab === "social" ? (
+            <form className="grid gap-4 sm:grid-cols-2" onSubmit={saveSiteConfig}>
+              {(
+                [
+                  ["linkedin", "LinkedIn"],
+                  ["instagram", "Instagram"],
+                  ["behance", "Behance"],
+                  ["dribbble", "Dribbble"],
+                  ["youtube", "YouTube"],
+                ] as const
+              ).map(([key, label]) => (
+                <Field key={key} id={key} label={label}>
+                  <Input
+                    id={key}
+                    value={cfg.social[key]}
+                    onChange={(e) =>
+                      patchCfg({
+                        social: { ...cfg.social, [key]: e.target.value },
+                      })
+                    }
+                    placeholder="https://"
+                  />
+                </Field>
+              ))}
+              <div className="sm:col-span-2">{saveConfigButton}</div>
+            </form>
+          ) : null}
+
+          {/* Commercial */}
+          {tab === "commercial" ? (
+            <form className="grid gap-4" onSubmit={saveSiteConfig}>
+              <Field
+                id="areas"
+                label="Service areas"
+                hint="One per line"
+              >
+                <textarea
+                  id="areas"
+                  className={TEXTAREA}
+                  value={cfg.serviceAreas.join("\n")}
+                  onChange={(e) =>
+                    patchCfg({
+                      serviceAreas: e.target.value
+                        .split("\n")
+                        .map((l) => l.trim())
+                        .filter(Boolean),
+                    })
+                  }
+                />
+              </Field>
+              <Field id="langs" label="Languages" hint="One per line">
+                <textarea
+                  id="langs"
+                  className={TEXTAREA}
+                  value={cfg.languages.join("\n")}
+                  onChange={(e) =>
+                    patchCfg({
+                      languages: e.target.value
+                        .split("\n")
+                        .map((l) => l.trim())
+                        .filter(Boolean),
+                    })
+                  }
+                />
+              </Field>
+              <Field id="price" label="Price range" hint="Used in schema.org">
+                <Input
+                  id="price"
+                  value={cfg.priceRange}
+                  onChange={(e) => patchCfg({ priceRange: e.target.value })}
+                  placeholder="$$"
+                />
+              </Field>
+              {saveConfigButton}
+            </form>
+          ) : null}
+
+          {/* Legal */}
+          {tab === "legal" ? (
+            <form className="grid gap-4 sm:grid-cols-2" onSubmit={saveSiteConfig}>
+              <p className="sm:col-span-2 text-xs text-muted-foreground">
+                These values fill {"{{legal.*}}"} tokens in Terms &amp; Privacy.
+              </p>
+              {(
+                [
+                  ["jurisdiction", "Jurisdiction"],
+                  ["governingLaw", "Governing law"],
+                  ["courts", "Courts"],
+                  ["deposit", "Deposit"],
+                  ["revisionRounds", "Revision rounds"],
+                  ["refundWindowDays", "Refund window (days)"],
+                  ["approvalWindowDays", "Approval window (days)"],
+                  ["latePaymentTerms", "Late payment terms"],
+                  ["dataRetentionMonths", "Data retention (months)"],
+                  ["minimumAge", "Minimum age"],
+                  ["noticeDays", "Notice days"],
+                ] as const
+              ).map(([key, label]) => (
+                <Field key={key} id={key} label={label}>
+                  <Input
+                    id={key}
+                    value={cfg.legal[key]}
+                    onChange={(e) =>
+                      patchCfg({
+                        legal: { ...cfg.legal, [key]: e.target.value },
+                      })
+                    }
+                  />
+                </Field>
+              ))}
+              <div className="sm:col-span-2">{saveConfigButton}</div>
             </form>
           ) : null}
 
@@ -593,7 +958,7 @@ function SettingsManager() {
           {tab === "login" ? (
             <form
               className="grid gap-6 lg:grid-cols-[1fr_0.85fr]"
-              onSubmit={handleSaveGeneral}
+              onSubmit={handleSaveLogin}
             >
               <div className="grid gap-4 content-start">
                 <Field id="loginBadge" label="Badge">
@@ -601,7 +966,6 @@ function SettingsManager() {
                     id="loginBadge"
                     value={loginBadgeText}
                     onChange={(e) => setLoginBadgeText(e.target.value)}
-                    placeholder="Staff portal"
                     required
                   />
                 </Field>
@@ -630,27 +994,20 @@ function SettingsManager() {
                   Save login copy
                 </Button>
               </div>
-
-              <div className="rounded-2xl border bg-gradient-to-br from-primary/10 via-card to-card p-5 shadow-sm">
+              <div className="rounded-2xl border bg-gradient-to-br from-primary/10 via-card to-card p-5">
                 <p className="mb-4 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Login preview
+                  Preview
                 </p>
-                <div className="rounded-2xl border bg-background/90 p-5 shadow-sm backdrop-blur">
+                <div className="rounded-2xl border bg-background/90 p-5 shadow-sm">
                   <span className="inline-flex rounded-full bg-primary/15 px-2.5 py-0.5 text-[11px] font-semibold text-primary">
                     {loginBadgeText || "Staff portal"}
                   </span>
                   <h3 className="mt-3 text-xl font-semibold tracking-tight">
-                    {loginTitle || "Sign in to your account"}
+                    {loginTitle || "Sign in"}
                   </h3>
                   <p className="mt-2 text-sm text-muted-foreground">
-                    {loginSubtitle ||
-                      "Use your username or email to access the dashboard."}
+                    {loginSubtitle}
                   </p>
-                  <div className="mt-5 grid gap-2">
-                    <div className="h-9 rounded-lg border bg-muted/40" />
-                    <div className="h-9 rounded-lg border bg-muted/40" />
-                    <div className="mt-1 h-9 rounded-lg bg-primary/90" />
-                  </div>
                 </div>
               </div>
             </form>
@@ -686,42 +1043,25 @@ function SettingsManager() {
                   Save favicon
                 </Button>
               </div>
-
               <div className="flex flex-col items-center justify-center gap-4 rounded-2xl border bg-muted/20 p-8">
                 <div className="flex size-20 items-center justify-center rounded-2xl border bg-background shadow-sm">
                   <img
                     src={faviconSrc}
-                    alt="Current favicon"
+                    alt="Favicon"
                     className="size-12 object-contain"
                   />
                 </div>
-                <div className="text-center">
-                  <p className="text-sm font-medium">
-                    {settings?.faviconUrl ? "Custom favicon" : "Website mark"}
-                  </p>
-                  <p className="mt-1 max-w-[220px] truncate text-xs text-muted-foreground">
-                    {settings?.faviconUrl ?? WEBSITE_LOGOS.mark}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2 rounded-full border bg-background px-3 py-1.5 text-xs text-muted-foreground shadow-sm">
-                  <img
-                    src={faviconSrc}
-                    alt=""
-                    className="size-3.5 object-contain"
-                  />
-                  <span className="font-medium text-foreground">
-                    {siteName || "ProDesignity"}
-                  </span>
-                  <span>— tab preview</span>
-                </div>
+                <p className="text-sm font-medium">
+                  {settings?.faviconUrl ? "Custom favicon" : "Website mark"}
+                </p>
               </div>
             </div>
           ) : null}
 
-          {/* Tracking */}
+          {/* Tracking — keep compact from before */}
           {tab === "tracking" ? (
-            <form className="grid gap-6" onSubmit={handleSaveTracking}>
-              <div className="flex flex-wrap items-center gap-2">
+            <form className="grid gap-5" onSubmit={handleSaveTracking}>
+              <div className="flex flex-wrap gap-2">
                 <TrackChip on={trackingEnabled} label="Enabled" />
                 <TrackChip on={Boolean(metaPixelId.trim())} label="Meta Pixel" />
                 <TrackChip
@@ -732,15 +1072,10 @@ function SettingsManager() {
                   on={Boolean(settings?.metaCapiAccessTokenSet)}
                   label="Meta CAPI"
                 />
-                <TrackChip
-                  on={Boolean(settings?.googleEnhancedConversionsApiKeySet)}
-                  label="Google Enhanced"
-                />
               </div>
-
               <label
                 className={cn(
-                  "flex cursor-pointer items-center justify-between gap-4 rounded-2xl border p-4 transition-colors",
+                  "flex cursor-pointer items-center justify-between gap-4 rounded-2xl border p-4",
                   trackingEnabled
                     ? "border-primary/40 bg-primary/5"
                     : "border-border bg-muted/20",
@@ -761,57 +1096,40 @@ function SettingsManager() {
                   onChange={(e) => setTrackingEnabled(e.target.checked)}
                 />
               </label>
-
               <div className="grid gap-4 rounded-2xl border bg-muted/10 p-4 sm:grid-cols-2">
-                <p className="sm:col-span-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Browser
-                </p>
                 <Field id="metaPixelId" label="Meta Pixel ID">
                   <Input
                     id="metaPixelId"
                     value={metaPixelId}
                     onChange={(e) => setMetaPixelId(e.target.value)}
-                    placeholder="123456789012345"
-                    autoComplete="off"
                   />
                 </Field>
-                <Field id="googleMeasurementId" label="GA4 Measurement ID">
+                <Field id="gaId" label="GA4 Measurement ID">
                   <Input
-                    id="googleMeasurementId"
+                    id="gaId"
                     value={googleMeasurementId}
                     onChange={(e) => setGoogleMeasurementId(e.target.value)}
                     placeholder="G-XXXXXXXXXX"
-                    autoComplete="off"
                   />
                 </Field>
-                <Field
-                  id="googleAdsId"
-                  label="Google Ads ID"
-                  hint="Optional"
-                  className="sm:col-span-2 sm:max-w-md"
-                >
+                <Field id="adsId" label="Google Ads ID" className="sm:col-span-2 sm:max-w-md">
                   <Input
-                    id="googleAdsId"
+                    id="adsId"
                     value={googleAdsId}
                     onChange={(e) => setGoogleAdsId(e.target.value)}
                     placeholder="AW-XXXXXXXXXX"
-                    autoComplete="off"
                   />
                 </Field>
               </div>
-
               <div className="grid gap-4 rounded-2xl border bg-muted/10 p-4 sm:grid-cols-2">
-                <p className="sm:col-span-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Meta CAPI (server)
-                </p>
                 <Field
-                  id="metaCapiToken"
-                  label="Access token"
-                  hint="Leave blank to keep the saved token"
+                  id="capi"
+                  label="Meta CAPI token"
+                  hint="Leave blank to keep saved token"
                   className="sm:col-span-2"
                 >
                   <Input
-                    id="metaCapiToken"
+                    id="capi"
                     type="password"
                     value={metaCapiAccessToken}
                     onChange={(e) => {
@@ -821,7 +1139,7 @@ function SettingsManager() {
                     placeholder={
                       settings?.metaCapiAccessTokenSet
                         ? `Saved ${settings.metaCapiAccessTokenMasked ?? "••••"}`
-                        : "Paste access token"
+                        : "Paste token"
                     }
                     autoComplete="new-password"
                   />
@@ -839,49 +1157,36 @@ function SettingsManager() {
                     Clear saved token
                   </label>
                 ) : null}
-                <Field id="metaCapiTest" label="Test event code" hint="Optional">
+                <Field id="testCode" label="Test event code">
                   <Input
-                    id="metaCapiTest"
+                    id="testCode"
                     value={metaCapiTestEventCode}
                     onChange={(e) => setMetaCapiTestEventCode(e.target.value)}
-                    placeholder="TEST12345"
-                    autoComplete="off"
                   />
                 </Field>
-              </div>
-
-              <div className="grid gap-4 rounded-2xl border bg-muted/10 p-4 sm:grid-cols-2">
-                <p className="sm:col-span-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Google Enhanced Conversions (server)
-                </p>
-                <Field id="googleAdsCustomerId" label="Ads customer ID">
+                <Field id="custId" label="Ads customer ID">
                   <Input
-                    id="googleAdsCustomerId"
+                    id="custId"
                     value={googleAdsCustomerId}
                     onChange={(e) => setGoogleAdsCustomerId(e.target.value)}
-                    placeholder="123-456-7890"
-                    autoComplete="off"
                   />
                 </Field>
-                <Field id="googleAdsConversionLabel" label="Conversion label">
+                <Field id="conv" label="Conversion label">
                   <Input
-                    id="googleAdsConversionLabel"
+                    id="conv"
                     value={googleAdsConversionLabel}
                     onChange={(e) =>
                       setGoogleAdsConversionLabel(e.target.value)
                     }
-                    placeholder="AbC-D_efGHiJklMN"
-                    autoComplete="off"
                   />
                 </Field>
                 <Field
-                  id="googleEnhancedKey"
-                  label="API key"
-                  hint="Leave blank to keep the saved key"
+                  id="gKey"
+                  label="Enhanced Conversions API key"
                   className="sm:col-span-2"
                 >
                   <Input
-                    id="googleEnhancedKey"
+                    id="gKey"
                     type="password"
                     value={googleEnhancedKey}
                     onChange={(e) => {
@@ -891,7 +1196,7 @@ function SettingsManager() {
                     placeholder={
                       settings?.googleEnhancedConversionsApiKeySet
                         ? `Saved ${settings.googleEnhancedConversionsApiKeyMasked ?? "••••"}`
-                        : "Paste API key"
+                        : "Paste key"
                     }
                     autoComplete="new-password"
                   />
@@ -910,14 +1215,6 @@ function SettingsManager() {
                   </label>
                 ) : null}
               </div>
-
-              <p className="text-xs text-muted-foreground">
-                Age &amp; gender stay in Meta Ads Manager / GA4 Demographics.
-                Overview countries come from CDN headers or MaxMind GeoLite2
-                (run <code className="rounded bg-muted px-1">npm run geoip:download</code>{" "}
-                on the API with your MaxMind license key).
-              </p>
-
               <Button type="submit" disabled={savingTracking} className="w-fit">
                 {savingTracking ? (
                   <Loader2Icon className="animate-spin" />
@@ -939,7 +1236,7 @@ export default function AdminSettingsPage() {
     <DashboardLayout
       expectedRole="admin"
       title="Settings"
-      description="Brand, login, favicon, and ads tracking"
+      description="Site config, contact, social, legal, login, favicon, tracking"
     >
       {() => <SettingsManager />}
     </DashboardLayout>
