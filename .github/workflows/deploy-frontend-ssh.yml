@@ -59,7 +59,7 @@ jobs:
                   username: ${{ secrets.SSH_USERNAME }}
                   key: ${{ secrets.SSH_PRIVATE_KEY }}
                   password: ${{ secrets.SSH_PASSWORD }}
-                  port: ${{ vars.SSH_PORT || 22 }}
+                  port: ${{ vars.SSH_PORT || 65002 }}
                   source: "site.tar.gz"
                   target: "/tmp"
                   overwrite: true
@@ -71,7 +71,7 @@ jobs:
                   username: ${{ secrets.SSH_USERNAME }}
                   key: ${{ secrets.SSH_PRIVATE_KEY }}
                   password: ${{ secrets.SSH_PASSWORD }}
-                  port: ${{ vars.SSH_PORT || 22 }}
+                  port: ${{ vars.SSH_PORT || 65002 }}
                   script_stop: true
                   script: |
                       set -euo pipefail
