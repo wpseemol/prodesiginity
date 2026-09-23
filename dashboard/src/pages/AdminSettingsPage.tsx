@@ -913,7 +913,9 @@ function SettingsManager() {
 
               <p className="text-xs text-muted-foreground">
                 Age &amp; gender stay in Meta Ads Manager / GA4 Demographics.
-                Overview shows country, device, and pages from your own visits.
+                Overview countries come from CDN headers or MaxMind GeoLite2
+                (run <code className="rounded bg-muted px-1">npm run geoip:download</code>{" "}
+                on the API with your MaxMind license key).
               </p>
 
               <Button type="submit" disabled={savingTracking} className="w-fit">

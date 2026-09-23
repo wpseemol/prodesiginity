@@ -58,6 +58,7 @@ export function AppSidebar({ user, onLogout }: AppSidebarProps) {
     ? [
         { title: "Overview", to: "/admin", icon: LayoutDashboardIcon },
         { title: "Homepage", to: "/admin/homepage", icon: LayoutTemplateIcon },
+        { title: "Services", to: "/admin/services", icon: BriefcaseIcon },
         { title: "Team", to: "/admin/team", icon: UsersRoundIcon },
         { title: "Staff", to: "/admin/staff", icon: UsersIcon },
         { title: "Settings", to: "/admin/settings", icon: SettingsIcon },
