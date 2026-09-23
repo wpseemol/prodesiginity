@@ -3,10 +3,12 @@
   "private": true,
   "packageManager": "pnpm@10.28.0",
   "scripts": {
-    "dev": "pnpm -r --parallel --filter \"./frontend\" --filter \"./backend\" run dev",
+    "dev": "pnpm -r --parallel --filter \"./frontend\" --filter \"./backend\" --filter \"./dashboard\" run dev",
     "dev:frontend": "pnpm --filter prodesignity dev",
     "dev:backend": "pnpm --filter prodesignity-api dev",
-    "build": "pnpm -r --filter \"./frontend\" --filter \"./backend\" run build",
+    "dev:dashboard": "pnpm --filter prodesignity-dashboard dev",
+    "build": "pnpm -r --filter \"./frontend\" --filter \"./backend\" --filter \"./dashboard\" run build",
+    "build:dashboard": "pnpm --filter prodesignity-dashboard build",
     "lint": "pnpm --filter prodesignity lint"
   },
   "pnpm": {
