@@ -19,6 +19,7 @@ type DashboardLayoutProps = {
   children: (ctx: {
     token: string;
     user: DashboardUser;
+    setUser: (user: DashboardUser) => void;
   }) => ReactNode;
 };
 
@@ -28,7 +29,9 @@ export function DashboardLayout({
   description,
   children,
 }: DashboardLayoutProps) {
-  const { token, user, ready, logout } = useDashboardAuth({ expectedRole });
+  const { token, user, ready, logout, setUser } = useDashboardAuth({
+    expectedRole,
+  });
 
   if (!ready || !token || !user) {
     return (
@@ -44,9 +47,9 @@ export function DashboardLayout({
 
   return (
     <SidebarProvider>
-      <AppSidebar user={user} onLogout={logout} />
+      <AppSidebar user={user} onLogout={() => void logout()} />
       <SidebarInset>
-        <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b bg-background/80 px-4 backdrop-blur supports-backdrop-filter:bg-background/60">
+        <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b border-border/80 bg-background/80 px-4 backdrop-blur-md supports-backdrop-filter:bg-background/60">
           <SidebarTrigger className="-ml-1" />
           <Separator orientation="vertical" className="mr-2 h-4" />
           <div className="min-w-0 flex-1">
@@ -61,8 +64,14 @@ export function DashboardLayout({
           </div>
           <ThemeToggle />
         </header>
-        <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
-          {children({ token, user })}
+        <div className="relative flex flex-1 flex-col gap-6 p-4 md:p-6">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute top-0 right-0 size-72 rounded-full bg-primary/5 blur-3xl dark:bg-primary/10"
+          />
+          <div className="relative flex flex-1 flex-col gap-6">
+            {children({ token, user, setUser })}
+          </div>
         </div>
       </SidebarInset>
     </SidebarProvider>

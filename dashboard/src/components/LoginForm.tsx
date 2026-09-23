@@ -16,7 +16,7 @@ function dashboardPathForRole(role: string): string | null {
 
 export default function LoginForm() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
+  const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
@@ -31,7 +31,7 @@ export default function LoginForm() {
       const res = await fetch(`${apiBaseUrl}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ login, password }),
       });
 
       const data = await res.json();
@@ -41,7 +41,7 @@ export default function LoginForm() {
         setError(
           typeof data.message === "string"
             ? data.message
-            : "Invalid email or password.",
+            : "Invalid username/email or password.",
         );
         return;
       }
@@ -49,13 +49,13 @@ export default function LoginForm() {
       const user = data.user as DashboardUser | undefined;
       const nextPath = user ? dashboardPathForRole(user.role) : null;
 
-      if (!user || !nextPath) {
+      if (!user || !data.accessToken || !data.refreshToken || !nextPath) {
         setStatus("error");
         setError("This account does not have staff dashboard access.");
         return;
       }
 
-      await setDashboardSession(data.token, user);
+      await setDashboardSession(data.accessToken, data.refreshToken, user);
       navigate(nextPath);
     } catch {
       setStatus("error");
@@ -66,12 +66,14 @@ export default function LoginForm() {
   return (
     <form className="grid gap-5" onSubmit={handleSubmit}>
       <div className="grid gap-1.5 text-center sm:text-left">
-        <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
+        <p className="mx-auto inline-flex w-fit items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary sm:mx-0">
           Staff portal
         </p>
-        <h1 className="text-2xl font-semibold tracking-tight">Sign in</h1>
+        <h1 className="text-2xl font-bold tracking-tight">
+          Sign in to your account
+        </h1>
         <p className="text-sm text-muted-foreground">
-          Access your admin or employee dashboard.
+          Use your username or email to access the ProDesignity dashboard.
         </p>
       </div>
 
@@ -83,16 +85,16 @@ export default function LoginForm() {
       ) : null}
 
       <div className="grid gap-2">
-        <Label htmlFor="email">Email</Label>
+        <Label htmlFor="login">Username or email</Label>
         <Input
-          id="email"
-          type="email"
-          name="email"
-          autoComplete="email"
+          id="login"
+          type="text"
+          name="login"
+          autoComplete="username"
           required
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="you@prodesignity.com"
+          value={login}
+          onChange={(e) => setLogin(e.target.value)}
+          placeholder="admin or you@prodesignity.com"
         />
       </div>
 

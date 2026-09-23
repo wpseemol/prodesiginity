@@ -1,4 +1,5 @@
 import LoginForm from "@/components/LoginForm";
+import { BrandLogo } from "@/components/BrandLogo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
   Card,
@@ -10,22 +11,27 @@ import {
 
 export default function LoginPage() {
   return (
-    <div className="relative flex min-h-svh items-center justify-center overflow-hidden bg-muted/40 p-4">
+    <div className="relative flex min-h-svh items-center justify-center overflow-hidden bg-slate-50/60 p-4 dark:bg-[#070B14]">
+      {/* Ambient glows — matched to frontend login */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_oklch(0.92_0.02_250),_transparent_55%),radial-gradient(ellipse_at_bottom_right,_oklch(0.94_0.01_80),_transparent_45%)] dark:bg-[radial-gradient(ellipse_at_top,_oklch(0.28_0.03_250),_transparent_55%),radial-gradient(ellipse_at_bottom_right,_oklch(0.22_0.02_80),_transparent_45%)]"
+        className="pointer-events-none absolute top-1/4 left-10 size-96 rounded-full bg-primary/10 blur-3xl dark:bg-primary/15"
       />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute right-10 bottom-10 size-96 rounded-full bg-brand-violet/10 blur-3xl dark:bg-brand-violet/15"
+      />
+
       <div className="absolute top-4 right-4 z-10">
         <ThemeToggle />
       </div>
-      <Card className="relative w-full max-w-md border-border/80 shadow-lg">
-        <CardHeader className="pb-0">
-          <div className="mb-4 flex size-10 items-center justify-center rounded-xl bg-primary text-sm font-semibold text-primary-foreground">
-            PD
-          </div>
-          <CardTitle className="sr-only">Prodesignity staff sign in</CardTitle>
+
+      <Card className="relative w-full max-w-md border-border/80 bg-white/90 shadow-2xl shadow-slate-900/10 backdrop-blur-2xl dark:bg-[#0D121F]/90 dark:shadow-black/60">
+        <CardHeader className="items-center pb-2 sm:items-start">
+          <BrandLogo className="mb-2" />
+          <CardTitle className="sr-only">ProDesignity staff sign in</CardTitle>
           <CardDescription className="sr-only">
-            Sign in to the Prodesignity dashboard
+            Sign in to the ProDesignity dashboard
           </CardDescription>
         </CardHeader>
         <CardContent>

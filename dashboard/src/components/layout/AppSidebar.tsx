@@ -5,8 +5,11 @@ import {
   LogOutIcon,
   UsersIcon,
   BriefcaseIcon,
+  UserRoundIcon,
 } from "lucide-react";
 import type { DashboardUser } from "@/lib/session";
+import { BrandLogo } from "@/components/BrandLogo";
+import { mediaUrl } from "@/config";
 import {
   Sidebar,
   SidebarContent,
@@ -20,7 +23,7 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 
 type NavItem = {
@@ -46,29 +49,32 @@ function initials(name: string) {
 export function AppSidebar({ user, onLogout }: AppSidebarProps) {
   const location = useLocation();
   const isAdmin = user.role === "admin";
+  const profilePath = isAdmin ? "/admin/profile" : "/employee/profile";
 
   const navItems: NavItem[] = isAdmin
     ? [
         { title: "Overview", to: "/admin", icon: LayoutDashboardIcon },
         { title: "Staff", to: "/admin/staff", icon: UsersIcon },
+        { title: "Profile", to: profilePath, icon: UserRoundIcon },
       ]
-    : [{ title: "Workspace", to: "/employee", icon: BriefcaseIcon }];
+    : [
+        { title: "Workspace", to: "/employee", icon: BriefcaseIcon },
+        { title: "Profile", to: profilePath, icon: UserRoundIcon },
+      ];
 
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="gap-3 px-3 py-4">
-        <div className="flex items-center gap-2.5 px-1 group-data-[collapsible=icon]:justify-center">
-          <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground text-xs font-semibold tracking-tight">
-            PD
+        <div className="flex flex-col gap-1.5 px-1 group-data-[collapsible=icon]:items-center">
+          <div className="group-data-[collapsible=icon]:hidden">
+            <BrandLogo />
           </div>
-          <div className="min-w-0 group-data-[collapsible=icon]:hidden">
-            <p className="truncate text-sm font-semibold tracking-tight">
-              Prodesignity
-            </p>
-            <p className="truncate text-xs text-muted-foreground">
-              {isAdmin ? "Admin console" : "Staff portal"}
-            </p>
+          <div className="hidden group-data-[collapsible=icon]:block">
+            <BrandLogo compact />
           </div>
+          <p className="truncate text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
+            {isAdmin ? "Admin console" : "Staff portal"}
+          </p>
         </div>
       </SidebarHeader>
 
@@ -98,13 +104,21 @@ export function AppSidebar({ user, onLogout }: AppSidebarProps) {
         <Separator />
         <div className="flex items-center gap-2 rounded-lg px-2 py-2 group-data-[collapsible=icon]:justify-center">
           <Avatar className="size-8">
+            {mediaUrl(user.photo?.url) ? (
+              <AvatarImage
+                src={mediaUrl(user.photo?.url)}
+                alt={user.fullName}
+              />
+            ) : null}
             <AvatarFallback className="text-xs">
               {initials(user.fullName)}
             </AvatarFallback>
           </Avatar>
           <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
             <p className="truncate text-sm font-medium">{user.fullName}</p>
-            <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+            <p className="truncate text-xs text-muted-foreground">
+              @{user.username}
+            </p>
           </div>
         </div>
         <SidebarMenu>

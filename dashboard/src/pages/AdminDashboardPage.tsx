@@ -6,9 +6,11 @@ import {
   UsersIcon,
 } from "lucide-react";
 import { toast } from "sonner";
-import { apiBaseUrl } from "@/config";
+import { mediaUrl } from "@/config";
+import { apiFetch } from "@/lib/api";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -36,13 +38,30 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+type StaffPhoto = {
+  id: number;
+  url: string;
+  altText: string | null;
+};
+
 type StaffUser = {
   id: number;
   fullName: string;
+  username: string;
   email: string;
   role: "admin" | "employer";
   created_at: string;
+  photo?: StaffPhoto | null;
 };
+
+function staffInitials(name: string) {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("");
+}
 
 function StatCard({
   title,
@@ -56,10 +75,12 @@ function StatCard({
   icon: ComponentType<{ className?: string }>;
 }) {
   return (
-    <Card>
+    <Card className="border-border/70 bg-card/90 shadow-sm backdrop-blur-sm">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        <Icon className="size-4 text-muted-foreground" />
+        <div className="flex size-8 items-center justify-center rounded-xl bg-primary/10 text-primary">
+          <Icon className="size-4" />
+        </div>
       </CardHeader>
       <CardContent>
         <div className="text-2xl font-semibold tracking-tight">{value}</div>
@@ -69,13 +90,7 @@ function StatCard({
   );
 }
 
-function AdminOverview({
-  token,
-  userName,
-}: {
-  token: string;
-  userName: string;
-}) {
+function AdminOverview({ userName }: { userName: string }) {
   const [staff, setStaff] = useState<StaffUser[]>([]);
   const [listError, setListError] = useState<string | null>(null);
 
@@ -83,9 +98,7 @@ function AdminOverview({
     let cancelled = false;
     void (async () => {
       try {
-        const res = await fetch(`${apiBaseUrl}/admin/users`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await apiFetch("/admin/users");
         const data = await res.json();
         if (cancelled) return;
         if (!res.ok) {
@@ -105,7 +118,7 @@ function AdminOverview({
     return () => {
       cancelled = true;
     };
-  }, [token]);
+  }, []);
 
   const adminCount = staff.filter((member) => member.role === "admin").length;
   const employeeCount = staff.filter(
@@ -186,6 +199,7 @@ function StaffTable({
       <TableHeader>
         <TableRow>
           <TableHead>Name</TableHead>
+          <TableHead>Username</TableHead>
           <TableHead>Email</TableHead>
           <TableHead>Role</TableHead>
         </TableRow>
@@ -193,7 +207,25 @@ function StaffTable({
       <TableBody>
         {staff.map((member) => (
           <TableRow key={member.id}>
-            <TableCell className="font-medium">{member.fullName}</TableCell>
+            <TableCell>
+              <div className="flex items-center gap-2.5">
+                <Avatar className="size-8">
+                  {mediaUrl(member.photo?.url) ? (
+                    <AvatarImage
+                      src={mediaUrl(member.photo?.url)}
+                      alt={member.fullName}
+                    />
+                  ) : null}
+                  <AvatarFallback className="text-xs">
+                    {staffInitials(member.fullName)}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="font-medium">{member.fullName}</span>
+              </div>
+            </TableCell>
+            <TableCell className="text-muted-foreground">
+              @{member.username}
+            </TableCell>
             <TableCell className="text-muted-foreground">
               {member.email}
             </TableCell>
@@ -209,9 +241,10 @@ function StaffTable({
   );
 }
 
-function AdminStaffManager({ token }: { token: string }) {
+function AdminStaffManager() {
   const [staff, setStaff] = useState<StaffUser[]>([]);
   const [fullName, setFullName] = useState("");
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<"admin" | "employer">("employer");
@@ -220,9 +253,7 @@ function AdminStaffManager({ token }: { token: string }) {
 
   const loadStaff = async () => {
     try {
-      const res = await fetch(`${apiBaseUrl}/admin/users`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await apiFetch("/admin/users");
       const data = await res.json();
       if (!res.ok) {
         setListError(
@@ -241,20 +272,16 @@ function AdminStaffManager({ token }: { token: string }) {
 
   useEffect(() => {
     void loadStaff();
-  }, [token]);
+  }, []);
 
   const handleCreate = async (e: FormEvent) => {
     e.preventDefault();
     setStatus("loading");
 
     try {
-      const res = await fetch(`${apiBaseUrl}/admin/users`, {
+      const res = await apiFetch("/admin/users", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ fullName, email, password, role }),
+        body: JSON.stringify({ fullName, username, email, password, role }),
       });
 
       const data = await res.json();
@@ -275,6 +302,7 @@ function AdminStaffManager({ token }: { token: string }) {
           : "Account created successfully.",
       );
       setFullName("");
+      setUsername("");
       setEmail("");
       setPassword("");
       setRole("employer");
@@ -305,6 +333,16 @@ function AdminStaffManager({ token }: { token: string }) {
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 placeholder="Jane Doe"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="username">Username</Label>
+              <Input
+                id="username"
+                required
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="jane.doe"
               />
             </div>
             <div className="grid gap-2">
@@ -390,9 +428,7 @@ export default function AdminDashboardPage() {
       title="Overview"
       description="Admin dashboard home"
     >
-      {({ token, user }) => (
-        <AdminOverview token={token} userName={user.fullName} />
-      )}
+      {({ user }) => <AdminOverview userName={user.fullName} />}
     </DashboardLayout>
   );
 }
@@ -404,7 +440,7 @@ export function AdminStaffPage() {
       title="Staff"
       description="Create and review team accounts"
     >
-      {({ token }) => <AdminStaffManager token={token} />}
+      {() => <AdminStaffManager />}
     </DashboardLayout>
   );
 }

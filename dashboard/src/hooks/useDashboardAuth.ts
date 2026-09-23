@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { StaffRole } from "@/config";
+import { logoutRequest } from "@/lib/api";
 import {
-  clearDashboardSession,
-  getDashboardToken,
+  getAccessToken,
   getDashboardUser,
   type DashboardUser,
 } from "@/lib/session";
@@ -26,7 +26,7 @@ export function useDashboardAuth({
     let cancelled = false;
 
     void (async () => {
-      const nextToken = getDashboardToken();
+      const nextToken = getAccessToken();
       const nextUser = await getDashboardUser();
       if (cancelled) return;
 
@@ -40,7 +40,9 @@ export function useDashboardAuth({
           : [expectedRole]
         : null;
 
-      const roleOk = !roles || (nextUser != null && roles.includes(nextUser.role as StaffRole));
+      const roleOk =
+        !roles ||
+        (nextUser != null && roles.includes(nextUser.role as StaffRole));
 
       if (!nextToken || !nextUser || !roleOk) {
         navigate(loginPath, { replace: true });
@@ -52,10 +54,10 @@ export function useDashboardAuth({
     };
   }, [expectedRole, loginPath, navigate]);
 
-  const logout = () => {
-    clearDashboardSession();
+  const logout = async () => {
+    await logoutRequest();
     navigate(loginPath);
   };
 
-  return { token, user, ready, logout };
+  return { token, user, ready, logout, setUser };
 }
