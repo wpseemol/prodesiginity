@@ -1,4 +1,8 @@
 node_modules
 .env
 
+# MaxMind GeoLite2 database (download via npm run geoip:download)
+data/geoip/*.mmdb
+data/geoip/*.tar.gz
 
+# Uploads rules live in uploads/.gitignore

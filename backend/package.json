@@ -6,28 +6,54 @@
     "scripts": {
         "dev": "tsx watch src/index.ts",
         "build": "tsc",
-        "start": "node dist/index.js"
+        "start": "node dist/index.js",
+        "postinstall": "npx prisma generate",
+        "db:seed": "tsx prisma/seed.ts",
+        "db:seed-homepage": "tsx scripts/ensure-homepage.ts",
+        "db:seed-team-settings": "tsx scripts/ensure-team-settings.ts",
+        "db:ensure-tracking": "tsx scripts/ensure-tracking-settings.ts",
+        "geoip:download": "tsx scripts/download-geolite2.ts",
+        "db:ensure-services": "tsx scripts/ensure-services.ts",
+        "services:export-seed": "tsx scripts/export-services-seed.ts",
+        "db:ensure-site-config": "tsx scripts/ensure-site-config.ts"
+    },
+    "prisma": {
+        "seed": "tsx prisma/seed.ts"
     },
     "keywords": [],
     "author": "",
     "license": "ISC",
-    "packageManager": "pnpm@10.28.0",
     "type": "commonjs",
     "dependencies": {
+        "@maxmind/geoip2-node": "^7.1.0",
+        "@prisma/adapter-mariadb": "^7.10.0",
+        "@prisma/client": "7.10.0",
+        "bcrypt": "^6.0.0",
         "cors": "^2.8.6",
         "dotenv": "^17.4.2",
         "express": "^5.2.1",
+        "jsonwebtoken": "^9.0.3",
+        "mariadb": "^3.5.4",
         "multer": "^2.3.0",
+        "mysql2": "^3.24.4",
         "nodemailer": "^9.0.6",
-        "resend": "^6.25.0"
+        "prisma": "7.10.0",
+        "resend": "^6.25.0",
+        "tar": "^7.5.22",
+        "typescript": "^7.0.2",
+        "validator": "^13.15.35",
+        "zod": "^4.6.5"
     },
     "devDependencies": {
+        "@types/bcrypt": "^6.0.0",
         "@types/cors": "^2.8.19",
         "@types/express": "^5.0.6",
+        "@types/jsonwebtoken": "^9.0.10",
         "@types/multer": "^2.2.0",
         "@types/node": "^26.4.0",
         "@types/nodemailer": "^8.0.1",
-        "tsx": "^4.23.13",
-        "typescript": "^7.0.2"
+        "@types/tar": "^6.1.13",
+        "@types/validator": "^13.15.10",
+        "tsx": "^4.23.13"
     }
 }
