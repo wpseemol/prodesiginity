@@ -1,0 +1,79 @@
+services:
+    mysql:
+        image: mysql:8.0
+        container_name: prodesignity_mysql
+        volumes:
+            - prodesignity_mysql_data:/var/lib/mysql
+        ports:
+            - "3306:3306"
+        env_file:
+            - .env.dev
+        networks:
+            - prodesignityDbNetwork
+        healthcheck:
+            test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${MYSQL_ROOT_PASSWORD:-_root}"]
+            interval: 10s
+            timeout: 5s
+            retries: 10
+
+    phpmyadmin:
+        image: phpmyadmin
+        container_name: prodesignity_phpmyadmin
+        ports:
+            - "8183:80"
+        env_file:
+            - .env.dev
+        depends_on:
+            mysql:
+                condition: service_healthy
+        networks:
+            - prodesignityDbNetwork
+
+    backend:
+        build:
+            context: .
+            dockerfile: backend/Dockerfile
+        container_name: prodesignity_api
+        ports:
+            - "4000:4000"
+        environment:
+            NODE_ENV: production
+            PORT: 4000
+            DB_HOST: mysql
+            DB_PORT: 3306
+            DB_USER: admin
+            DB_PASSWORD: _admin123
+            DB_NAME: pro_designity_db
+            DATABASE_URL: mariadb://admin:_admin123@mysql:3306/pro_designity_db
+            ALLOWED_ORIGINS: http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173
+            JWT_SECRET: change-me-in-production
+        depends_on:
+            mysql:
+                condition: service_healthy
+        networks:
+            - prodesignityDbNetwork
+        restart: unless-stopped
+
+    frontend:
+        build:
+            context: .
+            dockerfile: frontend/Dockerfile
+            args:
+                NEXT_PUBLIC_API_URL: http://localhost:4000/api
+                NEXT_PUBLIC_SITE_URL: http://localhost:3000
+        container_name: prodesignity_web
+        ports:
+            - "3000:80"
+        depends_on:
+            - backend
+        networks:
+            - prodesignityDbNetwork
+        restart: unless-stopped
+
+networks:
+    prodesignityDbNetwork:
+        driver: bridge
+
+volumes:
+    prodesignity_mysql_data:
+        name: prodesignity_mysql_data
