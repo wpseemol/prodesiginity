@@ -1,0 +1,28 @@
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+    // Emit a folder of plain .html/.css/.js files — no Node server needed.
+    // Client-side routing still ships in the JS bundle, so links between pages
+    // are soft navigations (no full reload), exactly like a normal Next app.
+    output: "export",
+    trailingSlash: true,
+    reactStrictMode: true,
+    poweredByHeader: false,
+    // redirects() and headers() are server features and are ignored by
+    // `output: export`. They now live in public_html/.htaccess instead.
+    compress: true,
+    images: {
+        // No server = no on-demand image optimizer. Images are served as-is.
+        unoptimized: true,
+        remotePatterns: [
+            { protocol: "https", hostname: "avatars.githubusercontent.com" },
+            { protocol: "https", hostname: "opengraph.githubassets.com" },
+            // Placeholder team/review headshots. Drop this once real photos
+            // live in /public/assets/team/.
+            { protocol: "https", hostname: "images.unsplash.com" },
+            { protocol: "https", hostname: "res.cloudinary.com" },
+            { protocol: "https", hostname: "i.ytimg.com" },
+        ],
+    },
+};
+
+export default nextConfig;

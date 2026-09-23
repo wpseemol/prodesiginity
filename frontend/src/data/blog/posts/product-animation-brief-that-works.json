@@ -1,0 +1,280 @@
+{
+    "slug": "product-animation-brief-that-works",
+    "title": "How to Brief a Product Animation So You Get a Usable Ad in One Round",
+    "excerpt": "Animation revisions are expensive because they arrive late. Most of that cost is avoidable, and it is avoided in the brief — before a single frame is rendered.",
+    "category": "Animation & Video",
+    "accent": "blue",
+    "icon": "Film",
+    "publishedAt": "2026-06-24",
+    "updatedAt": "2026-08-04",
+    "author": {
+        "name": "Antor Halder",
+        "role": "2D Artist & Animator",
+        "photo": "/assets/images/team/antor.jpg"
+    },
+    "tags": [
+        "product animation",
+        "3D animation",
+        "creative brief",
+        "ad creative"
+    ],
+    "keyTakeaways": [
+        "Feedback given at storyboard costs minutes; the same note given on a rendered cut costs days. The brief exists to move decisions earlier.",
+        "State one job for the video. A film that has to build brand, explain a feature and drive a click will do none of them well.",
+        "Specify the delivery matrix upfront — aspect ratios, durations, captions, sound-off legibility — because reframing after the fact is a re-edit.",
+        "Name the finishes and supply vector artwork. Vague material direction is the most common cause of an extra revision round.",
+        "Agree who approves, in what order, and by when. Sequential feedback from four people is the single largest schedule risk on any animation."
+    ],
+    "body": [
+        {
+            "type": "paragraph",
+            "text": "The complaint we hear about animation projects is almost always the same: it took three rounds and the third one was the expensive one. That is a real problem, but it is rarely a problem with the animator. It is a problem with when decisions got made."
+        },
+        {
+            "type": "paragraph",
+            "text": "In animation the cost of a change rises steeply through the project. Rewriting a beat on a storyboard is a conversation. The identical note after final render means re-lighting, re-rendering and re-grading. A good brief is not paperwork — it is the mechanism for pulling decisions to the cheap end of that curve."
+        },
+        {
+            "type": "stats",
+            "items": [
+                {
+                    "value": "Minutes",
+                    "label": "Cost of a change at storyboard"
+                },
+                {
+                    "value": "Hours",
+                    "label": "Cost of the same change at animatic"
+                },
+                {
+                    "value": "Days",
+                    "label": "Cost once it is lit and rendered"
+                }
+            ]
+        },
+        {
+            "type": "heading",
+            "id": "one-job",
+            "text": "1. Give the video exactly one job"
+        },
+        {
+            "type": "paragraph",
+            "text": "The most common brief we receive asks for a film that establishes the brand, demonstrates three features, shows the packaging, includes a testimonial and ends on a discount code. In fifteen seconds. That video can be made and it will underperform every one of those objectives."
+        },
+        {
+            "type": "paragraph",
+            "text": "Pick one, and let the format follow from it."
+        },
+        {
+            "type": "table",
+            "caption": "Matching the job to the format that actually serves it.",
+            "head": ["The job", "Format that suits it", "Typical length"],
+            "rows": [
+                [
+                    "Stop the scroll on a cold audience",
+                    "Fast product reveal, motion in the first frame",
+                    "6–15 seconds"
+                ],
+                [
+                    "Explain how it works",
+                    "Exploded view or cutaway with callouts",
+                    "20–45 seconds"
+                ],
+                [
+                    "Show craft and materials",
+                    "Slow macro turntable, minimal cuts",
+                    "10–20 seconds"
+                ],
+                [
+                    "Show what is in the box",
+                    "Packaging open and layout reveal",
+                    "10–20 seconds"
+                ],
+                [
+                    "Support a launch or retailer pitch",
+                    "Narrative hero film",
+                    "45–90 seconds"
+                ]
+            ]
+        },
+        {
+            "type": "callout",
+            "tone": "info",
+            "title": "A better way to phrase the objective",
+            "text": "Instead of 'we need a product video', write the sentence you want a viewer to be able to say afterwards. 'I understand that the filter is replaceable without tools' is a brief. 'Something premium and eye-catching' is a mood, and moods produce revision rounds."
+        },
+        {
+            "type": "heading",
+            "id": "delivery-matrix",
+            "text": "2. Specify the delivery matrix before the first frame"
+        },
+        {
+            "type": "paragraph",
+            "text": "This is the requirement most often left until the end, and it is the one most likely to force a re-edit rather than a tweak. A 16:9 film cropped to 9:16 afterwards will have the product half out of frame and the type off screen. Composition has to know about the crop in advance."
+        },
+        {
+            "type": "list",
+            "items": [
+                "Aspect ratios: 9:16 for feed and stories, 1:1 for grid, 16:9 for site and retail. Say which ones, and which is the master.",
+                "Durations: the platform cut-downs you need — commonly 6, 15 and 30 seconds — since they are edited, not trimmed.",
+                "Sound-off legibility: assume the majority of views are muted and confirm whether burned-in captions are required.",
+                "Text safe zones, so nothing important sits under a platform's interface overlay.",
+                "The end frame: logo, claim, call to action, and whether a discount code needs to be swappable later.",
+                "File specifications for each destination, including any codec or file-size limits your ad platform enforces."
+            ]
+        },
+        {
+            "type": "heading",
+            "id": "source-material",
+            "text": "3. Send proper source material"
+        },
+        {
+            "type": "paragraph",
+            "text": "Everything downstream is built on what arrives in the first email. Weak source material does not stop a project — it just moves the cost into modelling time and into an extra revision round when the finish comes back wrong."
+        },
+        {
+            "type": "steps",
+            "items": [
+                {
+                    "title": "Geometry",
+                    "body": "CAD or a production dieline is ideal because it is measured. Failing that, straight-on photographs from front, side and top, plus real dimensions. Photographs taken at an angle are the hardest thing to model accurately from."
+                },
+                {
+                    "title": "Artwork",
+                    "body": "Vector labels and logos, layered where possible. A flattened screen-resolution JPEG of a label will look soft in close-up, and close-up is the entire point of a product animation."
+                },
+                {
+                    "title": "Materials",
+                    "body": "Name them: 'soft-touch matte lamination', 'brushed 304 stainless', 'PET with a slight haze'. 'Premium looking' is not a specification, and interpreting it is a revision round waiting to happen."
+                },
+                {
+                    "title": "Brand rules",
+                    "body": "Fonts as actual font files, exact colour values, and the logo lock-up with its clear-space rule. Substituting a font that looks close is the sort of thing that fails at final approval."
+                },
+                {
+                    "title": "Reference",
+                    "body": "Three to five links, each with one line explaining what you want from it. 'This pacing', 'this lighting', 'this camera move' is enormously more useful than a folder of films you liked."
+                }
+            ]
+        },
+        {
+            "type": "callout",
+            "tone": "warning",
+            "title": "The single most expensive omission",
+            "text": "Not mentioning that the packaging artwork is still being finalised. Lighting and materials are tuned to the artwork they are lighting, so a label change after look development is not a swap — it is a relight of every shot in the film."
+        },
+        {
+            "type": "heading",
+            "id": "approval",
+            "text": "4. Decide who approves, and when"
+        },
+        {
+            "type": "paragraph",
+            "text": "Schedules slip on approvals far more often than on production. The specific failure is sequential feedback: the animator addresses the marketing lead's notes, then the founder sees it for the first time and disagrees with the premise, and a week of work is undone by a comment that could have been made at storyboard."
+        },
+        {
+            "type": "list",
+            "ordered": true,
+            "items": [
+                "Name one person who consolidates feedback. Everybody may comment; one person decides what is sent.",
+                "Get every stakeholder to the storyboard review. This is the meeting that saves the project, and it is the one people skip because 'it is only sketches'.",
+                "Set a turnaround for each round — two working days is typical — so the schedule has real dates rather than aspirations.",
+                "Agree what each stage locks. Once the storyboard is approved, the structure is settled and later notes about the structure become a new scope.",
+                "Give notes on the film, not on the still. A frame grab cannot show timing, and most animation notes are really timing notes."
+            ]
+        },
+        {
+            "type": "quote",
+            "text": "Every hour spent in the storyboard review saves roughly a day at the render stage. Nobody believes this until the first time they skip it.",
+            "attribution": "Our standard argument for making the meeting mandatory"
+        },
+        {
+            "type": "heading",
+            "id": "how-a-project-runs",
+            "text": "What a well-run project looks like"
+        },
+        {
+            "type": "steps",
+            "items": [
+                {
+                    "title": "Kickoff",
+                    "body": "Objective, audience, delivery matrix and source material confirmed in one session. Anything missing is listed with an owner and a date."
+                },
+                {
+                    "title": "Storyboard",
+                    "body": "Frames with timing and on-screen text. All stakeholders review together. Structural notes belong here and nowhere later."
+                },
+                {
+                    "title": "Look development",
+                    "body": "One key frame, fully lit and graded, showing the visual target. Approve materials and lighting on a single frame rather than on a sequence."
+                },
+                {
+                    "title": "Animatic",
+                    "body": "Timing in motion, with placeholder quality. This is where pacing notes are cheap and where they should be given."
+                },
+                {
+                    "title": "Full render and grade",
+                    "body": "The expensive stage. By now it should hold no surprises, because every decision it depends on was approved earlier."
+                },
+                {
+                    "title": "Versioning",
+                    "body": "Cut-downs, aspect ratios and caption variants produced from the approved master."
+                }
+            ]
+        },
+        {
+            "type": "heading",
+            "id": "brief-template",
+            "text": "The brief, in ten lines"
+        },
+        {
+            "type": "paragraph",
+            "text": "If you write nothing else, write these. It takes about twenty minutes and it is the cheapest schedule insurance available on any animation project."
+        },
+        {
+            "type": "list",
+            "ordered": true,
+            "items": [
+                "What the video must make a viewer understand or do — one sentence.",
+                "Who is watching, and where they encounter it.",
+                "Master duration and every cut-down required.",
+                "Every aspect ratio required, and which is the master.",
+                "Whether it must work with sound off.",
+                "What the end frame says.",
+                "What source material exists today, and what is still pending with a date.",
+                "Named materials and finishes.",
+                "Three references with a note on what each one is for.",
+                "Who approves, and the deadline for each round."
+            ]
+        }
+    ],
+    "faqs": [
+        {
+            "q": "How long does a product animation take?",
+            "a": "For a short social cut from an existing approved 3D model, typically one to two weeks. Starting from scratch — modelling, materials, look development and animation — is more commonly three to five weeks depending on complexity and on how quickly approvals come back. Approval turnaround is usually the larger variable, not the production itself."
+        },
+        {
+            "q": "Can you animate a product we have already had rendered elsewhere?",
+            "a": "If you have the source scene file, usually yes, and it saves considerable time. If you only have flat images, the model has to be rebuilt — which is why asking about source file ownership at the start of a rendering project matters more than it seems at the time."
+        },
+        {
+            "q": "How many revision rounds should we expect?",
+            "a": "Two is a reasonable standard scope, structured as one at storyboard and one at animatic, with final render treated as a check rather than a review. Projects that consistently need more usually have a brief problem or an approval-chain problem rather than a production one."
+        },
+        {
+            "q": "Do we need separate versions for each platform?",
+            "a": "You need separate crops and cut-downs, yes, and it is far cheaper to plan them upfront than to produce them afterwards. Composing the master with the vertical crop in mind means the versions are an export step rather than a re-edit."
+        }
+    ],
+    "relatedServices": ["product-animation", "3d-animation", "motion-graphics"],
+    "seo": {
+        "title": "How to Brief a Product Animation Properly",
+        "description": "A practical brief template for 3D product animation: defining one objective, specifying the delivery matrix, supplying usable source material and structuring approvals.",
+        "keywords": [
+            "product animation brief",
+            "3d animation brief template",
+            "product video brief",
+            "animation production process",
+            "cgi product video"
+        ]
+    }
+}

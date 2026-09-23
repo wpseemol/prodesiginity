@@ -1,0 +1,243 @@
+{
+    "slug": "shopify-product-page-conversion-checklist",
+    "title": "The Shopify Product Page Checklist That Actually Moves Conversion",
+    "excerpt": "Most product page advice is decoration. This is the short list of changes that reliably shift revenue on Shopify stores — ordered by how much work they take against what they return.",
+    "category": "E-commerce",
+    "accent": "emerald",
+    "icon": "ShoppingBag",
+    "publishedAt": "2026-08-05",
+    "updatedAt": "2026-08-27",
+    "author": {
+        "name": "Shajjad Shagor",
+        "role": "Shopify Developer",
+        "photo": "/assets/images/team/shajjad.jpg"
+    },
+    "tags": [
+        "Shopify",
+        "conversion rate",
+        "product page",
+        "Core Web Vitals"
+    ],
+    "keyTakeaways": [
+        "The gallery is the product page. Buyers scroll images and skip prose, so image work returns more than copy rewrites on almost every store.",
+        "Above the fold you need five things: what it is, what it costs, what it looks like, why it is trustworthy, and one unambiguous button.",
+        "Mobile Largest Contentful Paint under 2.5 seconds is a conversion feature, not an engineering vanity metric.",
+        "Answer objections on the page where they occur rather than burying them in a shipping policy nobody opens.",
+        "Change one thing at a time and give it two weeks. Stacked changes on a store doing modest traffic teach you nothing."
+    ],
+    "body": [
+        {
+            "type": "paragraph",
+            "text": "There is a version of product page optimisation that is mostly theatre: badge sets, countdown timers, a fourth trust seal. It moves nothing, and it makes the page slower. The changes that move revenue are duller than that and there are fewer of them than the internet suggests."
+        },
+        {
+            "type": "paragraph",
+            "text": "What follows is the list we work through on Shopify builds, roughly in order of return per hour spent. If you only get through the first three, you will still have done the majority of the available work."
+        },
+        {
+            "type": "heading",
+            "id": "gallery-first",
+            "text": "1. Treat the gallery as the page"
+        },
+        {
+            "type": "paragraph",
+            "text": "Watch a session recording of any product page and the pattern is the same: the buyer swipes the images, glances at the price, swipes more images, and only then reads anything. Your image set is doing the persuading. Copy is a supporting document."
+        },
+        {
+            "type": "paragraph",
+            "text": "A gallery that converts tends to follow a fixed sequence, because each frame is answering the question the previous frame created."
+        },
+        {
+            "type": "steps",
+            "items": [
+                {
+                    "title": "Frame 1 — the clean hero",
+                    "body": "Product on a plain background, filling roughly 85% of the frame, cropped identically to every other product in the range. This is the frame that also has to survive being shrunk into a collection grid."
+                },
+                {
+                    "title": "Frame 2 — scale",
+                    "body": "The single most common return reason in e-commerce is 'smaller than I expected'. Show the product in a hand, next to a recognisable object, or with dimensions overlaid. This frame quietly reduces returns."
+                },
+                {
+                    "title": "Frame 3 — the detail that justifies the price",
+                    "body": "The stitching, the seal, the material grain, the port layout. Whatever makes this cost more than the cheap version, shown close enough that the difference is visible."
+                },
+                {
+                    "title": "Frame 4 — in use",
+                    "body": "The product in its actual context, with a person if that makes sense for the category. This is the frame that lets someone picture owning it."
+                },
+                {
+                    "title": "Frame 5 — what is in the box",
+                    "body": "Everything included, laid out flat. It pre-empts the 'does it come with' question that otherwise becomes a support ticket or an abandoned cart."
+                },
+                {
+                    "title": "Frame 6 — the spec card",
+                    "body": "Dimensions, materials, compatibility, care. An image, not a table, because it survives being screenshotted and shared."
+                }
+            ]
+        },
+        {
+            "type": "callout",
+            "tone": "info",
+            "title": "Test this before you rewrite anything",
+            "text": "Shrink your first gallery image to 200 pixels wide and look at it on a phone. If you cannot tell what the product is at that size, the collection grid is leaking traffic before anyone ever reaches the product page."
+        },
+        {
+            "type": "heading",
+            "id": "above-the-fold",
+            "text": "2. Fix what sits above the fold"
+        },
+        {
+            "type": "paragraph",
+            "text": "On a phone you have roughly one screen to establish the product, the price and the reason to trust you. Five elements have to be visible without scrolling, and anything else in that space is competing with them."
+        },
+        {
+            "type": "list",
+            "items": [
+                "The product name, written the way a customer would say it rather than the way your PIM stores it.",
+                "The price, with any discount shown as a real comparison rather than a permanently struck-through fiction.",
+                "The first gallery image, loaded and rendered — not a grey box waiting on JavaScript.",
+                "One line of social proof: star rating and review count, or a single specific credibility claim.",
+                "A single primary button. One. 'Add to cart' next to 'Buy it now' next to a wallet button is three decisions where you wanted zero."
+            ]
+        },
+        {
+            "type": "paragraph",
+            "text": "Variant pickers deserve particular attention. If a colour needs a swatch, use a swatch — a dropdown listing colour names asks the buyer to imagine what 'Sage' means, and some of them will not bother. Sizes belong in a row of buttons, not a select element, and unavailable combinations should be visibly unavailable rather than silently failing when tapped."
+        },
+        {
+            "type": "heading",
+            "id": "speed",
+            "text": "3. Make it fast, especially on mobile"
+        },
+        {
+            "type": "paragraph",
+            "text": "Speed is not an engineering preference. A product page that takes four seconds to show its first image on a mid-range Android phone over a mobile connection has already lost a meaningful share of the people who tapped the ad you paid for."
+        },
+        {
+            "type": "table",
+            "caption": "The Core Web Vitals thresholds that matter for a Shopify product page.",
+            "head": ["Metric", "Target", "Most common cause of failure"],
+            "rows": [
+                [
+                    "LCP — largest contentful paint",
+                    "Under 2.5s on mobile",
+                    "An oversized, unpreloaded hero image"
+                ],
+                [
+                    "INP — interaction to next paint",
+                    "Under 200ms",
+                    "App scripts blocking the main thread"
+                ],
+                [
+                    "CLS — cumulative layout shift",
+                    "Under 0.1",
+                    "Gallery and badges rendering without reserved height"
+                ]
+            ]
+        },
+        {
+            "type": "list",
+            "items": [
+                "Serve the hero image at the size it is actually displayed. A 3000px JPEG rendered into a 600px slot is the single most common cause of a failing LCP.",
+                "Preload that first image and let everything below the fold load lazily.",
+                "Audit your apps quarterly. Every store accumulates scripts from tools that were uninstalled but left their embed behind.",
+                "Reserve height for the gallery, the review widget and any promotional banner so nothing jumps as it loads.",
+                "Test on a real mid-range phone on a real connection, not on your laptop over office wifi."
+            ]
+        },
+        {
+            "type": "heading",
+            "id": "objections",
+            "text": "4. Answer objections where they happen"
+        },
+        {
+            "type": "paragraph",
+            "text": "Every product has three or four reasons someone hesitates. You already know them — they are sitting in your support inbox. The mistake is answering them on a policy page instead of at the exact point in the page where the doubt occurs."
+        },
+        {
+            "type": "list",
+            "items": [
+                "Delivery timing belongs next to the buy button, with a real date: 'Order today, arrives 12–15 September' beats 'ships in 2–3 business days'.",
+                "Returns belong there too, in one sentence, using the actual window rather than the phrase 'hassle-free'.",
+                "Sizing doubt belongs beside the size picker, not behind a modal three taps away.",
+                "Compatibility questions belong in the gallery as a spec card, because that is where people look for them.",
+                "Reviews should be filterable by the attribute people worry about — fit, durability, colour accuracy."
+            ]
+        },
+        {
+            "type": "callout",
+            "tone": "success",
+            "title": "A free source of copy",
+            "text": "Read the last fifty pre-purchase support messages and count the questions. The top three belong on the product page, phrased in the customer's words. This is usually the highest-return hour anyone spends on a Shopify store, and it costs nothing."
+        },
+        {
+            "type": "heading",
+            "id": "measuring",
+            "text": "5. Measure it honestly"
+        },
+        {
+            "type": "paragraph",
+            "text": "Most stores do not have the traffic for statistically clean A/B testing on a single product page, and pretending otherwise leads to confident decisions based on noise."
+        },
+        {
+            "type": "list",
+            "ordered": true,
+            "items": [
+                "Record the baseline: product page conversion rate, add-to-cart rate and mobile LCP, over a full fortnight.",
+                "Change one thing.",
+                "Wait two weeks, or until you have several hundred sessions on that page — whichever comes second.",
+                "Compare like periods. A week containing a payday or a promotion is not comparable to one that does not.",
+                "Write down what you changed and what happened. Six months of that log is worth more than any generic best-practice list, including this one."
+            ]
+        },
+        {
+            "type": "quote",
+            "text": "Nearly every store we audit has the same shape of problem: the images are doing 80% of the selling and receiving 20% of the budget.",
+            "attribution": "Recurring finding across our Shopify audits"
+        },
+        {
+            "type": "heading",
+            "id": "start-here",
+            "text": "Where to start on Monday"
+        },
+        {
+            "type": "paragraph",
+            "text": "Open your best-selling product on your own phone, on mobile data, and go through it as a stranger would. Note where you had to guess, where you had to scroll to find something obvious, and where you waited. That list, in that order, is your roadmap — and it will overlap with this article more than it does not."
+        }
+    ],
+    "faqs": [
+        {
+            "q": "How many product images should a Shopify page have?",
+            "a": "Six to eight is the range that works for most physical products. Fewer and predictable questions go unanswered; many more and buyers stop swiping before reaching the frames that matter. What matters more than the count is that each frame does a distinct job rather than showing the same angle again."
+        },
+        {
+            "q": "Do video and 3D viewers on the product page help conversion?",
+            "a": "They help when the product has motion, assembly or scale that a still cannot convey, and they hurt when they delay the first image. Load them after the gallery, never before it, and treat them as a supporting frame rather than a replacement for a clean hero shot."
+        },
+        {
+            "q": "Should the product description be long or short?",
+            "a": "Short at the top, long underneath. A scannable block covering what it is, who it is for and the key specs, then the detail below for the minority who read that far. Length is not the problem — length above the price is."
+        },
+        {
+            "q": "Is a theme change worth it for conversion?",
+            "a": "Rarely, on its own. Themes mostly differ in defaults, and a new theme resets the accumulated fixes on the old one. Unless your current theme is slow at its core or blocks the layout you need, the same effort spent on images, speed and objection handling returns considerably more."
+        }
+    ],
+    "relatedServices": [
+        "shopify-store-design",
+        "shopify-development",
+        "store-customization"
+    ],
+    "seo": {
+        "title": "Shopify Product Page Checklist That Actually Moves Conversion",
+        "description": "The image, layout, speed and objection-handling changes that reliably lift Shopify product page conversion — ordered by return per hour of work.",
+        "keywords": [
+            "shopify product page conversion",
+            "shopify conversion rate optimization",
+            "product page checklist",
+            "shopify core web vitals",
+            "ecommerce product page best practices"
+        ]
+    }
+}

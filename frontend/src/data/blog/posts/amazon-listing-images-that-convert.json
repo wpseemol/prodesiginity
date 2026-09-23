@@ -1,0 +1,231 @@
+{
+    "slug": "amazon-listing-images-that-convert",
+    "title": "Amazon Listing Images That Survive the Mobile Thumbnail",
+    "excerpt": "Most Amazon listings are designed on a 27-inch monitor and sold on a 5-inch phone. Here is how to build an image stack that still works at the size buyers actually see it.",
+    "category": "E-commerce",
+    "accent": "orange",
+    "icon": "PackageSearch",
+    "publishedAt": "2026-07-22",
+    "updatedAt": "2026-08-19",
+    "author": {
+        "name": "Asif Iqbol Suzon",
+        "role": "Graphic Designer",
+        "photo": "/assets/images/team/asif.jpg"
+    },
+    "tags": [
+        "Amazon",
+        "listing images",
+        "A+ content",
+        "marketplace design"
+    ],
+    "keyTakeaways": [
+        "The main image competes at roughly thumbnail size in search results, so silhouette and fill matter more than detail.",
+        "Amazon requires a pure white background and a product filling about 85% of the frame for the main image — creative choices start at image two.",
+        "Seven images is the practical ceiling; assign each one a specific objection to defeat rather than another angle.",
+        "Text on secondary images should be legible at 300 pixels wide, which in practice means very few words in a very large size.",
+        "A+ content is a conversion and returns tool, not a decoration budget — its modules are where specification detail belongs."
+    ],
+    "body": [
+        {
+            "type": "paragraph",
+            "text": "Amazon is a search engine with a checkout attached, and the unit of competition is a small square image in a scrolling grid. Your listing does not get judged on the beautiful full-width layout you approved in a review meeting. It gets judged against six competitors at about 180 pixels across, on a phone, in about a second."
+        },
+        {
+            "type": "paragraph",
+            "text": "Design for that moment first and the rest of the listing gets easier."
+        },
+        {
+            "type": "heading",
+            "id": "the-main-image",
+            "text": "The main image: constrained on purpose"
+        },
+        {
+            "type": "paragraph",
+            "text": "Amazon's rules for the main image are narrow, and they are enforced. Understand them as a fixed frame rather than a limitation to be negotiated, because every competitor is working inside exactly the same box."
+        },
+        {
+            "type": "list",
+            "items": [
+                "Pure white background — RGB 255, 255, 255, not off-white, not a soft gradient.",
+                "The product filling roughly 85% of the frame, with no distracting margin.",
+                "The product only. No props, no packaging that is not being sold, no lifestyle context.",
+                "No text, badges, logos, watermarks or borders of any kind.",
+                "At least 1600 pixels on the longest side so the zoom function activates."
+            ]
+        },
+        {
+            "type": "paragraph",
+            "text": "Within those rules the one lever you have is the angle, and it matters more than it sounds. Pick the angle that produces the most recognisable silhouette at thumbnail size. A bottle photographed straight on is a rectangle; the same bottle turned fifteen degrees reads as a bottle. That distinction is the difference between a scroll and a tap."
+        },
+        {
+            "type": "callout",
+            "tone": "warning",
+            "title": "Check before you upload",
+            "text": "Export your main image, scale it to 180 pixels wide, and put it beside screenshots of the top five results for your keyword. If yours disappears into the row, no amount of A+ content downstream will fix it — the traffic never arrives."
+        },
+        {
+            "type": "heading",
+            "id": "the-image-stack",
+            "text": "The other six images, each with a job"
+        },
+        {
+            "type": "paragraph",
+            "text": "After the main image the constraints drop away and most brands waste the freedom by uploading more angles. An angle is not a reason to buy. Give each slot a specific doubt to eliminate."
+        },
+        {
+            "type": "steps",
+            "items": [
+                {
+                    "title": "Image 2 — scale",
+                    "body": "Answer 'how big is it' immediately, with a hand, a familiar object or clean dimension callouts. Size surprise is the leading driver of returns in most physical categories, and returns are more expensive than the sale was profitable."
+                },
+                {
+                    "title": "Image 3 — the differentiator",
+                    "body": "The one feature that justifies your price against the cheaper listing beside you. One feature, called out large, not six annotations competing for attention."
+                },
+                {
+                    "title": "Image 4 — in use",
+                    "body": "The product in its real context, being used by someone who plausibly resembles your buyer. This is where the listing stops being a spec sheet."
+                },
+                {
+                    "title": "Image 5 — what is included",
+                    "body": "A flat lay of everything in the box. Every unanswered 'does it come with' becomes either a question in the Q&A or a lost sale."
+                },
+                {
+                    "title": "Image 6 — the comparison",
+                    "body": "Your variants side by side, or an honest comparison against the generic alternative. Comparison images perform because they do the work the buyer was about to do in another tab."
+                },
+                {
+                    "title": "Image 7 — trust",
+                    "body": "Certifications, warranty, materials, origin, care instructions. The reassurance frame people look at last, right before they commit."
+                }
+            ]
+        },
+        {
+            "type": "heading",
+            "id": "text-on-images",
+            "text": "Text on images: fewer words, much larger"
+        },
+        {
+            "type": "paragraph",
+            "text": "Secondary images allow text, and this is where most listings fall apart. Designed at full size, a caption looks generous. Rendered on a phone it becomes an unreadable smudge, and an unreadable smudge is worse than empty space because it costs attention without paying anything back."
+        },
+        {
+            "type": "table",
+            "caption": "Practical text guidance for Amazon secondary images.",
+            "head": ["Element", "Guideline", "Why"],
+            "rows": [
+                [
+                    "Words per image",
+                    "Five to eight for the headline claim",
+                    "Anything longer will not be read in the gallery"
+                ],
+                [
+                    "Minimum type size",
+                    "Legible at 300px wide",
+                    "That is roughly the mobile gallery width"
+                ],
+                [
+                    "Claims per image",
+                    "One primary, one supporting at most",
+                    "Two competing claims mean neither lands"
+                ],
+                [
+                    "Contrast",
+                    "Solid colour behind text, never over busy detail",
+                    "Compression artefacts destroy thin text on texture"
+                ],
+                [
+                    "Safe margin",
+                    "Keep text away from the outer edge",
+                    "Different surfaces crop the square differently"
+                ]
+            ]
+        },
+        {
+            "type": "heading",
+            "id": "a-plus-content",
+            "text": "A+ content is where the detail belongs"
+        },
+        {
+            "type": "paragraph",
+            "text": "If the gallery answers 'should I consider this', A+ content answers 'am I sure'. It sits below the fold, it is read by people who have already decided they are interested, and it is the correct home for everything too detailed for the gallery."
+        },
+        {
+            "type": "list",
+            "items": [
+                "A comparison table across your own range — this both converts and moves buyers up to the higher-margin variant.",
+                "Detailed specifications, in text where possible so it remains accessible and readable at any size.",
+                "The brand story module, kept short. It matters more in considered categories than in commodity ones.",
+                "Usage, care and compatibility detail — the content that reduces returns and support volume after the sale.",
+                "Cross-links to the rest of your catalogue, which is one of the few places Amazon lets you merchandise your own range."
+            ]
+        },
+        {
+            "type": "callout",
+            "tone": "info",
+            "title": "Where CGI earns its place on Amazon",
+            "text": "A rendered product set gives you every variant in identical lighting and framing, which makes a comparison module look deliberate rather than assembled from whatever photos existed. It also means a packaging change does not require re-shooting the entire catalogue — you swap a label and re-export."
+        },
+        {
+            "type": "heading",
+            "id": "common-failures",
+            "text": "The failures we see most often"
+        },
+        {
+            "type": "list",
+            "items": [
+                "A main image with the product floating small in a sea of white, losing the grid to a competitor who filled the frame.",
+                "Seven images that are seven angles of the same thing, none of which answers a question.",
+                "Caption text sized for a desktop review deck and unreadable everywhere else.",
+                "Lifestyle photography so styled that the product itself becomes hard to identify.",
+                "Inconsistent colour between the gallery and the A+ modules, which reads as carelessness and triggers colour-related returns.",
+                "A+ content built entirely from images, leaving no indexable text on the page at all."
+            ]
+        },
+        {
+            "type": "quote",
+            "text": "You are not designing a listing. You are designing a thumbnail that earns the right to show a listing.",
+            "attribution": "The note we put at the top of every Amazon brief"
+        },
+        {
+            "type": "heading",
+            "id": "audit-your-listing",
+            "text": "A ten-minute audit"
+        },
+        {
+            "type": "paragraph",
+            "text": "Open your listing on your phone. Count how many seconds pass before you know what the product is, how big it is and why it costs what it does. If any of those three takes longer than a swipe, you have found your next piece of work — and it is almost always image two."
+        }
+    ],
+    "faqs": [
+        {
+            "q": "Can I use 3D renders as my Amazon main image?",
+            "a": "Yes. Amazon requires the main image to be a professional-quality representation of the actual product on a pure white background; it does not require a camera. Photorealistic CGI is widely used and permitted, provided it depicts the product accurately — misrepresenting colour, finish or contents is the violation, not the technique."
+        },
+        {
+            "q": "How many images should an Amazon listing have?",
+            "a": "Use every slot your category allows, typically seven for the main gallery plus video where available. The discipline is not in the count but in assignment: if you cannot name the specific objection an image defeats, it is taking a slot from one that could."
+        },
+        {
+            "q": "Does A+ content actually increase sales?",
+            "a": "Amazon has reported meaningful average sales lifts from A+ content, though the range is wide and depends heavily on category and execution. The more reliable benefit is on the other side of the sale — clear specification and usage modules reduce returns and support contacts, which often matters more to margin than the conversion lift."
+        },
+        {
+            "q": "What image dimensions should I supply?",
+            "a": "Square, at least 1600 pixels on the longest side so zoom activates, and 2000 pixels if you have the source resolution to support it. Supply sRGB, and keep an uncompressed master so you can re-export when Amazon changes its requirements — which it does."
+        }
+    ],
+    "relatedServices": ["graphic-design", "product-rendering", "brand-identity"],
+    "seo": {
+        "title": "Amazon Listing Images That Convert on Mobile",
+        "description": "How to build an Amazon image stack that works at thumbnail size: main image rules, a job for every secondary slot, readable text sizing and A+ content that reduces returns.",
+        "keywords": [
+            "amazon listing images",
+            "amazon main image requirements",
+            "amazon a+ content",
+            "amazon product photography",
+            "amazon listing optimization"
+        ]
+    }
+}
