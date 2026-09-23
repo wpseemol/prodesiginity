@@ -1,5 +1,6 @@
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
+import { mediaUrl } from "@/config";
 import { cn } from "@/lib/utils";
 
 type BrandLogoProps = {
@@ -17,9 +18,11 @@ export function BrandLogo({ className, compact = false }: BrandLogoProps) {
   }, []);
 
   const isDark = mounted && resolvedTheme === "dark";
-  const src = isDark
-    ? "/assets/logo/prodesignity-logo-dark.png"
-    : "/assets/logo/prodesignity-logo-light.svg";
+  const src = mediaUrl(
+    isDark
+      ? "/uploads/assets/logo/prodesignity-logo-dark.png"
+      : "/uploads/assets/logo/prodesignity-logo-light.svg",
+  );
 
   if (compact) {
     return (
@@ -29,7 +32,7 @@ export function BrandLogo({ className, compact = false }: BrandLogoProps) {
           className,
         )}
       >
-        {!mounted ? (
+        {!mounted || !src ? (
           <div className="size-full bg-muted/60" aria-hidden />
         ) : (
           <img
@@ -47,7 +50,7 @@ export function BrandLogo({ className, compact = false }: BrandLogoProps) {
 
   return (
     <div className={cn("relative flex h-9 w-[148px] items-center", className)}>
-      {!mounted ? (
+      {!mounted || !src ? (
         <div className="h-full w-full rounded-md bg-muted/60" aria-hidden />
       ) : (
         <img

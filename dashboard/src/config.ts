@@ -4,17 +4,24 @@ export const apiBaseUrl =
 /** Origin used for uploaded media (`/uploads/...`) */
 export const apiOrigin = apiBaseUrl.replace(/\/api\/?$/, "");
 
-/** Marketing site origin for static `/assets/...` paths shown in admin UI */
+/** Marketing site origin (rarely needed now that assets live on the API) */
 export const siteOrigin =
   import.meta.env.VITE_SITE_URL ?? "http://localhost:3000";
 
 export function mediaUrl(path: string | null | undefined): string | undefined {
   if (!path) return undefined;
   if (/^https?:\/\//i.test(path)) return path;
-  if (path.startsWith("/uploads/")) {
-    return `${apiOrigin}${path.startsWith("/") ? path : `/${path}`}`;
+
+  let normalized = path.startsWith("/") ? path : `/${path}`;
+  if (normalized.startsWith("/assets/")) {
+    normalized = `/uploads/assets/${normalized.slice("/assets/".length)}`;
   }
-  return `${siteOrigin}${path.startsWith("/") ? path : `/${path}`}`;
+
+  if (normalized.startsWith("/uploads/")) {
+    return `${apiOrigin}${normalized}`;
+  }
+
+  return `${siteOrigin}${normalized}`;
 }
 
 export type StaffRole = "admin" | "employer";

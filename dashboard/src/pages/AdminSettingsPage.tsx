@@ -287,7 +287,7 @@ function SettingsManager() {
                     Light
                   </p>
                   <img
-                    src={WEBSITE_LOGOS.light}
+                    src={mediaUrl(WEBSITE_LOGOS.light)}
                     alt="ProDesignity light logo"
                     className="h-10 w-auto object-contain"
                   />
@@ -297,7 +297,7 @@ function SettingsManager() {
                     Dark
                   </p>
                   <img
-                    src={WEBSITE_LOGOS.dark}
+                    src={mediaUrl(WEBSITE_LOGOS.dark)}
                     alt="ProDesignity dark logo"
                     className="h-10 w-auto object-contain"
                   />
@@ -435,7 +435,7 @@ function SettingsManager() {
               src={
                 settings?.faviconUrl
                   ? mediaUrl(settings.faviconUrl)
-                  : WEBSITE_LOGOS.mark
+                  : mediaUrl(WEBSITE_LOGOS.mark)
               }
               alt="Current favicon"
               className="size-10 object-contain"

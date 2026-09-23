@@ -1,8 +1,16 @@
-/** Same logo files used on the marketing website (copied into dashboard/public). */
+import { mediaUrl } from "@/config";
+
+/** Website logos served from backend /uploads/assets/logo */
 export const WEBSITE_LOGOS = {
-  light: "/assets/logo/prodesignity-logo-light.svg",
-  dark: "/assets/logo/prodesignity-logo-dark.png",
-  mark: "/assets/logo/prodesignity-logo.png",
+  light: "/uploads/assets/logo/prodesignity-logo-light.svg",
+  dark: "/uploads/assets/logo/prodesignity-logo-dark.png",
+  mark: "/uploads/assets/logo/prodesignity-logo.png",
+} as const;
+
+export const WEBSITE_LOGO_URLS = {
+  light: mediaUrl(WEBSITE_LOGOS.light)!,
+  dark: mediaUrl(WEBSITE_LOGOS.dark)!,
+  mark: mediaUrl(WEBSITE_LOGOS.mark)!,
 } as const;
 
 export const DEFAULT_SITE_SETTINGS = {
