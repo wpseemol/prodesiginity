@@ -8,6 +8,14 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
+import { asObj, cloneContent } from "@/components/homepage/helpers";
+import { SectionEditor } from "@/components/homepage/SectionEditor";
+import {
+  HOMEPAGE_SECTION_KEYS,
+  SECTION_HINTS,
+  type HomepageSectionKey,
+  type SectionPayload,
+} from "@/components/homepage/types";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -23,40 +31,10 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 
-export const HOMEPAGE_SECTION_KEYS = [
-  "hero",
-  "stats",
-  "brands",
-  "process",
-  "recentProjects",
-  "pricing",
-  "team",
-] as const;
-
-export type HomepageSectionKey = (typeof HOMEPAGE_SECTION_KEYS)[number];
-
-type SectionPayload = {
-  label: string;
-  content: unknown;
-  updatedAt: string;
-};
-
-const SECTION_HINTS: Record<HomepageSectionKey, string> = {
-  hero: "Headline, CTAs, side cards, channel chips, hero stats",
-  stats: "Numbers / feature tiles under the hero",
-  brands: "Brand logos marquee",
-  process: "How we work steps",
-  recentProjects: "Recent projects carousel copy + items",
-  pricing: "Pricing plans and footer CTA",
-  team: "Team section members",
-};
-
 function HomepageCmsManager() {
-  const [sections, setSections] = useState<Record<string, SectionPayload>>(
-    {},
-  );
+  const [sections, setSections] = useState<Record<string, SectionPayload>>({});
   const [activeKey, setActiveKey] = useState<HomepageSectionKey>("hero");
-  const [draft, setDraft] = useState("");
+  const [draft, setDraft] = useState<Record<string, unknown>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -67,7 +45,7 @@ function HomepageCmsManager() {
   const dirty = useMemo(() => {
     if (!active) return false;
     try {
-      return JSON.stringify(JSON.parse(draft)) !== JSON.stringify(active.content);
+      return JSON.stringify(draft) !== JSON.stringify(active.content);
     } catch {
       return true;
     }
@@ -87,10 +65,20 @@ function HomepageCmsManager() {
         );
         return;
       }
-      const next = (data.sections ?? {}) as Record<string, SectionPayload>;
+      const raw = (data.sections ?? {}) as Record<
+        string,
+        { label: string; content: unknown; updatedAt: string }
+      >;
+      const next: Record<string, SectionPayload> = {};
+      for (const [key, value] of Object.entries(raw)) {
+        next[key] = {
+          label: value.label,
+          content: asObj(value.content),
+          updatedAt: value.updatedAt,
+        };
+      }
       setSections(next);
-      const content = next[activeKey]?.content ?? {};
-      setDraft(JSON.stringify(content, null, 2));
+      setDraft(cloneContent(next[activeKey]?.content));
     } catch {
       setLoadError("Could not reach the server.");
     } finally {
@@ -106,36 +94,20 @@ function HomepageCmsManager() {
   useEffect(() => {
     const content = sections[activeKey]?.content;
     if (content !== undefined) {
-      setDraft(JSON.stringify(content, null, 2));
+      setDraft(cloneContent(content));
     }
   }, [activeKey, sections]);
 
   const resetDraft = () => {
-    if (active) setDraft(JSON.stringify(active.content, null, 2));
+    if (active) setDraft(cloneContent(active.content));
   };
 
   const save = async () => {
     setSaving(true);
     try {
-      let parsed: unknown;
-      try {
-        parsed = JSON.parse(draft);
-      } catch {
-        toast.error("JSON is invalid — fix syntax before saving.");
-        return;
-      }
-      if (
-        typeof parsed !== "object" ||
-        parsed === null ||
-        Array.isArray(parsed)
-      ) {
-        toast.error("Root value must be a JSON object.");
-        return;
-      }
-
       const res = await apiFetch(`/admin/homepage/${activeKey}`, {
         method: "PUT",
-        body: JSON.stringify({ content: parsed }),
+        body: JSON.stringify({ content: draft }),
       });
       const body = await res.json();
       if (!res.ok) {
@@ -145,15 +117,16 @@ function HomepageCmsManager() {
         return;
       }
 
+      const saved = asObj(body.content);
       setSections((prev) => ({
         ...prev,
         [activeKey]: {
           label: body.label ?? prev[activeKey]?.label ?? activeKey,
-          content: body.content,
+          content: saved,
           updatedAt: body.updatedAt,
         },
       }));
-      setDraft(JSON.stringify(body.content, null, 2));
+      setDraft(cloneContent(saved));
       toast.success(`Saved “${activeLabel}”. Live site refreshes within ~60s.`);
     } catch {
       toast.error("Could not reach the server.");
@@ -177,7 +150,12 @@ function HomepageCmsManager() {
         <AlertTitle>Could not load homepage CMS</AlertTitle>
         <AlertDescription className="flex flex-wrap items-center gap-3">
           <span>{loadError}</span>
-          <Button type="button" size="sm" variant="outline" onClick={() => void load()}>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => void load()}
+          >
             Retry
           </Button>
         </AlertDescription>
@@ -195,8 +173,8 @@ function HomepageCmsManager() {
               Homepage content
             </CardTitle>
             <CardDescription>
-              Customize marketing site sections. Edits replace the JSON for that
-              block; the public homepage reads them from the API.
+              Each tab has its own editor. Create and edit flows are separate —
+              remember to Save section after changes.
             </CardDescription>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -209,7 +187,11 @@ function HomepageCmsManager() {
               <RotateCcwIcon />
               Reset
             </Button>
-            <Button type="button" onClick={() => void save()} disabled={saving || !dirty}>
+            <Button
+              type="button"
+              onClick={() => void save()}
+              disabled={saving || !dirty}
+            >
               {saving ? (
                 <>
                   <Loader2Icon className="animate-spin" />
@@ -271,21 +253,11 @@ function HomepageCmsManager() {
             </div>
           </div>
 
-          <textarea
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            spellCheck={false}
-            className="min-h-[420px] w-full resize-y rounded-xl border border-border bg-muted/30 p-4 font-mono text-sm leading-relaxed text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            aria-label={`${activeLabel} JSON editor`}
+          <SectionEditor
+            sectionKey={activeKey}
+            content={draft}
+            onChange={setDraft}
           />
-
-          <p className="text-xs text-muted-foreground">
-            Tip: keep the same field names the site already expects (e.g.{" "}
-            <code className="rounded bg-muted px-1">headlineLines</code>,{" "}
-            <code className="rounded bg-muted px-1">plans</code>,{" "}
-            <code className="rounded bg-muted px-1">members</code>). Invalid JSON
-            will not save.
-          </p>
         </CardContent>
       </Card>
 
