@@ -146,5 +146,3 @@ Auth endpoint details: [`backend/API.md`](backend/API.md).
 ## License
 
 Private project — all rights reserved.
-
-now try to date
