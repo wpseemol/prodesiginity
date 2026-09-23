@@ -2,10 +2,13 @@ import type { ComponentType } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboardIcon,
+  LayoutTemplateIcon,
   LogOutIcon,
   UsersIcon,
+  UsersRoundIcon,
   BriefcaseIcon,
   UserRoundIcon,
+  SettingsIcon,
 } from "lucide-react";
 import type { DashboardUser } from "@/lib/session";
 import { BrandLogo } from "@/components/BrandLogo";
@@ -54,7 +57,10 @@ export function AppSidebar({ user, onLogout }: AppSidebarProps) {
   const navItems: NavItem[] = isAdmin
     ? [
         { title: "Overview", to: "/admin", icon: LayoutDashboardIcon },
+        { title: "Homepage", to: "/admin/homepage", icon: LayoutTemplateIcon },
+        { title: "Team", to: "/admin/team", icon: UsersRoundIcon },
         { title: "Staff", to: "/admin/staff", icon: UsersIcon },
+        { title: "Settings", to: "/admin/settings", icon: SettingsIcon },
         { title: "Profile", to: profilePath, icon: UserRoundIcon },
       ]
     : [

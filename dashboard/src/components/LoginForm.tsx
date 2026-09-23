@@ -14,7 +14,17 @@ function dashboardPathForRole(role: string): string | null {
   return null;
 }
 
-export default function LoginForm() {
+type LoginFormProps = {
+  badgeText?: string;
+  title?: string;
+  subtitle?: string;
+};
+
+export default function LoginForm({
+  badgeText = "Staff portal",
+  title = "Sign in to your account",
+  subtitle = "Use your username or email to access the ProDesignity dashboard.",
+}: LoginFormProps) {
   const navigate = useNavigate();
   const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
@@ -67,14 +77,10 @@ export default function LoginForm() {
     <form className="grid gap-5" onSubmit={handleSubmit}>
       <div className="grid gap-1.5 text-center sm:text-left">
         <p className="mx-auto inline-flex w-fit items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary sm:mx-0">
-          Staff portal
+          {badgeText}
         </p>
-        <h1 className="text-2xl font-bold tracking-tight">
-          Sign in to your account
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Use your username or email to access the ProDesignity dashboard.
-        </p>
+        <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
+        <p className="text-sm text-muted-foreground">{subtitle}</p>
       </div>
 
       {error ? (

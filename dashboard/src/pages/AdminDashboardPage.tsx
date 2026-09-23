@@ -1,9 +1,12 @@
 import { useEffect, useState, type ComponentType, type FormEvent } from "react";
+import { Link } from "react-router-dom";
 import {
   Loader2Icon,
   ShieldCheckIcon,
   UserPlusIcon,
   UsersIcon,
+  LayoutTemplateIcon,
+  ArrowRightIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { mediaUrl } from "@/config";
@@ -163,6 +166,24 @@ function AdminOverview({ userName }: { userName: string }) {
           icon={UserPlusIcon}
         />
       </div>
+
+      <Card className="border-primary/20 bg-primary/5">
+        <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
+          <div className="space-y-1">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <LayoutTemplateIcon className="size-4 text-primary" />
+              Homepage customization
+            </CardTitle>
+            <CardDescription>
+              Edit hero, pricing, team, and other marketing site sections.
+            </CardDescription>
+          </div>
+          <Button render={<Link to="/admin/homepage" />} size="sm">
+            Open editor
+            <ArrowRightIcon />
+          </Button>
+        </CardHeader>
+      </Card>
 
       <Card>
         <CardHeader>

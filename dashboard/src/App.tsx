@@ -5,6 +5,9 @@ import { Toaster } from "@/components/ui/sonner";
 import AdminDashboardPage, {
   AdminStaffPage,
 } from "@/pages/AdminDashboardPage";
+import AdminHomepagePage from "@/pages/AdminHomepagePage";
+import AdminTeamPage from "@/pages/AdminTeamPage";
+import AdminSettingsPage from "@/pages/AdminSettingsPage";
 import LoginPage from "@/pages/LoginPage";
 import ProfilePage from "@/pages/ProfilePage";
 import StaffHomePage from "@/pages/StaffHomePage";
@@ -24,6 +27,9 @@ export default function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/admin" element={<AdminDashboardPage />} />
             <Route path="/admin/staff" element={<AdminStaffPage />} />
+            <Route path="/admin/homepage" element={<AdminHomepagePage />} />
+            <Route path="/admin/team" element={<AdminTeamPage />} />
+            <Route path="/admin/settings" element={<AdminSettingsPage />} />
             <Route
               path="/admin/profile"
               element={<ProfilePage expectedRole="admin" />}
