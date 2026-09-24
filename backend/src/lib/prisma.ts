@@ -16,9 +16,15 @@ function createAdapter() {
       user,
       password,
       database,
-      connectionLimit: 10,
-      connectTimeout: 20_000,
-      acquireTimeout: 20_000,
+      // Keep the pool small under tsx watch (reloads can leave orphaned pools briefly).
+      connectionLimit: 5,
+      connectTimeout: 10_000,
+      acquireTimeout: 10_000,
+      initializationTimeout: 10_000,
+      // Drop idle sockets so a restarted MySQL doesn't leave a dead pool.
+      idleTimeout: 60,
+      // Always validate before reuse after MySQL restarts / network blips.
+      minDelayValidation: 0,
     });
   }
 
@@ -39,6 +45,7 @@ function createAdapter() {
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
+  prismaShutdownHooked?: boolean;
 };
 
 export const prisma =
@@ -47,5 +54,22 @@ export const prisma =
 if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = prisma;
 }
+
+function hookShutdown() {
+  if (globalForPrisma.prismaShutdownHooked) return;
+  globalForPrisma.prismaShutdownHooked = true;
+
+  const shutdown = () => {
+    void prisma.$disconnect().finally(() => {
+      // Let tsx / process exit continue.
+    });
+  };
+
+  process.once("SIGINT", shutdown);
+  process.once("SIGTERM", shutdown);
+  process.once("beforeExit", shutdown);
+}
+
+hookShutdown();
 
 export default prisma;

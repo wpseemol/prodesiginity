@@ -110,38 +110,60 @@ function toPublicSettingsPayload(
   };
 }
 
+const defaultSettingsCreate = {
+  key: SETTINGS_KEY,
+  siteName: DEFAULT_SITE_CONFIG.name,
+  loginTitle: "Sign in to your account",
+  loginSubtitle:
+    "Use your username or email to access the ProDesignity dashboard.",
+  loginBadgeText: "Staff portal",
+  siteConfig: DEFAULT_SITE_CONFIG as unknown as Prisma.InputJsonValue,
+};
+
+/** Prefer find-then-create so the hot public path avoids a transactional upsert. */
 async function getOrCreateSettingsPublic() {
-  return prisma.siteSetting.upsert({
+  const existing = await prisma.siteSetting.findUnique({
     where: { key: SETTINGS_KEY },
-    create: {
-      key: SETTINGS_KEY,
-      siteName: DEFAULT_SITE_CONFIG.name,
-      loginTitle: "Sign in to your account",
-      loginSubtitle:
-        "Use your username or email to access the ProDesignity dashboard.",
-      loginBadgeText: "Staff portal",
-      siteConfig: DEFAULT_SITE_CONFIG as unknown as Prisma.InputJsonValue,
-    },
-    update: {},
     select: publicSettingsSelect,
   });
+  if (existing) return existing;
+
+  try {
+    return await prisma.siteSetting.create({
+      data: defaultSettingsCreate,
+      select: publicSettingsSelect,
+    });
+  } catch {
+    // Concurrent first-load race: another request created the row.
+    const raced = await prisma.siteSetting.findUnique({
+      where: { key: SETTINGS_KEY },
+      select: publicSettingsSelect,
+    });
+    if (raced) return raced;
+    throw new Error("Failed to initialize site settings");
+  }
 }
 
 async function getOrCreateSettingsAdmin() {
-  return prisma.siteSetting.upsert({
+  const existing = await prisma.siteSetting.findUnique({
     where: { key: SETTINGS_KEY },
-    create: {
-      key: SETTINGS_KEY,
-      siteName: DEFAULT_SITE_CONFIG.name,
-      loginTitle: "Sign in to your account",
-      loginSubtitle:
-        "Use your username or email to access the ProDesignity dashboard.",
-      loginBadgeText: "Staff portal",
-      siteConfig: DEFAULT_SITE_CONFIG as unknown as Prisma.InputJsonValue,
-    },
-    update: {},
     select: adminSettingsSelect,
   });
+  if (existing) return existing;
+
+  try {
+    return await prisma.siteSetting.create({
+      data: defaultSettingsCreate,
+      select: adminSettingsSelect,
+    });
+  } catch {
+    const raced = await prisma.siteSetting.findUnique({
+      where: { key: SETTINGS_KEY },
+      select: adminSettingsSelect,
+    });
+    if (raced) return raced;
+    throw new Error("Failed to initialize site settings");
+  }
 }
 
 /** Public branding + site config + browser tracking IDs (never secrets). */

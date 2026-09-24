@@ -136,9 +136,11 @@ export const login = async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error("Login Error:", error);
-    return res
-      .status(500)
-      .json({ message: "Login failed due to an internal server error" });
+    const message =
+      error instanceof Error && /pool timeout|P2039|Can't connect/i.test(error.message)
+        ? "Database is temporarily unavailable. Please try again in a moment."
+        : "Login failed due to an internal server error";
+    return res.status(500).json({ message });
   }
 };
 
