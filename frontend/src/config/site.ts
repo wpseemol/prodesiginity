@@ -51,11 +51,12 @@ export const siteConfig = {
     /**
      * Staff portal = separate Vite app (`dashboard/` package).
      * Admin + employee login lives there: {url}/login
-     * Dev default: http://localhost:5173/login
+     * Production: https://dashboard.prodesignity.com/login
      */
     staffPortal: {
         url:
-            process.env.NEXT_PUBLIC_STAFF_PORTAL_URL ?? "http://localhost:5173",
+            process.env.NEXT_PUBLIC_STAFF_PORTAL_URL ??
+            "https://dashboard.prodesignity.com",
         loginPath: "/login",
         adminPath: "/admin",
         employeePath: "/employee",
