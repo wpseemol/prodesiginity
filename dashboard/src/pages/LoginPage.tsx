@@ -41,18 +41,6 @@ export default function LoginPage() {
     };
   }, []);
 
-  useEffect(() => {
-    const href = mediaUrl(settings?.faviconUrl);
-    if (!href) return;
-    let link = document.querySelector<HTMLLinkElement>("link[rel='icon']");
-    if (!link) {
-      link = document.createElement("link");
-      link.rel = "icon";
-      document.head.appendChild(link);
-    }
-    link.href = href;
-  }, [settings?.faviconUrl]);
-
   const loginLogo = mediaUrl(settings?.loginLogoUrl);
 
   return (
@@ -76,7 +64,7 @@ export default function LoginPage() {
             <img
               src={loginLogo}
               alt={settings?.siteName ?? "ProDesignity"}
-              className="mb-2 h-9 w-auto object-contain"
+              className="mb-2 max-h-9 max-w-[160px] object-contain object-left"
             />
           ) : (
             <BrandLogo className="mb-2" />

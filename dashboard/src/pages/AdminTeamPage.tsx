@@ -11,6 +11,7 @@ import {
 import { toast } from "sonner";
 import { mediaUrl } from "@/config";
 import { apiFetch } from "@/lib/api";
+import { formatImageHint, IMAGE_SPECS } from "@/lib/imageSpecs";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -290,8 +291,10 @@ function TeamManager() {
                                         {photoFile
                                             ? `New file selected: ${photoFile.name}`
                                             : isEditMode
-                                              ? "Current image kept until you change it."
-                                              : "JPEG, PNG, WebP, or GIF · max 5 MB"}
+                                              ? `Current image kept until you change it. Ideal ${IMAGE_SPECS.teamPhoto.width}×${IMAGE_SPECS.teamPhoto.height}px.`
+                                              : formatImageHint(
+                                                  IMAGE_SPECS.teamPhoto,
+                                                )}
                                     </p>
                                     <div className="flex flex-wrap gap-2">
                                         <Button

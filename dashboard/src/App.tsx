@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ReduxProvider } from "@/components/providers/ReduxProvider";
+import { SiteDocumentBranding } from "@/components/SiteDocumentBranding";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import AdminDashboardPage, {
@@ -24,6 +25,7 @@ export default function App() {
         disableTransitionOnChange
       >
         <TooltipProvider>
+          <SiteDocumentBranding />
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Navigate to="/login" replace />} />
