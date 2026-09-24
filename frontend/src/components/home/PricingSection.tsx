@@ -6,12 +6,35 @@ import Link from "next/link";
 import { Check, Star, Zap } from "lucide-react";
 import { PRICING_PLANS } from "@/data/pricingData";
 import { HeaderPill } from "@/components/HeaderPill";
+import type { PricingCmsContent } from "@/lib/homepage";
 import PortfolioBackground from "./portfolio/PortfolioBackground";
 
-export default function PricingSection() {
+type PricingSectionProps = {
+    content?: PricingCmsContent | null;
+};
+
+export default function PricingSection({ content }: PricingSectionProps) {
     const sectionRef = useRef<HTMLElement>(null);
     const router = useRouter();
     const pathname = usePathname();
+
+    const pill = content?.pill?.trim() || "Monthly Retainers";
+    const headline = content?.headline?.trim() || "Predictable Growth with";
+    const headlineAccent =
+        content?.headlineAccent?.trim() || "Flat Monthly Pricing";
+    const description =
+        content?.description?.trim() ||
+        "No hidden fees, no hourly rates. Just consistent, high-quality content and e-commerce management delivered to your brand every single month.";
+    const footerPrompt =
+        content?.footerPrompt?.trim() ||
+        "Need a custom solution for a large enterprise?";
+    const footerCtaLabel = content?.footerCtaLabel?.trim() || "Let's talk.";
+    const footerCtaHref =
+        content?.footerCtaHref?.trim() || "/contact?type=enterprise";
+    const plans =
+        content?.plans?.length && content.plans.every((p) => p.id && p.name)
+            ? content.plans
+            : PRICING_PLANS;
 
     useEffect(() => {
         const target = sectionRef.current;
@@ -61,26 +84,24 @@ export default function PricingSection() {
 
             <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
                 <div className="text-center max-w-3xl mx-auto mb-16 sm:mb-20">
-                    <HeaderPill text="Monthly Retainers" className="sm:mb-8" />
+                    <HeaderPill text={pill} className="sm:mb-8" />
 
                     <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 dark:text-white tracking-tight leading-[1.2]">
-                        Predictable Growth with <br />
+                        {headline} <br />
                         <span className="inline-flex items-center gap-2 bg-linear-to-r from-primary via-secondary to-primary/40 dark:from-primary/80 dark:via-primary/70 dark:to-cyan-400 bg-clip-text text-transparent">
-                            Flat Monthly Pricing
+                            {headlineAccent}
                             <Zap className="w-7 h-7 sm:w-8 sm:h-8 text-brand-orange fill-brand-orange inline-block" />
                         </span>
                     </h2>
 
                     <p className="mt-4 text-sm sm:text-base text-slate-600 dark:text-slate-400 max-w-xl mx-auto leading-relaxed">
-                        No hidden fees, no hourly rates. Just consistent,
-                        high-quality content and e-commerce management delivered
-                        to your brand every single month.
+                        {description}
                     </p>
                 </div>
 
                 {/* 3-Column Pricing Cards Grid */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
-                    {PRICING_PLANS.map((plan) => {
+                    {plans.map((plan) => {
                         const isPopular = plan.isPopular;
 
                         return (
@@ -166,12 +187,12 @@ export default function PricingSection() {
 
                 <div className="mt-14 text-center">
                     <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400">
-                        Need a custom solution for a large enterprise?{" "}
+                        {footerPrompt}{" "}
                         <Link
-                            href="/contact?type=enterprise"
+                            href={footerCtaHref}
                             className="font-bold text-primary dark:text-primary/80 hover:underline inline-flex items-center gap-1"
                         >
-                            Let&apos;s talk.
+                            {footerCtaLabel}
                         </Link>
                     </p>
                 </div>

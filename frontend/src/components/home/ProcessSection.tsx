@@ -10,8 +10,10 @@ import {
     Eye,
     Rocket,
     ArrowRight,
+    type LucideIcon,
 } from "lucide-react";
 import { HeaderPill } from "@/components/HeaderPill";
+import type { ProcessCmsContent } from "@/lib/homepage";
 
 interface Step {
     number: string;
@@ -19,10 +21,18 @@ interface Step {
     badge: string;
     title: string;
     description: string;
-    icon: typeof Search;
+    icon: LucideIcon;
 }
 
-const processSteps: Step[] = [
+const PROCESS_ICONS: Record<string, LucideIcon> = {
+    Search,
+    Compass,
+    Scissors,
+    Eye,
+    Rocket,
+};
+
+const DEFAULT_PROCESS_STEPS: Step[] = [
     {
         number: "01",
         stepFraction: "1/5",
@@ -98,8 +108,39 @@ const itemVariants: Variants = {
     },
 };
 
-export default function ProcessSection() {
+type ProcessSectionProps = {
+    content?: ProcessCmsContent | null;
+};
+
+export default function ProcessSection({ content }: ProcessSectionProps) {
     const [activeIndex, setActiveIndex] = useState<number>(4);
+
+    const pill = content?.pill?.trim() || "Our Process";
+    const headline = content?.headline?.trim() || "How We Turn Ideas";
+    const headlineAccent =
+        content?.headlineAccent?.trim() || "Into Powerful Solutions";
+    const description =
+        content?.description?.trim() ||
+        "A clear, collaborative process built to deliver quality, speed, and measurable results.";
+    const processSteps: Step[] =
+        content?.steps?.length
+            ? content.steps.map((step, index) => {
+                  const fallback =
+                      DEFAULT_PROCESS_STEPS[
+                          index % DEFAULT_PROCESS_STEPS.length
+                      ];
+                  return {
+                      number: step.number?.trim() || fallback.number,
+                      stepFraction:
+                          step.stepFraction?.trim() || fallback.stepFraction,
+                      badge: step.badge?.trim() || fallback.badge,
+                      title: step.title?.trim() || fallback.title,
+                      description:
+                          step.description?.trim() || fallback.description,
+                      icon: PROCESS_ICONS[step.icon ?? ""] ?? fallback.icon,
+                  };
+              })
+            : DEFAULT_PROCESS_STEPS;
 
     return (
         <section className="relative py-20 lg:py-28 bg-white dark:bg-[#070B14] border-b border-border-color dark:border-dark-border-color transition-colors duration-300 font-sans overflow-hidden">
@@ -118,22 +159,21 @@ export default function ProcessSection() {
                 >
                     <div>
                         <HeaderPill
-                            text="Our Process"
+                            text={pill}
                             className="justify-start sm:mb-8"
                             dotClassName="hidden"
                             inlineDivClassName="px-3.5 py-1.5 sm:text-xs"
                         />
                         <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 dark:text-white tracking-tight leading-[1.15]">
-                            How We Turn Ideas <br />
+                            {headline} <br />
                             <span className="bg-linear-to-r from-brand-violet via-primary to-brand-blue dark:from-dark-brand-violet dark:via-dark-primary dark:to-dark-brand-blue bg-clip-text text-transparent">
-                                Into Powerful Solutions
+                                {headlineAccent}
                             </span>
                         </h2>
                     </div>
 
                     <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 max-w-xs md:text-right leading-relaxed">
-                        A clear, collaborative process built to deliver quality,
-                        speed, and measurable results.
+                        {description}
                     </p>
                 </motion.div>
 

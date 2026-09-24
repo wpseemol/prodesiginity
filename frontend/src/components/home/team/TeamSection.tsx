@@ -10,6 +10,7 @@ import {
     TEAM_MEMBERS,
     type TeamMember,
 } from "@/data/teamData";
+import { mediaUrl } from "@/config/api";
 
 /**
  * Team coverflow.
@@ -25,8 +26,6 @@ import {
  * while the rendering cost stays flat.
  */
 
-const COUNT = TEAM_MEMBERS.length;
-
 /** How many cards deep the stack goes on each side before it fades out. */
 const VISIBLE_DEPTH = 2;
 /** Horizontal step per depth level, as a share of one card's width. */
@@ -41,26 +40,51 @@ const DRAG_THRESHOLD = 60;
 
 /**
  * Distance from `index` to `active` taking the shorter way around the ring.
- * For 6 members this returns -3..3, so card 5 sits one step *left* of card 0
- * rather than five steps right.
  */
-function signedOffset(index: number, active: number): number {
+function signedOffset(index: number, active: number, count: number): number {
     let d = index - active;
-    if (d > COUNT / 2) d -= COUNT;
-    if (d < -COUNT / 2) d += COUNT;
+    if (d > count / 2) d -= count;
+    if (d < -count / 2) d += count;
     return d;
 }
 
-export default function TeamSection() {
-    const [active, setActive] = useState(TEAM_INITIAL_INDEX);
+type TeamSectionProps = {
+    members?: TeamMember[] | null;
+};
+
+export default function TeamSection({ members }: TeamSectionProps) {
+    const roster =
+        members?.length
+            ? members.map((m) => ({
+                  ...m,
+                  photo: mediaUrl(m.photo) ?? m.photo,
+              }))
+            : TEAM_MEMBERS;
+    const count = roster.length;
+    const initialIndex = Math.max(
+        roster.findIndex((m) => m.lead),
+        0,
+    );
+
+    const [active, setActive] = useState(
+        members?.length ? initialIndex : TEAM_INITIAL_INDEX,
+    );
     const [paused, setPaused] = useState(false);
     const [reducedMotion, setReducedMotion] = useState(false);
 
     const dragStart = useRef<number | null>(null);
 
-    const go = useCallback((delta: number) => {
-        setActive((current) => (current + delta + COUNT) % COUNT);
-    }, []);
+    useEffect(() => {
+        if (!members?.length) return;
+        setActive(Math.max(members.findIndex((m) => m.lead), 0));
+    }, [members]);
+
+    const go = useCallback(
+        (delta: number) => {
+            setActive((current) => (current + delta + count) % count);
+        },
+        [count],
+    );
 
     /* ---------------------------------------------------------------- */
 
@@ -154,8 +178,8 @@ export default function TeamSection() {
                             transformStyle: "preserve-3d",
                         }}
                     >
-                        {TEAM_MEMBERS.map((member, index) => {
-                            const offset = signedOffset(index, active);
+                        {roster.map((member, index) => {
+                            const offset = signedOffset(index, active, count);
                             const depth = Math.abs(offset);
                             const hidden = depth > VISIBLE_DEPTH;
                             const isActive = depth === 0;
@@ -223,7 +247,7 @@ export default function TeamSection() {
 
                     {/* Dots */}
                     <div className="flex justify-center items-center gap-2 mt-10 sm:mt-12">
-                        {TEAM_MEMBERS.map((member, index) => (
+                        {roster.map((member, index) => (
                             <button
                                 key={member.id}
                                 type="button"
@@ -242,8 +266,8 @@ export default function TeamSection() {
                     {/* Announces the centred card to screen readers, which get
                         no benefit from the visual depth cue. */}
                     <p className="sr-only" aria-live="polite">
-                        {TEAM_MEMBERS[active].name},{" "}
-                        {TEAM_MEMBERS[active].role}
+                        {roster[active].name},{" "}
+                        {roster[active].role}
                     </p>
                 </div>
             </div>
