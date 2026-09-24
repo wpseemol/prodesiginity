@@ -21,7 +21,7 @@ export default function LoginPage() {
         <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-white px-4 py-12 font-sans text-slate-900 transition-colors duration-300 dark:bg-[#070B14] dark:text-slate-100">
             <div
                 aria-hidden
-                className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(99,102,241,0.16),_transparent_55%),radial-gradient(ellipse_at_bottom_right,_rgba(59,130,246,0.12),_transparent_45%)] dark:bg-[radial-gradient(ellipse_at_top,_rgba(129,140,248,0.18),_transparent_55%),radial-gradient(ellipse_at_bottom_right,_rgba(96,165,250,0.1),_transparent_45%)]"
+                className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(99,102,241,0.16),transparent_55%),radial-gradient(ellipse_at_bottom_right,rgba(59,130,246,0.12),transparent_45%)] dark:bg-[radial-gradient(ellipse_at_top,rgba(129,140,248,0.18),transparent_55%),radial-gradient(ellipse_at_bottom_right,rgba(96,165,250,0.1),transparent_45%)]"
             />
 
             <div className="absolute top-4 right-4 z-20 sm:top-6 sm:right-6">
