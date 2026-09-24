@@ -3,6 +3,7 @@ import fs from "fs";
 import cors from "cors";
 import corsDelegate from "./config/cors.js";
 import rootRouter from "./routes/index.js";
+import { getApiIndex } from "./lib/apiCatalog.js";
 import {
   ASSETS_UPLOAD_ROOT,
   HOMEPAGE_UPLOAD_ROOT,
@@ -13,6 +14,7 @@ import {
 } from "./lib/uploads.js";
 
 const app = express();
+const PORT = Number(process.env.PORT || 4000);
 
 // Ensure upload roots exist
 fs.mkdirSync(USERS_UPLOAD_ROOT, { recursive: true });
@@ -30,6 +32,15 @@ app.use(express.urlencoded({ extended: true }));
 
 // Serve uploads: /uploads/users|team|site/...
 app.use("/uploads", express.static(UPLOADS_ROOT));
+
+// Landing: list all routers + routes (port 4000 by default)
+app.get("/", (_req, res) => {
+  res.status(200).json(getApiIndex(PORT));
+});
+
+app.get("/api", (_req, res) => {
+  res.status(200).json(getApiIndex(PORT));
+});
 
 // Routes
 app.use("/api", rootRouter);
