@@ -55,3 +55,4 @@ dashboard/dist/
 # Recovery / local scratch (do not commit)
 backend-recovered/
 backend-old-api-backup/
+.vercel
