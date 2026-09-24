@@ -3,22 +3,36 @@ import bcrypt from "bcrypt";
 import prisma from "../src/lib/prisma.js";
 import { homepageSeedSections } from "./homepageSeed.js";
 
-const demoUsers = [
-  {
-    fullName: "Demo Admin",
-    username: "admin",
-    email: "admin@prodesignity.com",
-    password: "DemoAdmin1!",
-    role: "admin" as const,
-  },
-  {
-    fullName: "Demo Employee",
-    username: "employee",
-    email: "employee@prodesignity.com",
-    password: "DemoEmployee1!",
-    role: "employer" as const,
-  },
-];
+type SeedUser = {
+  fullName: string;
+  username: string;
+  email: string;
+  password: string;
+  role: "admin" | "employer";
+};
+
+/**
+ * Demo defaults for local/dev. On production, set SEED_* env vars
+ * (and preferably change passwords after first login).
+ */
+function buildSeedUsers(): SeedUser[] {
+  return [
+    {
+      fullName: process.env.SEED_ADMIN_NAME ?? "Demo Admin",
+      username: process.env.SEED_ADMIN_USERNAME ?? "admin",
+      email: process.env.SEED_ADMIN_EMAIL ?? "admin@prodesignity.com",
+      password: process.env.SEED_ADMIN_PASSWORD ?? "DemoAdmin1!",
+      role: "admin",
+    },
+    {
+      fullName: process.env.SEED_EMPLOYEE_NAME ?? "Demo Employee",
+      username: process.env.SEED_EMPLOYEE_USERNAME ?? "employee",
+      email: process.env.SEED_EMPLOYEE_EMAIL ?? "employee@prodesignity.com",
+      password: process.env.SEED_EMPLOYEE_PASSWORD ?? "DemoEmployee1!",
+      role: "employer",
+    },
+  ];
+}
 
 async function waitForDb(retries = 8) {
   let lastError: unknown;
@@ -40,7 +54,9 @@ async function waitForDb(retries = 8) {
 }
 
 async function seedUsers() {
-  for (const user of demoUsers) {
+  const users = buildSeedUsers();
+
+  for (const user of users) {
     const hashedPassword = await bcrypt.hash(user.password, 10);
 
     await prisma.user.upsert({
@@ -62,6 +78,8 @@ async function seedUsers() {
 
     console.log(`Seeded ${user.role}: ${user.username} / ${user.email}`);
   }
+
+  return users;
 }
 
 async function seedHomepage() {
@@ -85,12 +103,14 @@ async function seedHomepage() {
 async function main() {
   console.log("Connecting to database…");
   await waitForDb();
-  await seedUsers();
+  const users = await seedUsers();
   await seedHomepage();
 
-  console.log("\nDemo credentials:");
-  console.log("  Admin    → admin / DemoAdmin1!");
-  console.log("  Employee → employee / DemoEmployee1!");
+  console.log("\nDashboard login credentials (https://dashboard.prodesignity.com):");
+  for (const user of users) {
+    const label = user.role === "admin" ? "Admin   " : "Employee";
+    console.log(`  ${label} → ${user.username} / ${user.password}`);
+  }
 }
 
 main()

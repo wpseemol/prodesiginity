@@ -37,7 +37,7 @@ ls ~/domains
 | ------------------ | -------------------------------- |
 | `SITE_URL`         | `https://prodesignity.com`       |
 | `API_URL`          | `https://api.prodesignity.com`   |
-| `STAFF_PORTAL_URL` | `https://admin.prodesignity.com` |
+| `STAFF_PORTAL_URL` | `https://dashboard.prodesignity.com` |
 
 GitHub → **Settings → Secrets and variables → Actions → Variables**.
 
@@ -124,6 +124,35 @@ GitHub → **Actions → Deploy Backend API to Hostinger → Run workflow**
 
 Later pushes to `backend/**` on `main` deploy automatically.
 
+### F. Prisma seed (dashboard login users + CMS)
+
+One-time (or after empty DB), over SSH in `BACKEND_REMOTE_DIR`:
+
+```bash
+cd "$HOME/domains/api.prodesignity.com/nodejs"
+
+# optional: set stronger passwords before seeding
+# nano .env  → SEED_ADMIN_PASSWORD=... SEED_EMPLOYEE_PASSWORD=...
+
+npm run db:setup:deploy
+# or, if schema already pushed:
+# npm run db:seed:deploy
+```
+
+This creates:
+
+- Admin / employee accounts for `https://dashboard.prodesignity.com/login`
+- Homepage CMS sections, team, site settings, services, tracking tables
+
+Default demo logins (unless overridden by `SEED_*`):
+
+| Role     | Username   | Password         |
+| -------- | ---------- | ---------------- |
+| Admin    | `admin`    | `DemoAdmin1!`    |
+| Employee | `employee` | `DemoEmployee1!` |
+
+Change passwords after first login.
+
 ---
 
 ## 3. Quick verify
@@ -136,7 +165,8 @@ curl https://prodesignity.com/
 # → 200 homepage
 ```
 
-Browser: site should call `https://api.prodesignity.com/api/...` (Network tab).
+Browser: site should call `https://api.prodesignity.com/api/...` (Network tab).  
+Dashboard: `https://dashboard.prodesignity.com/login` with seeded admin.
 
 ---
 

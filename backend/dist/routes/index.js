@@ -6,10 +6,27 @@ import teamRoutes from "./team.routes.js";
 import settingsRoutes from "./settings.routes.js";
 import trackingRoutes from "./tracking.routes.js";
 import servicesRoutes from "./services.routes.js";
+import prisma from "../lib/prisma.js";
 const rootRouter = Router();
-// Health check route
-rootRouter.get("/health", (_req, res) => {
-    res.status(200).json({ status: "ok", uptime: process.uptime() });
+// Health check — also verifies MySQL/Prisma connection
+rootRouter.get("/health", async (_req, res) => {
+    try {
+        await prisma.$queryRaw `SELECT 1`;
+        return res.status(200).json({
+            status: "ok",
+            database: "connected",
+            uptime: process.uptime(),
+        });
+    }
+    catch (error) {
+        console.error("Health DB check failed:", error);
+        return res.status(503).json({
+            status: "error",
+            database: "disconnected",
+            uptime: process.uptime(),
+            message: error instanceof Error ? error.message : "Database connection failed",
+        });
+    }
 });
 rootRouter.use("/auth", authRoutes);
 rootRouter.use("/homepage", homepageRoutes);
