@@ -1,3 +1,6 @@
+# Root monorepo ignores (package-specific rules live in
+# frontend/.gitignore, backend/.gitignore, dashboard/.gitignore)
+
 # Dependencies
 node_modules/
 .pnp
@@ -17,6 +20,7 @@ node_modules/
 .env.*
 !.env.example
 !.env.*.example
+!.env.dev
 
 # Logs
 logs/
@@ -32,38 +36,22 @@ Desktop.ini
 .idea/
 .vscode/*
 !.vscode/extensions.json
+!.vscode/settings.json
 !.vscode/settings.json.example
 *.swp
 *.swo
 
-# Build / output
+# Build / output / deploy artifacts
 dist/
 build/
-out/
-coverage/
-*.tsbuildinfo
-
-# Next.js (frontend)
-frontend/.next/
-frontend/out/
-frontend/.vercel/
-frontend/next-env.d.ts
-frontend/upload/
-frontend/site.zip
-
-# Backend
 backend/dist/
-backend/uploads/
-backend/tmp/
+frontend/out/
+frontend/upload/
+dashboard/dist/
+*.tar.gz
+*.zip
+!frontend/public/**
 
-# Prisma
-backend/prisma/*.db
-backend/prisma/*.db-journal
-
-# Misc
-*.pem
-*.local
-.turbo/
-.cache/
-tmp/
-temp/
+# Recovery / local scratch (do not commit)
+backend-recovered/
+backend-old-api-backup/

@@ -1,0 +1,185 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+model User {
+  id            Int            @id @default(autoincrement())
+  fullName      String         @map("full_name")
+  username      String         @unique
+  email         String         @unique
+  password      String
+  role          Role           @default(user)
+  photoId       Int?           @map("photo_id")
+  photo         Photo?         @relation("UserProfilePhoto", fields: [photoId], references: [id], onDelete: SetNull)
+  photos        Photo[]        @relation("UserPhotos")
+  created_at    DateTime       @default(now())
+  refreshTokens RefreshToken[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        Int       @id @default(autoincrement())
+  tokenHash String    @unique @map("token_hash") @db.VarChar(64)
+  userId    Int       @map("user_id")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model Photo {
+  id           Int      @id @default(autoincrement())
+  url          String
+  altText      String?  @map("alt_text")
+  description  String?
+  ownerId      Int?     @map("owner_id")
+  owner        User?    @relation("UserPhotos", fields: [ownerId], references: [id], onDelete: Cascade)
+  profileUsers User[]   @relation("UserProfilePhoto")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([ownerId])
+  @@map("photos")
+}
+
+enum Role {
+  admin
+  user
+  employer
+}
+
+/// Editable homepage CMS blocks. Each row is one section (hero, pricing, …);
+/// `content` holds the section's JSON payload consumed by the frontend.
+model HomePageSection {
+  id        Int      @id @default(autoincrement())
+  key       String   @unique @db.VarChar(64)
+  label     String   @db.VarChar(128)
+  content   Json
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("homepage_sections")
+}
+
+/// Homepage / about team roster managed by admin (add / delete).
+model TeamMember {
+  id         Int      @id @default(autoincrement())
+  slug       String   @unique @db.VarChar(80)
+  name       String   @db.VarChar(120)
+  role       String   @db.VarChar(160)
+  tagline    String?  @db.VarChar(255)
+  photoUrl   String   @map("photo_url") @db.VarChar(512)
+  /** SEO: HTML img alt / description */
+  photoAlt   String?  @map("photo_alt") @db.VarChar(255)
+  /** SEO: HTML img title */
+  photoTitle String?  @map("photo_title") @db.VarChar(160)
+  isLead     Boolean  @default(false) @map("is_lead")
+  sortOrder  Int      @default(0) @map("sort_order")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@index([sortOrder])
+  @@map("team_members")
+}
+
+/// Singleton site branding (key = "default"): favicon + login screen copy/logo.
+model SiteSetting {
+  id             Int      @id @default(autoincrement())
+  key            String   @unique @default("default") @db.VarChar(32)
+  siteName       String?  @map("site_name") @db.VarChar(120)
+  faviconUrl     String?  @map("favicon_url") @db.VarChar(512)
+  loginTitle     String?  @map("login_title") @db.VarChar(160)
+  loginSubtitle  String?  @map("login_subtitle") @db.VarChar(255)
+  loginBadgeText String?  @map("login_badge_text") @db.VarChar(80)
+  loginLogoUrl   String?  @map("login_logo_url") @db.VarChar(512)
+
+  /// Browser + server tracking (Meta Pixel, GA4, CAPI, Enhanced Conversions).
+  trackingEnabled                 Boolean  @default(false) @map("tracking_enabled")
+  metaPixelId                     String?  @map("meta_pixel_id") @db.VarChar(64)
+  googleMeasurementId             String?  @map("google_measurement_id") @db.VarChar(64)
+  googleAdsId                     String?  @map("google_ads_id") @db.VarChar(64)
+  metaCapiAccessToken             String?  @map("meta_capi_access_token") @db.Text
+  metaCapiTestEventCode           String?  @map("meta_capi_test_event_code") @db.VarChar(64)
+  googleAdsConversionLabel        String?  @map("google_ads_conversion_label") @db.VarChar(128)
+  googleAdsCustomerId             String?  @map("google_ads_customer_id") @db.VarChar(32)
+  googleEnhancedConversionsApiKey String?  @map("google_enhanced_conversions_api_key") @db.Text
+
+  /// Editable marketing site config (contact, social, legal, …).
+  siteConfig Json? @map("site_config")
+
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("site_settings")
+}
+
+/// First-party page views for dashboard overview (country / device / path).
+model PageVisit {
+  id          Int      @id @default(autoincrement())
+  path        String   @db.VarChar(512)
+  referrer    String?  @db.VarChar(512)
+  country     String?  @db.VarChar(80)
+  countryCode String?  @map("country_code") @db.VarChar(8)
+  deviceType  String?  @map("device_type") @db.VarChar(32)
+  browser     String?  @db.VarChar(64)
+  sessionId   String?  @map("session_id") @db.VarChar(64)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@index([countryCode])
+  @@index([deviceType])
+  @@map("page_visits")
+}
+
+/// Service category (nav mega-menu level 1).
+model ServiceGroup {
+  id        Int       @id @default(autoincrement())
+  slug      String    @unique @db.VarChar(80)
+  title     String    @db.VarChar(160)
+  blurb     String    @db.VarChar(512)
+  icon      String    @db.VarChar(64)
+  sortOrder Int       @default(0) @map("sort_order")
+  services  Service[]
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  @@index([sortOrder])
+  @@map("service_groups")
+}
+
+/// Individual service (Types of Work We Do + /services pages).
+model Service {
+  id           Int          @id @default(autoincrement())
+  slug         String       @unique @db.VarChar(120)
+  title        String       @db.VarChar(200)
+  groupId      Int          @map("group_id")
+  group        ServiceGroup @relation(fields: [groupId], references: [id], onDelete: Restrict)
+  icon         String       @db.VarChar(64)
+  tagline      String       @db.VarChar(255)
+  summary      String       @db.Text
+  intro        Json
+  deliverables Json
+  idealFor     Json         @map("ideal_for")
+  process      Json
+  faqs         Json
+  timeline     String       @db.VarChar(120)
+  startingAt   String       @map("starting_at") @db.VarChar(120)
+  accent       Json
+  seo          Json
+  sortOrder    Int          @default(0) @map("sort_order")
+  published    Boolean      @default(true)
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+
+  @@index([groupId])
+  @@index([sortOrder])
+  @@index([published])
+  @@map("services")
+}

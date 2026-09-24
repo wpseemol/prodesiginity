@@ -1,7 +1,15 @@
+<<<<<<< HEAD
 name: Deploy Backend (SSH)
 
 # Build Express API in CI (pnpm), then sync to Hostinger Node host over SSH.
 # Server installs with npm — avoids Hostinger corepack/pnpm failures.
+=======
+name: Deploy Backend API to Hostinger
+
+# Express API → Hostinger VPS via SSH password auth.
+# Required secrets: SSH_HOST, SSH_USERNAME, SSH_PASSWORD, SSH_PORT, BACKEND_REMOTE_DIR
+# Optional vars: API_URL (default https://api.prodesignity.com)
+>>>>>>> seemol
 on:
     push:
         branches:
@@ -9,10 +17,19 @@ on:
         paths:
             - "backend/**"
             - ".github/workflows/deploy-backend.yml"
+<<<<<<< HEAD
             - "package.json"
             - "pnpm-lock.yaml"
             - "pnpm-workspace.yaml"
     workflow_dispatch:
+=======
+    workflow_dispatch:
+        inputs:
+            run_migrations:
+                description: "Run prisma db push before restart"
+                type: boolean
+                default: false
+>>>>>>> seemol
 
 concurrency:
     group: deploy-backend-ssh
@@ -25,6 +42,26 @@ jobs:
         steps:
             - name: Checkout
               uses: actions/checkout@v4
+<<<<<<< HEAD
+=======
+
+            - name: Require deploy secrets
+              env:
+                  SSH_HOST: ${{ secrets.SSH_HOST }}
+                  SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
+                  SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
+                  BACKEND_REMOTE_DIR: ${{ secrets.BACKEND_REMOTE_DIR }}
+              run: |
+                  set -euo pipefail
+                  missing=0
+                  for key in SSH_HOST SSH_USERNAME SSH_PASSWORD BACKEND_REMOTE_DIR; do
+                    if [ -z "${!key}" ]; then
+                      echo "::error::Missing secret: $key"
+                      missing=1
+                    fi
+                  done
+                  [ "$missing" = "0" ] || exit 1
+>>>>>>> seemol
 
             - name: Setup Node
               uses: actions/setup-node@v4
@@ -40,6 +77,7 @@ jobs:
             - name: Install dependencies
               run: pnpm install --filter prodesignity-api...
 
+<<<<<<< HEAD
             - name: Generate Prisma client + build
               working-directory: backend
               env:
@@ -70,10 +108,42 @@ jobs:
                   ls -lh backend-deploy.tar.gz
 
             - name: Upload archive
+=======
+            - name: Generate Prisma client
+              working-directory: backend
+              run: pnpm exec prisma generate
+
+            - name: Build TypeScript
+              working-directory: backend
+              run: pnpm run build
+
+            - name: Sanity-check the build
+              working-directory: backend
+              run: |
+                  test -f dist/index.js || { echo "::error::dist/index.js missing"; exit 1; }
+                  echo "Backend build OK"
+
+            - name: Package release
+              run: |
+                  set -euo pipefail
+                  rm -rf /tmp/api-release
+                  mkdir -p /tmp/api-release
+                  cp -r backend/dist /tmp/api-release/dist
+                  cp -r backend/prisma /tmp/api-release/prisma
+                  cp backend/package.json /tmp/api-release/package.json
+                  cp backend/prisma.config.ts /tmp/api-release/prisma.config.ts
+                  cp pnpm-lock.yaml /tmp/api-release/pnpm-lock.yaml
+                  mkdir -p /tmp/api-release/uploads
+                  tar -C /tmp/api-release -czf api-release.tgz .
+                  ls -lh api-release.tgz
+
+            - name: Upload release via SCP
+>>>>>>> seemol
               uses: appleboy/scp-action@v0.1.7
               with:
                   host: ${{ secrets.SSH_HOST }}
                   username: ${{ secrets.SSH_USERNAME }}
+<<<<<<< HEAD
                   key: ${{ secrets.SSH_PRIVATE_KEY }}
                   password: ${{ secrets.SSH_PASSWORD }}
                   port: ${{ vars.SSH_PORT || 65002 }}
@@ -138,6 +208,72 @@ jobs:
                       fi
 
                       echo "Backend deploy OK → $REMOTE"
+=======
+                  password: ${{ secrets.SSH_PASSWORD }}
+                  port: ${{ secrets.SSH_PORT }}
+                  source: api-release.tgz
+                  target: /tmp/
+                  overwrite: true
+
+            - name: Extract, install, restart on server
+              uses: appleboy/ssh-action@v1.2.0
+              env:
+                  REMOTE_DIR: ${{ secrets.BACKEND_REMOTE_DIR }}
+                  RUN_MIGRATIONS: ${{ github.event.inputs.run_migrations || 'false' }}
+              with:
+                  host: ${{ secrets.SSH_HOST }}
+                  username: ${{ secrets.SSH_USERNAME }}
+                  password: ${{ secrets.SSH_PASSWORD }}
+                  port: ${{ secrets.SSH_PORT }}
+                  script_stop: true
+                  envs: REMOTE_DIR,RUN_MIGRATIONS
+                  script: |
+                      set -euo pipefail
+                      echo "Deploying to $REMOTE_DIR"
+                      mkdir -p "$REMOTE_DIR"
+                      tar -xzf /tmp/api-release.tgz -C "$REMOTE_DIR"
+                      rm -f /tmp/api-release.tgz
+                      cd "$REMOTE_DIR"
+
+                      test -f .env || {
+                        echo "Missing $REMOTE_DIR/.env"
+                        echo "Create it once on the VPS (see deploy/HOSTINGER.md) then re-run."
+                        exit 1
+                      }
+
+                      export NVM_DIR="$HOME/.nvm"
+                      [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+
+                      if command -v corepack >/dev/null 2>&1; then
+                        corepack enable || true
+                        corepack prepare pnpm@10.28.0 --activate || true
+                      fi
+                      if ! command -v pnpm >/dev/null 2>&1; then
+                        npm install -g pnpm@10.28.0
+                      fi
+
+                      pnpm install --prod
+                      pnpm exec prisma generate
+
+                      if [ "$RUN_MIGRATIONS" = "true" ]; then
+                        pnpm exec prisma db push
+                      fi
+
+                      if command -v pm2 >/dev/null 2>&1; then
+                        if pm2 describe prodesignity-api >/dev/null 2>&1; then
+                          pm2 restart prodesignity-api --update-env
+                        else
+                          pm2 start dist/index.js --name prodesignity-api
+                        fi
+                        pm2 save
+                      else
+                        echo "pm2 not found. Install once:"
+                        echo "  npm i -g pm2 && cd $REMOTE_DIR && pm2 start dist/index.js --name prodesignity-api && pm2 save && pm2 startup"
+                        exit 1
+                      fi
+
+                      echo "Backend deployed"
+>>>>>>> seemol
 
             - name: Health check
               env:
@@ -145,6 +281,7 @@ jobs:
               run: |
                   set -euo pipefail
                   BASE="${API_URL%/}"
+<<<<<<< HEAD
                   CODE=$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 "${BASE}/" || true)
                   echo "API root HTTP $CODE"
                   # 200/404/401 all mean the Node process is up; 000/5xx = down
@@ -152,3 +289,17 @@ jobs:
                     2*|3*|401|403|404) echo "OK" ;;
                     *) echo "::warning::Unexpected status $CODE — check hPanel Node app + .env" ;;
                   esac
+=======
+                  echo "Checking ${BASE}/api/health"
+                  for i in 1 2 3 4 5 6; do
+                    CODE=$(curl -s -o /tmp/health.json -w '%{http_code}' --max-time 20 "${BASE}/api/health" || true)
+                    echo "Attempt $i → HTTP $CODE"
+                    if [ "$CODE" = "200" ]; then
+                      cat /tmp/health.json || true
+                      exit 0
+                    fi
+                    sleep 5
+                  done
+                  echo "::error::API health check failed — is the subdomain / reverse proxy pointing at the Node app?"
+                  exit 1
+>>>>>>> seemol

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import BrandsMarquee from "@/components/home/BrandsMarquee";
 import HeroSection from "@/components/home/hero/HeroSection";
 import JsonLd from "@/components/home/JsonLd";
@@ -8,12 +9,17 @@ import RecentProjects from "@/components/home/recent-projects/RecentProjects";
 import ServicesMarquee from "@/components/home/ServicesMarquee";
 import StatsSection from "@/components/home/StatsSection";
 import TeamSection from "@/components/home/team/TeamSection";
+=======
+import HomePageFromCms from "@/components/home/HomePageFromCms";
+import JsonLd from "@/components/home/JsonLd";
+>>>>>>> seemol
 import { homeSchema } from "@/lib/seo";
 
 export default function Home() {
     return (
         <main className="">
             <JsonLd data={homeSchema()} />
+<<<<<<< HEAD
             <HeroSection />
             <StatsSection />
             <BrandsMarquee />
@@ -23,6 +29,9 @@ export default function Home() {
             <RecentProjects />
             <PricingSection />
             <TeamSection />
+=======
+            <HomePageFromCms />
+>>>>>>> seemol
         </main>
     );
 }

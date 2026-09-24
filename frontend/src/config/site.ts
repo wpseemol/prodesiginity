@@ -17,8 +17,13 @@ export const siteConfig = {
     legalName: "ProDesignity", // TODO: exact registered name if incorporated
     domain: "prodesignity.com",
     url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://prodesignity.com",
+<<<<<<< HEAD
     logo: "/assets/logo/prodesignity-logo.png",
     ogImage: "/assets/images/Prodesignity-hero-image-change.jpg",
+=======
+    logo: "/uploads/assets/logo/prodesignity-logo.png",
+    ogImage: "/uploads/assets/images/Prodesignity-hero-image-change.jpg",
+>>>>>>> seemol
     founded: "2021", // TODO: confirm
 
     tagline:
@@ -39,6 +44,47 @@ export const siteConfig = {
     whatsapp: "https://wa.me/8801738142398", // TODO: confirm the number in the link
     contactPath: "/contact",
 
+<<<<<<< HEAD
+=======
+    // --- App routes (marketing site / regular users) ---------------------
+    /**
+     * Client (regular user) sign-in on the Next.js site.
+     * NOT for admin/employee — those use `staffPortal` (Vite :5173).
+     */
+    loginPath: "/login",
+    /** Where clients land after signing in on this site. */
+    dashboardPath: "/dashboard",
+
+    /**
+     * Staff portal = separate Vite app (`dashboard/` package).
+     * Admin + employee login lives there: {url}/login
+     * Dev default: http://localhost:5173/login
+     */
+    staffPortal: {
+        url:
+            process.env.NEXT_PUBLIC_STAFF_PORTAL_URL ?? "http://localhost:5173",
+        loginPath: "/login",
+        adminPath: "/admin",
+        employeePath: "/employee",
+    },
+
+    /**
+     * Copy for the client login page left panel (SEO + product story).
+     * This page is for customers only — not staff.
+     */
+    login: {
+        eyebrow: "Client login",
+        headline: "Sign in to your client account",
+        description:
+            "Track 3D renders, packaging drafts, and e-commerce assets for your brand. This portal is for ProDesignity clients — not for admin or employee staff accounts.",
+        points: [
+            "Review project progress and delivery status",
+            "Access approved renders, mockups, and source files",
+            "Request revisions without losing brand context",
+        ],
+    },
+
+>>>>>>> seemol
     address: {
         street: "", // TODO: add if you want a LocalBusiness listing
         city: "Khulna",
@@ -94,6 +140,17 @@ export function absoluteUrl(path = "/"): string {
     return new URL(path, siteConfig.url).toString();
 }
 
+<<<<<<< HEAD
+=======
+/** Full URL to the staff (admin / employee) login on the Vite dashboard app. */
+export function staffLoginUrl(): string {
+    return new URL(
+        siteConfig.staffPortal.loginPath,
+        siteConfig.staffPortal.url,
+    ).toString();
+}
+
+>>>>>>> seemol
 /** Non-empty social profiles, ready for schema.org sameAs. */
 export const socialProfiles: string[] = Object.values(siteConfig.social).filter(
     (value) => value.length > 0,

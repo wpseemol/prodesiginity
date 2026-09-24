@@ -1,0 +1,25 @@
+# Keep this folder in git, but ignore generated / uploaded binary files.
+*
+!.gitignore
+!**/.gitkeep
+
+# Track migrated website media (logos, brand marks, team photos, etc.)
+!assets/
+!assets/**
+
+# Dynamic upload buckets stay empty in git
+users/**
+!users/
+!users/.gitkeep
+
+team/**
+!team/
+!team/.gitkeep
+
+site/**
+!site/
+!site/.gitkeep
+
+homepage/**
+!homepage/
+!homepage/.gitkeep

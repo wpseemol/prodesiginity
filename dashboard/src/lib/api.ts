@@ -14,9 +14,16 @@ type ApiOptions = RequestInit & {
 
 let refreshPromise: Promise<boolean> | null = null;
 
-async function refreshSession(): Promise<boolean> {
-  const refreshToken = getRefreshToken();
-  if (!refreshToken) return false;
+/**
+ * Exchange the encrypted refresh cookie for a new access/refresh pair.
+ * On any failure the session is cleared so the user must sign in again.
+ */
+export async function refreshSession(): Promise<boolean> {
+  const refreshToken = await getRefreshToken();
+  if (!refreshToken) {
+    clearDashboardSession();
+    return false;
+  }
 
   try {
     const res = await fetch(`${apiBaseUrl}/auth/refresh`, {
@@ -24,22 +31,34 @@ async function refreshSession(): Promise<boolean> {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ refreshToken }),
     });
-    const data = await res.json();
-    if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.accessToken || !data.refreshToken || !data.user) {
       clearDashboardSession();
       return false;
     }
 
     await setDashboardSession(
-      data.accessToken,
-      data.refreshToken,
+      data.accessToken as string,
+      data.refreshToken as string,
       data.user as DashboardUser,
+      typeof data.refreshExpiresInDays === "number"
+        ? data.refreshExpiresInDays
+        : undefined,
     );
     return true;
   } catch {
     clearDashboardSession();
     return false;
   }
+}
+
+async function refreshSessionSingleFlight(): Promise<boolean> {
+  if (!refreshPromise) {
+    refreshPromise = refreshSession().finally(() => {
+      refreshPromise = null;
+    });
+  }
+  return refreshPromise;
 }
 
 export async function apiFetch(path: string, options: ApiOptions = {}) {
@@ -50,7 +69,7 @@ export async function apiFetch(path: string, options: ApiOptions = {}) {
     ...rest
   } = options;
 
-  const buildHeaders = () => {
+  const buildHeaders = async () => {
     const next = new Headers(headers);
     const isFormData =
       typeof FormData !== "undefined" && rest.body instanceof FormData;
@@ -58,7 +77,7 @@ export async function apiFetch(path: string, options: ApiOptions = {}) {
       next.set("Content-Type", "application/json");
     }
     if (!skipAuth) {
-      const token = getAccessToken();
+      const token = await getAccessToken();
       if (token) next.set("Authorization", `Bearer ${token}`);
     }
     return next;
@@ -66,20 +85,15 @@ export async function apiFetch(path: string, options: ApiOptions = {}) {
 
   let res = await fetch(`${apiBaseUrl}${path}`, {
     ...rest,
-    headers: buildHeaders(),
+    headers: await buildHeaders(),
   });
 
   if (res.status === 401 && !skipAuth && retryOnAuthFail) {
-    if (!refreshPromise) {
-      refreshPromise = refreshSession().finally(() => {
-        refreshPromise = null;
-      });
-    }
-    const refreshed = await refreshPromise;
+    const refreshed = await refreshSessionSingleFlight();
     if (refreshed) {
       res = await fetch(`${apiBaseUrl}${path}`, {
         ...rest,
-        headers: buildHeaders(),
+        headers: await buildHeaders(),
       });
     }
   }
@@ -88,7 +102,7 @@ export async function apiFetch(path: string, options: ApiOptions = {}) {
 }
 
 export async function logoutRequest() {
-  const refreshToken = getRefreshToken();
+  const refreshToken = await getRefreshToken();
   if (refreshToken) {
     try {
       await fetch(`${apiBaseUrl}/auth/logout`, {

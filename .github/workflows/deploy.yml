@@ -46,6 +46,10 @@ jobs:
               run: pnpm install
 
             - name: Build
+              env:
+                  NEXT_PUBLIC_SITE_URL: ${{ vars.SITE_URL || 'https://prodesignity.com' }}
+                  NEXT_PUBLIC_API_URL: ${{ vars.API_URL || 'https://api.prodesignity.com' }}/api
+                  NEXT_PUBLIC_STAFF_PORTAL_URL: ${{ vars.STAFF_PORTAL_URL || 'https://admin.prodesignity.com' }}
               run: pnpm run build
 
             - name: Sanity-check the build

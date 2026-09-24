@@ -3,6 +3,10 @@ import MobileMenu from "@/components/home/MobileMenu";
 import DesktopNav, { type NavLink } from "@/components/home/nav/DesktopNav";
 import Logo from "@/components/home/Logo";
 import Link from "next/link";
+<<<<<<< HEAD
+=======
+import { siteConfig } from "@/config/site";
+>>>>>>> seemol
 
 /**
  * `mega: true` swaps the plain link for the cascading Services flyout. The
@@ -14,7 +18,11 @@ const navLinks: NavLink[] = [
     { name: "Pricing", href: "/#pricing" },
     { name: "About", href: "/about" },
     { name: "Blog", href: "/blog" },
+<<<<<<< HEAD
     { name: "Contact", href: "/contact" },
+=======
+    { name: "Contact", href: siteConfig.contactPath },
+>>>>>>> seemol
 ];
 
 export default function Header() {
@@ -33,7 +41,18 @@ export default function Header() {
                         <ThemeToggle />
 
                         <Link
+<<<<<<< HEAD
                             href="/contact/#book-a-call"
+=======
+                            href={siteConfig.loginPath}
+                            className="hidden sm:inline-flex items-center justify-center px-4 py-2.5 text-sm font-semibold text-slate-700 hover:text-primary dark:text-slate-200 dark:hover:text-dark-primary transition-colors"
+                        >
+                            Login
+                        </Link>
+
+                        <Link
+                            href={`${siteConfig.contactPath}/#book-a-call`}
+>>>>>>> seemol
                             className="hidden md:inline-flex items-center justify-center px-5 py-2.5 text-sm font-semibold text-white bg-linear-to-r from-brand-violet to-brand-blue hover:from-primary-hover hover:to-brand-blue dark:from-dark-brand-violet dark:to-dark-brand-blue dark:hover:from-dark-primary-hover dark:hover:to-dark-brand-blue rounded-xl shadow-md transition-all duration-200"
                         >
                             Get Started

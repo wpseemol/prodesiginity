@@ -139,9 +139,10 @@ Auth endpoint details: [`backend/API.md`](backend/API.md).
 
 ## Docs
 
+- [`deploy/HOSTINGER.md`](deploy/HOSTINGER.md) — Hostinger frontend (FTP) + API (SSH) deploy
 - [`backend/API.md`](backend/API.md) — authentication API
 - [`backend/README.md`](backend/README.md) — Prisma commands
-- [`frontend/DEPLOY.MD`](frontend/DEPLOY.MD) — frontend deploy notes
+- [`frontend/DEPLOY.MD`](frontend/DEPLOY.MD) — frontend FTP extract details
 
 ## License
 

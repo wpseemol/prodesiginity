@@ -6,13 +6,45 @@ import Link from "next/link";
 import { Check, Star, Zap } from "lucide-react";
 import { PRICING_PLANS } from "@/data/pricingData";
 import { HeaderPill } from "@/components/HeaderPill";
+<<<<<<< HEAD
 import PortfolioBackground from "./portfolio/PortfolioBackground";
 
 export default function PricingSection() {
+=======
+import type { PricingCmsContent } from "@/lib/homepage";
+import PortfolioBackground from "./portfolio/PortfolioBackground";
+
+type PricingSectionProps = {
+    content?: PricingCmsContent | null;
+};
+
+export default function PricingSection({ content }: PricingSectionProps) {
+>>>>>>> seemol
     const sectionRef = useRef<HTMLElement>(null);
     const router = useRouter();
     const pathname = usePathname();
 
+<<<<<<< HEAD
+=======
+    const pill = content?.pill?.trim() || "Monthly Retainers";
+    const headline = content?.headline?.trim() || "Predictable Growth with";
+    const headlineAccent =
+        content?.headlineAccent?.trim() || "Flat Monthly Pricing";
+    const description =
+        content?.description?.trim() ||
+        "No hidden fees, no hourly rates. Just consistent, high-quality content and e-commerce management delivered to your brand every single month.";
+    const footerPrompt =
+        content?.footerPrompt?.trim() ||
+        "Need a custom solution for a large enterprise?";
+    const footerCtaLabel = content?.footerCtaLabel?.trim() || "Let's talk.";
+    const footerCtaHref =
+        content?.footerCtaHref?.trim() || "/contact?type=enterprise";
+    const plans =
+        content?.plans?.length && content.plans.every((p) => p.id && p.name)
+            ? content.plans
+            : PRICING_PLANS;
+
+>>>>>>> seemol
     useEffect(() => {
         const target = sectionRef.current;
         if (!target) return;
@@ -61,26 +93,43 @@ export default function PricingSection() {
 
             <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
                 <div className="text-center max-w-3xl mx-auto mb-16 sm:mb-20">
+<<<<<<< HEAD
                     <HeaderPill text="Monthly Retainers" className="sm:mb-8" />
 
                     <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 dark:text-white tracking-tight leading-[1.2]">
                         Predictable Growth with <br />
                         <span className="inline-flex items-center gap-2 bg-linear-to-r from-primary via-secondary to-primary/40 dark:from-primary/80 dark:via-primary/70 dark:to-cyan-400 bg-clip-text text-transparent">
                             Flat Monthly Pricing
+=======
+                    <HeaderPill text={pill} className="sm:mb-8" />
+
+                    <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 dark:text-white tracking-tight leading-[1.2]">
+                        {headline} <br />
+                        <span className="inline-flex items-center gap-2 bg-linear-to-r from-primary via-secondary to-primary/40 dark:from-primary/80 dark:via-primary/70 dark:to-cyan-400 bg-clip-text text-transparent">
+                            {headlineAccent}
+>>>>>>> seemol
                             <Zap className="w-7 h-7 sm:w-8 sm:h-8 text-brand-orange fill-brand-orange inline-block" />
                         </span>
                     </h2>
 
                     <p className="mt-4 text-sm sm:text-base text-slate-600 dark:text-slate-400 max-w-xl mx-auto leading-relaxed">
+<<<<<<< HEAD
                         No hidden fees, no hourly rates. Just consistent,
                         high-quality content and e-commerce management delivered
                         to your brand every single month.
+=======
+                        {description}
+>>>>>>> seemol
                     </p>
                 </div>
 
                 {/* 3-Column Pricing Cards Grid */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
+<<<<<<< HEAD
                     {PRICING_PLANS.map((plan) => {
+=======
+                    {plans.map((plan) => {
+>>>>>>> seemol
                         const isPopular = plan.isPopular;
 
                         return (
@@ -166,12 +215,21 @@ export default function PricingSection() {
 
                 <div className="mt-14 text-center">
                     <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400">
+<<<<<<< HEAD
                         Need a custom solution for a large enterprise?{" "}
                         <Link
                             href="/contact?type=enterprise"
                             className="font-bold text-primary dark:text-primary/80 hover:underline inline-flex items-center gap-1"
                         >
                             Let&apos;s talk.
+=======
+                        {footerPrompt}{" "}
+                        <Link
+                            href={footerCtaHref}
+                            className="font-bold text-primary dark:text-primary/80 hover:underline inline-flex items-center gap-1"
+                        >
+                            {footerCtaLabel}
+>>>>>>> seemol
                         </Link>
                     </p>
                 </div>

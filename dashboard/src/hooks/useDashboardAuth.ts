@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { StaffRole } from "@/config";
-import { logoutRequest } from "@/lib/api";
+import { logoutRequest, refreshSession } from "@/lib/api";
 import {
   getAccessToken,
   getDashboardUser,
+  getRefreshToken,
   type DashboardUser,
 } from "@/lib/session";
 
@@ -26,8 +27,19 @@ export function useDashboardAuth({
     let cancelled = false;
 
     void (async () => {
-      const nextToken = getAccessToken();
-      const nextUser = await getDashboardUser();
+      let nextToken = await getAccessToken();
+      let nextUser = await getDashboardUser();
+      const refreshToken = await getRefreshToken();
+
+      // Access cookie/JWT gone but refresh still present → silent renew.
+      if ((!nextToken || !nextUser) && refreshToken) {
+        const ok = await refreshSession();
+        if (ok) {
+          nextToken = await getAccessToken();
+          nextUser = await getDashboardUser();
+        }
+      }
+
       if (cancelled) return;
 
       setToken(nextToken);
@@ -44,7 +56,11 @@ export function useDashboardAuth({
         !roles ||
         (nextUser != null && roles.includes(nextUser.role as StaffRole));
 
+      // Expired/invalid refresh ⇒ hard logout to login.
       if (!nextToken || !nextUser || !roleOk) {
+        if (refreshToken && (!nextToken || !nextUser)) {
+          // refreshSession already cleared cookies on failure
+        }
         navigate(loginPath, { replace: true });
       }
     })();

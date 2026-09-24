@@ -1,5 +1,9 @@
 import Link from "next/link";
 import Logo from "./Logo";
+<<<<<<< HEAD
+=======
+import { siteConfig, staffLoginUrl } from "@/config/site";
+>>>>>>> seemol
 
 const serviceLinks = [
     { name: "Short-form & Reels Editing", href: "/services" },
@@ -12,13 +16,22 @@ const companyLinks = [
     { name: "About ProDesignity", href: "/about" },
     { name: "Services Portfolio", href: "/services" },
     { name: "Journal", href: "/blog" },
+<<<<<<< HEAD
     { name: "Contact & Inquiries", href: "/contact" },
+=======
+    { name: "Contact & Inquiries", href: siteConfig.contactPath },
+>>>>>>> seemol
     { name: "Careers", href: "/careers" },
     { name: "Privacy Policy", href: "/privacy-policy" },
     { name: "Terms of Service", href: "/terms" },
 ];
 
 export default function Footer() {
+<<<<<<< HEAD
+=======
+    const adminLoginHref = staffLoginUrl();
+
+>>>>>>> seemol
     return (
         <footer className="bg-card-bg dark:bg-dark-card-bg border-t border-border-color dark:border-dark-border-color text-slate-600 dark:text-slate-400 transition-colors duration-300 font-sans">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-12">
@@ -85,10 +98,17 @@ export default function Footer() {
                                     Email:
                                 </span>
                                 <a
+<<<<<<< HEAD
                                     href="mailto:info@prodesignity.com"
                                     className="hover:text-primary dark:hover:text-dark-primary transition-colors"
                                 >
                                     info@prodesignity.com
+=======
+                                    href={`mailto:${siteConfig.email}`}
+                                    className="hover:text-primary dark:hover:text-dark-primary transition-colors"
+                                >
+                                    {siteConfig.email}
+>>>>>>> seemol
                                 </a>
                             </li>
                             <li className="flex items-center gap-2">
@@ -96,7 +116,11 @@ export default function Footer() {
                                     WhatsApp:
                                 </span>
                                 <a
+<<<<<<< HEAD
                                     href="https://wa.me/"
+=======
+                                    href={siteConfig.whatsapp}
+>>>>>>> seemol
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="text-brand-orange dark:text-dark-brand-orange hover:opacity-80 transition-opacity font-medium"
@@ -117,8 +141,13 @@ export default function Footer() {
                 {/* Bottom Bar */}
                 <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400 dark:text-slate-500">
                     <p>
+<<<<<<< HEAD
                         © {new Date().getFullYear()} ProDesignity. All rights
                         reserved.
+=======
+                        © {new Date().getFullYear()} {siteConfig.name}. All
+                        rights reserved.
+>>>>>>> seemol
                     </p>
                     <div className="flex gap-6">
                         <Link
@@ -133,6 +162,15 @@ export default function Footer() {
                         >
                             Privacy Policy
                         </Link>
+<<<<<<< HEAD
+=======
+                        <a
+                            href={adminLoginHref}
+                            className="hover:text-slate-600 dark:hover:text-slate-300 transition"
+                        >
+                            Admin Login
+                        </a>
+>>>>>>> seemol
                     </div>
                 </div>
             </div>
