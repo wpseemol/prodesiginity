@@ -1,14 +1,6 @@
-<<<<<<< HEAD
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
-# dependencies
-/node_modules
-/.pnp
-=======
 # Dependencies
 node_modules/
 .pnp
->>>>>>> seemol
 .pnp.*
 .yarn/*
 !.yarn/patches
@@ -16,23 +8,6 @@ node_modules/
 !.yarn/releases
 !.yarn/versions
 
-<<<<<<< HEAD
-# testing
-/coverage
-
-# next.js
-/.next/
-/out/
-
-# production
-/build
-
-# misc
-.DS_Store
-*.pem
-
-# debug
-=======
 # Next.js
 .next/
 out/
@@ -48,33 +23,11 @@ coverage/
 !.env.*.example
 
 # Debug / logs
->>>>>>> seemol
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-<<<<<<< HEAD
-# env files (can opt-in for committing if needed)
-.env*
-
-# vercel
-.vercel
-
-# typescript
-*.tsbuildinfo
-next-env.d.ts
-
-# PHP API secrets and runtime data (public/api/).
-# config.php holds the Zoom credentials; bookings.log holds enquiry data.
-# Both live on the server only — never in the repo, never in the deploy zip.
-/public/api/config.php
-/public/api/bookings.log
-
-# Deploy payload assembled by .github/workflows/deploy-zip.yml
-/upload/
-site.zip
-=======
 # TypeScript
 *.tsbuildinfo
 next-env.d.ts
@@ -94,4 +47,3 @@ public/api/bookings.log
 upload/
 site.zip
 site.tar.gz
->>>>>>> seemol

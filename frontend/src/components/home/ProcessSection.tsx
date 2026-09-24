@@ -10,15 +10,10 @@ import {
     Eye,
     Rocket,
     ArrowRight,
-<<<<<<< HEAD
-} from "lucide-react";
-import { HeaderPill } from "@/components/HeaderPill";
-=======
     type LucideIcon,
 } from "lucide-react";
 import { HeaderPill } from "@/components/HeaderPill";
 import type { ProcessCmsContent } from "@/lib/homepage";
->>>>>>> seemol
 
 interface Step {
     number: string;
@@ -26,12 +21,6 @@ interface Step {
     badge: string;
     title: string;
     description: string;
-<<<<<<< HEAD
-    icon: typeof Search;
-}
-
-const processSteps: Step[] = [
-=======
     icon: LucideIcon;
 }
 
@@ -44,7 +33,6 @@ const PROCESS_ICONS: Record<string, LucideIcon> = {
 };
 
 const DEFAULT_PROCESS_STEPS: Step[] = [
->>>>>>> seemol
     {
         number: "01",
         stepFraction: "1/5",
@@ -120,11 +108,6 @@ const itemVariants: Variants = {
     },
 };
 
-<<<<<<< HEAD
-export default function ProcessSection() {
-    const [activeIndex, setActiveIndex] = useState<number>(4);
-
-=======
 type ProcessSectionProps = {
     content?: ProcessCmsContent | null;
 };
@@ -159,7 +142,6 @@ export default function ProcessSection({ content }: ProcessSectionProps) {
               })
             : DEFAULT_PROCESS_STEPS;
 
->>>>>>> seemol
     return (
         <section className="relative py-20 lg:py-28 bg-white dark:bg-[#070B14] border-b border-border-color dark:border-dark-border-color transition-colors duration-300 font-sans overflow-hidden">
             {/* Background Ambient Glows */}
@@ -177,36 +159,21 @@ export default function ProcessSection({ content }: ProcessSectionProps) {
                 >
                     <div>
                         <HeaderPill
-<<<<<<< HEAD
-                            text="Our Process"
-=======
                             text={pill}
->>>>>>> seemol
                             className="justify-start sm:mb-8"
                             dotClassName="hidden"
                             inlineDivClassName="px-3.5 py-1.5 sm:text-xs"
                         />
                         <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 dark:text-white tracking-tight leading-[1.15]">
-<<<<<<< HEAD
-                            How We Turn Ideas <br />
-                            <span className="bg-linear-to-r from-brand-violet via-primary to-brand-blue dark:from-dark-brand-violet dark:via-dark-primary dark:to-dark-brand-blue bg-clip-text text-transparent">
-                                Into Powerful Solutions
-=======
                             {headline} <br />
                             <span className="bg-linear-to-r from-brand-violet via-primary to-brand-blue dark:from-dark-brand-violet dark:via-dark-primary dark:to-dark-brand-blue bg-clip-text text-transparent">
                                 {headlineAccent}
->>>>>>> seemol
                             </span>
                         </h2>
                     </div>
 
                     <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 max-w-xs md:text-right leading-relaxed">
-<<<<<<< HEAD
-                        A clear, collaborative process built to deliver quality,
-                        speed, and measurable results.
-=======
                         {description}
->>>>>>> seemol
                     </p>
                 </motion.div>
 

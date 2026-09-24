@@ -17,13 +17,8 @@ export const siteConfig = {
     legalName: "ProDesignity", // TODO: exact registered name if incorporated
     domain: "prodesignity.com",
     url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://prodesignity.com",
-<<<<<<< HEAD
-    logo: "/assets/logo/prodesignity-logo.png",
-    ogImage: "/assets/images/Prodesignity-hero-image-change.jpg",
-=======
     logo: "/uploads/assets/logo/prodesignity-logo.png",
     ogImage: "/uploads/assets/images/Prodesignity-hero-image-change.jpg",
->>>>>>> seemol
     founded: "2021", // TODO: confirm
 
     tagline:
@@ -44,8 +39,6 @@ export const siteConfig = {
     whatsapp: "https://wa.me/8801738142398", // TODO: confirm the number in the link
     contactPath: "/contact",
 
-<<<<<<< HEAD
-=======
     // --- App routes (marketing site / regular users) ---------------------
     /**
      * Client (regular user) sign-in on the Next.js site.
@@ -84,7 +77,6 @@ export const siteConfig = {
         ],
     },
 
->>>>>>> seemol
     address: {
         street: "", // TODO: add if you want a LocalBusiness listing
         city: "Khulna",
@@ -140,8 +132,6 @@ export function absoluteUrl(path = "/"): string {
     return new URL(path, siteConfig.url).toString();
 }
 
-<<<<<<< HEAD
-=======
 /** Full URL to the staff (admin / employee) login on the Vite dashboard app. */
 export function staffLoginUrl(): string {
     return new URL(
@@ -150,7 +140,6 @@ export function staffLoginUrl(): string {
     ).toString();
 }
 
->>>>>>> seemol
 /** Non-empty social profiles, ready for schema.org sameAs. */
 export const socialProfiles: string[] = Object.values(siteConfig.social).filter(
     (value) => value.length > 0,

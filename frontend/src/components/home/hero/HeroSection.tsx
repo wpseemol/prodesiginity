@@ -7,32 +7,16 @@ import { useGSAP } from "@gsap/react";
 
 import styles from "./hero.module.css";
 import { useHeroScene } from "./useHeroScene";
-<<<<<<< HEAD
-import { HERO_HEADLINE_LINES, HERO_STATS } from "./heroData";
-=======
 import {
     HERO_HEADLINE_LINES,
     HERO_STATS,
 } from "./heroData";
 import type { HeroCmsContent } from "@/lib/homepage";
->>>>>>> seemol
 
 /**
  * Homepage hero: headline copy on the left, an interactive WebGL box on the
  * right whose four faces each carry a service, plus a proof strip underneath.
  *
-<<<<<<< HEAD
- * The section renders fully visible in the server HTML and GSAP hides it again
- * in a layout effect before first paint. That ordering matters: if the intro
- * ever fails to run — no GSAP, a thrown error, JS disabled — the copy is still
- * on the page and still indexable, rather than stuck at opacity 0.
- */
-
-// Anchors on the homepage. `#pricing` is PricingSection; the second points at
-// the recent-projects heading. Swap these if the section ids ever move.
-const PRIMARY_HREF = "/#pricing";
-const SECONDARY_HREF = "/#recent-projects-heading";
-=======
  * Copy can come from the CMS (`content`); WebGL face labels still use
  * `heroData` so the scene does not remount mid-intro.
  */
@@ -42,7 +26,6 @@ const DEFAULT_SECONDARY_HREF = "/#recent-projects-heading";
 const DEFAULT_PILL_HTML = "Rated <b>4.8</b> by 300+ store owners";
 const DEFAULT_LEDE =
     "Listings, creative, ads and SEO across Amazon, Shopify, Meta, Google and TikTok — handled by one team on a single monthly retainer, so you can stay on the product.";
->>>>>>> seemol
 
 function Star() {
     return (
@@ -52,17 +35,6 @@ function Star() {
     );
 }
 
-<<<<<<< HEAD
-export default function HeroSection() {
-    const rootRef = useRef<HTMLElement | null>(null);
-    const hintRef = useRef<HTMLSpanElement | null>(null);
-
-    // Called before useGSAP so the scene is live when the timeline is built.
-    const { stageRef, canvasRef, sceneRef, face, hintHidden } = useHeroScene();
-
-    // The hint stays mounted and fades: unmounting it mid-intro would leave
-    // GSAP tweening a detached node, and the disappearance would be abrupt.
-=======
 type HeroSectionProps = {
     content?: HeroCmsContent | null;
 };
@@ -90,7 +62,6 @@ export default function HeroSection({ content }: HeroSectionProps) {
 
     const { stageRef, canvasRef, sceneRef, face, hintHidden } = useHeroScene();
 
->>>>>>> seemol
     useEffect(() => {
         const hint = hintRef.current;
         if (!hint || !hintHidden) return;
@@ -106,12 +77,6 @@ export default function HeroSection({ content }: HeroSectionProps) {
 
             const scene = sceneRef.current;
 
-<<<<<<< HEAD
-            // Queried off the section rather than with gsap.utils.toArray:
-            // useGSAP's scope only narrows selector *strings* handed to gsap
-            // methods, so a bare toArray would reach into the whole document.
-=======
->>>>>>> seemol
             const q = (sel: string) =>
                 Array.from(root.querySelectorAll<HTMLElement>(sel));
 
@@ -257,13 +222,6 @@ export default function HeroSection({ content }: HeroSectionProps) {
                                 <Star />
                                 <Star />
                             </span>
-<<<<<<< HEAD
-                            Rated <b>4.8</b> by 300+ store owners
-                        </span>
-
-                        <h1 className={styles.headline}>
-                            {HERO_HEADLINE_LINES.map((line) => (
-=======
                             <span
                                 dangerouslySetInnerHTML={{ __html: pillHtml }}
                             />
@@ -271,7 +229,6 @@ export default function HeroSection({ content }: HeroSectionProps) {
 
                         <h1 className={styles.headline}>
                             {headlineLines.map((line) => (
->>>>>>> seemol
                                 <span className={styles.line} key={line}>
                                     <span>{line}</span>
                                 </span>
@@ -279,30 +236,12 @@ export default function HeroSection({ content }: HeroSectionProps) {
                         </h1>
 
                         <p className={styles.lede} data-reveal>
-<<<<<<< HEAD
-                            Listings, creative, ads and SEO across Amazon,
-                            Shopify, Meta, Google and TikTok — handled by one
-                            team on a single monthly retainer, so you can stay
-                            on the product.
-=======
                             {lede}
->>>>>>> seemol
                         </p>
 
                         <div className={styles.actions} data-reveal>
                             <Link
                                 className={`${styles.btn} ${styles.btnPrimary}`}
-<<<<<<< HEAD
-                                href={PRIMARY_HREF}
-                            >
-                                Get Started
-                            </Link>
-                            <Link
-                                className={`${styles.btn} ${styles.btnGhost}`}
-                                href={SECONDARY_HREF}
-                            >
-                                See our work
-=======
                                 href={primaryCta.href}
                             >
                                 {primaryCta.label}
@@ -312,7 +251,6 @@ export default function HeroSection({ content }: HeroSectionProps) {
                                 href={secondaryCta.href}
                             >
                                 {secondaryCta.label}
->>>>>>> seemol
                             </Link>
                         </div>
                     </div>
@@ -325,17 +263,6 @@ export default function HeroSection({ content }: HeroSectionProps) {
                             aria-label="A 3D carton with one service printed on each side. It turns on its own; drag it or use the arrow keys to control it."
                         />
 
-<<<<<<< HEAD
-                        {/* <span className={styles.hint} data-chrome ref={hintRef}>
-                            <svg viewBox="0 0 24 24" aria-hidden="true">
-                                <path d="M8.5 6v9m0 0l-3-3m3 3l3-3" />
-                                <path d="M4 18.5h16" />
-                            </svg>
-                            Drag the box to steer it
-                        </span> */}
-
-=======
->>>>>>> seemol
                         <div
                             className={styles.readout}
                             data-chrome
@@ -346,11 +273,6 @@ export default function HeroSection({ content }: HeroSectionProps) {
                                     <path d="M4 12.5l5 5L20 6.5" />
                                 </svg>
                             </span>
-<<<<<<< HEAD
-                            {/* Keyed so React remounts the text and the CSS
-                                fade replays on every quarter turn. */}
-=======
->>>>>>> seemol
                             <span
                                 key={face.slot}
                                 className={styles.readoutSwap}
@@ -367,11 +289,7 @@ export default function HeroSection({ content }: HeroSectionProps) {
                 </div>
 
                 <div className={styles.proof}>
-<<<<<<< HEAD
-                    {HERO_STATS.map((stat) => (
-=======
                     {stats.map((stat) => (
->>>>>>> seemol
                         <div
                             className={styles.proofItem}
                             data-reveal

@@ -18,10 +18,7 @@ import { Menu, X, ArrowRight, ChevronDown } from "lucide-react";
 import ServiceIcon from "@/components/ServiceIcon";
 import { SERVICE_MENU, SERVICES_BASE_PATH } from "@/data/servicesData";
 import { cn } from "@/lib/utils";
-<<<<<<< HEAD
-=======
 import { siteConfig } from "@/config/site";
->>>>>>> seemol
 import type { NavLink } from "@/components/home/nav/DesktopNav";
 
 export default function MobileMenu({ navLinks }: { navLinks: NavLink[] }) {
@@ -258,11 +255,6 @@ export default function MobileMenu({ navLinks }: { navLinks: NavLink[] }) {
                             })}
                         </nav>
 
-<<<<<<< HEAD
-                        <div className="pt-2">
-                            <Link
-                                href="/contact/#book-a-call"
-=======
                         <div className="pt-2 space-y-2">
                             <Link
                                 href={siteConfig.loginPath}
@@ -273,7 +265,6 @@ export default function MobileMenu({ navLinks }: { navLinks: NavLink[] }) {
                             </Link>
                             <Link
                                 href={`${siteConfig.contactPath}/#book-a-call`}
->>>>>>> seemol
                                 onClick={close}
                                 className="flex items-center justify-center gap-2 w-full py-3 rounded-xl font-semibold text-white bg-linear-to-r from-brand-violet to-brand-blue dark:from-dark-brand-violet dark:to-dark-brand-blue shadow-md transition-all"
                             >
