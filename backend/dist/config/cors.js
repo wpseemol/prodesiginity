@@ -1,5 +1,3 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
 const isDev = process.env.NODE_ENV !== "production";
 /**
  * Origins allowed to send writes (POST/PUT/PATCH/DELETE) in production.
@@ -64,4 +62,5 @@ const corsDelegate = (req, callback) => {
     // Unknown origin trying to write: no CORS headers, browser blocks it.
     callback(null, { ...baseOptions, origin: false });
 };
-exports.default = corsDelegate;
+export default corsDelegate;
+//# sourceMappingURL=cors.js.map

@@ -7,15 +7,15 @@ import {
   me,
   updateProfile,
   deleteAccount,
-} from "../controllers/auth.controller";
+} from "../controllers/auth.controller.js";
 import {
   listMyPhotos,
   setActivePhoto,
   uploadErrorHandler,
   uploadProfilePhoto,
-} from "../controllers/photo.controller";
-import { requireAuth } from "../middleware/auth";
-import { profilePhotoUpload } from "../middleware/upload";
+} from "../controllers/photo.controller.js";
+import { requireAuth } from "../middleware/auth.js";
+import { profilePhotoUpload } from "../middleware/upload.js";
 
 const router = Router();
 

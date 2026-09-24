@@ -1,8 +1,7 @@
 name: Deploy Backend API to Hostinger
 
-# Express API → Hostinger VPS via SSH password auth.
-# Required secrets: SSH_HOST, SSH_USERNAME, SSH_PASSWORD, SSH_PORT, BACKEND_REMOTE_DIR
-# Optional vars: API_URL (default https://api.prodesignity.com)
+# Standalone Express API (npm + ESM) → Hostinger VPS via SSH.
+# Secrets: SSH_HOST, SSH_USERNAME, SSH_PASSWORD, SSH_PORT, BACKEND_REMOTE_DIR
 on:
     push:
         branches:
@@ -24,12 +23,16 @@ concurrency:
 jobs:
     build-and-deploy:
         runs-on: ubuntu-latest
+        defaults:
+            run:
+                working-directory: backend
 
         steps:
             - name: Checkout Code
               uses: actions/checkout@v4
 
             - name: Require deploy secrets
+              working-directory: .
               env:
                   SSH_HOST: ${{ secrets.SSH_HOST }}
                   SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
@@ -50,31 +53,25 @@ jobs:
               uses: actions/setup-node@v4
               with:
                   node-version: 22
-
-            - name: Install pnpm
-              uses: pnpm/action-setup@v4
-              with:
-                  version: 10
-                  run_install: false
+                  cache: npm
+                  cache-dependency-path: backend/package-lock.json
 
             - name: Install dependencies
-              run: pnpm install --filter prodesignity-api...
+              run: npm ci
 
             - name: Generate Prisma client
-              working-directory: backend
-              run: pnpm exec prisma generate
+              run: npx prisma generate
 
             - name: Build TypeScript
-              working-directory: backend
-              run: pnpm run build
+              run: npm run build
 
             - name: Sanity-check the build
-              working-directory: backend
               run: |
                   test -f dist/index.js || { echo "::error::dist/index.js missing"; exit 1; }
                   echo "Backend build OK"
 
             - name: Package release
+              working-directory: .
               run: |
                   set -euo pipefail
                   rm -rf /tmp/api-release
@@ -82,11 +79,12 @@ jobs:
                   cp -r backend/dist /tmp/api-release/dist
                   cp -r backend/prisma /tmp/api-release/prisma
                   cp backend/package.json /tmp/api-release/package.json
+                  cp backend/package-lock.json /tmp/api-release/package-lock.json
                   cp backend/prisma.config.ts /tmp/api-release/prisma.config.ts
-                  cp pnpm-lock.yaml /tmp/api-release/pnpm-lock.yaml
                   mkdir -p /tmp/api-release/uploads
                   tar -C /tmp/api-release -czf api-release.tgz .
-                  ls -lh api-release.tgz
+                  mv api-release.tgz backend/api-release.tgz
+                  ls -lh backend/api-release.tgz
 
             - name: Upload release via SCP
               uses: appleboy/scp-action@v0.1.7
@@ -95,7 +93,7 @@ jobs:
                   username: ${{ secrets.SSH_USERNAME }}
                   password: ${{ secrets.SSH_PASSWORD }}
                   port: ${{ secrets.SSH_PORT }}
-                  source: api-release.tgz
+                  source: backend/api-release.tgz
                   target: /tmp/
                   overwrite: true
 
@@ -115,32 +113,28 @@ jobs:
                       set -euo pipefail
                       echo "Deploying to $REMOTE_DIR"
                       mkdir -p "$REMOTE_DIR"
-                      tar -xzf /tmp/api-release.tgz -C "$REMOTE_DIR"
-                      rm -f /tmp/api-release.tgz
+                      # scp may nest as /tmp/backend/api-release.tgz
+                      ARCHIVE="/tmp/api-release.tgz"
+                      if [ ! -f "$ARCHIVE" ] && [ -f /tmp/backend/api-release.tgz ]; then
+                        ARCHIVE=/tmp/backend/api-release.tgz
+                      fi
+                      tar -xzf "$ARCHIVE" -C "$REMOTE_DIR"
+                      rm -f "$ARCHIVE" /tmp/backend/api-release.tgz
                       cd "$REMOTE_DIR"
 
                       test -f .env || {
-                        echo "Missing $REMOTE_DIR/.env"
-                        echo "Create it once on the VPS (see deploy/HOSTINGER.md) then re-run."
+                        echo "Missing $REMOTE_DIR/.env — create it once on the VPS"
                         exit 1
                       }
 
                       export NVM_DIR="$HOME/.nvm"
                       [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
 
-                      if command -v corepack >/dev/null 2>&1; then
-                        corepack enable || true
-                        corepack prepare pnpm@10.28.0 --activate || true
-                      fi
-                      if ! command -v pnpm >/dev/null 2>&1; then
-                        npm install -g pnpm@10.28.0
-                      fi
-
-                      pnpm install --prod
-                      pnpm exec prisma generate
+                      npm ci --omit=dev
+                      npx prisma generate
 
                       if [ "$RUN_MIGRATIONS" = "true" ]; then
-                        pnpm exec prisma db push
+                        npx prisma db push
                       fi
 
                       if command -v pm2 >/dev/null 2>&1; then
@@ -151,14 +145,14 @@ jobs:
                         fi
                         pm2 save
                       else
-                        echo "pm2 not found. Install once:"
-                        echo "  npm i -g pm2 && cd $REMOTE_DIR && pm2 start dist/index.js --name prodesignity-api && pm2 save && pm2 startup"
+                        echo "pm2 not found. Install once: npm i -g pm2"
                         exit 1
                       fi
 
                       echo "Backend deployed"
 
             - name: Health check
+              working-directory: .
               env:
                   API_URL: ${{ vars.API_URL || 'https://api.prodesignity.com' }}
               run: |
@@ -174,5 +168,5 @@ jobs:
                     fi
                     sleep 5
                   done
-                  echo "::error::API health check failed — is the subdomain / reverse proxy pointing at the Node app?"
+                  echo "::error::API health check failed"
                   exit 1

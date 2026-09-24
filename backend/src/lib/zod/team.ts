@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { editableSiteConfigSchema } from "./siteConfig";
+import { editableSiteConfigSchema } from "./siteConfig.js";
 
 export const createTeamMemberSchema = z.object({
   name: z.string().trim().min(2).max(120),

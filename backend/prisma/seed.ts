@@ -1,7 +1,7 @@
 import "dotenv/config";
 import bcrypt from "bcrypt";
-import prisma from "../src/lib/prisma";
-import { homepageSeedSections } from "./homepageSeed";
+import prisma from "../src/lib/prisma.js";
+import { homepageSeedSections } from "./homepageSeed.js";
 
 const demoUsers = [
   {
@@ -19,6 +19,25 @@ const demoUsers = [
     role: "employer" as const,
   },
 ];
+
+async function waitForDb(retries = 8) {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+      return;
+    } catch (error) {
+      lastError = error;
+      console.warn(
+        `DB not ready (attempt ${attempt}/${retries}). Is MySQL running?`,
+      );
+      await new Promise((r) => setTimeout(r, 1500 * attempt));
+    }
+  }
+  throw lastError instanceof Error
+    ? lastError
+    : new Error("Could not connect to the database");
+}
 
 async function seedUsers() {
   for (const user of demoUsers) {
@@ -64,6 +83,8 @@ async function seedHomepage() {
 }
 
 async function main() {
+  console.log("Connecting to database…");
+  await waitForDb();
   await seedUsers();
   await seedHomepage();
 

@@ -1,7 +1,7 @@
 import "dotenv/config";
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 import { PrismaClient, type Prisma } from "@prisma/client";
-import { DEFAULT_SITE_CONFIG } from "../src/lib/zod/siteConfig";
+import { DEFAULT_SITE_CONFIG } from "../src/lib/zod/siteConfig.js";
 
 const prisma = new PrismaClient({
   adapter: new PrismaMariaDb({

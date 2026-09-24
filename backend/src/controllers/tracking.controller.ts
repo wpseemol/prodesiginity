@@ -1,15 +1,15 @@
 import { createHash, randomUUID } from "crypto";
 import type { Request, Response } from "express";
-import prisma from "../lib/prisma";
-import { trackPageVisitSchema } from "../lib/zod/team";
+import prisma from "../lib/prisma.js";
+import { trackPageVisitSchema } from "../lib/zod/team.js";
 import {
   parseUserAgent,
   requestClientIp,
   resolveVisitorCountry,
   sendMetaCapiPageView,
-} from "../lib/tracking";
-import type { AuthRequest } from "../middleware/auth";
-import { siteConfigUrl } from "../lib/site-url";
+} from "../lib/tracking.js";
+import type { AuthRequest } from "../middleware/auth.js";
+import { siteConfigUrl } from "../lib/site-url.js";
 
 function groupCount<T extends string | null | undefined>(
   rows: { key: T; _count: { _all: number } }[],

@@ -3,11 +3,11 @@ import path from "path";
 import { Request, Response, NextFunction } from "express";
 import type { Prisma } from "@prisma/client";
 import multer from "multer";
-import prisma from "../lib/prisma";
+import prisma from "../lib/prisma.js";
 import {
   HOMEPAGE_UPLOAD_ROOT,
   publicHomepageUploadPath,
-} from "../lib/uploads";
+} from "../lib/uploads.js";
 import {
   homepageSectionKeySchema,
   updateHomepageSectionSchema,
@@ -20,8 +20,8 @@ import {
   HOMEPAGE_SECTION_KEYS,
   LOGO_REC_WIDTH,
   LOGO_REC_HEIGHT,
-} from "../lib/zod/homepage";
-import type { AuthRequest } from "../middleware/auth";
+} from "../lib/zod/homepage.js";
+import type { AuthRequest } from "../middleware/auth.js";
 
 function sectionsToMap(
   rows: { key: string; label: string; content: unknown; updatedAt: Date }[],

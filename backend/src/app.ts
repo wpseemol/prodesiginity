@@ -1,8 +1,8 @@
 import express, { Request, Response, NextFunction } from "express";
 import fs from "fs";
 import cors from "cors";
-import corsDelegate from "./config/cors";
-import rootRouter from "./routes/index";
+import corsDelegate from "./config/cors.js";
+import rootRouter from "./routes/index.js";
 import {
   ASSETS_UPLOAD_ROOT,
   HOMEPAGE_UPLOAD_ROOT,
@@ -10,7 +10,7 @@ import {
   TEAM_UPLOAD_ROOT,
   UPLOADS_ROOT,
   USERS_UPLOAD_ROOT,
-} from "./lib/uploads";
+} from "./lib/uploads.js";
 
 const app = express();
 

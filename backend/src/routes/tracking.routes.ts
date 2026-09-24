@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { recordPageVisit } from "../controllers/tracking.controller";
+import { recordPageVisit } from "../controllers/tracking.controller.js";
 
 const router = Router();
 

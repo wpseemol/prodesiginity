@@ -6,9 +6,18 @@ Full-stack website for [Prodesignity](https://prodesignity.com) — marketing si
 
 | Layer | Tech |
 | --- | --- |
-| Frontend | Next.js 16 (App Router, Turbopack), React 19, Tailwind CSS 4, Redux Toolkit |
-| Backend | Express 5, Prisma 7, MariaDB/MySQL, JWT auth |
-| Tooling | pnpm workspaces, Docker Compose (MySQL + phpMyAdmin) |
+| Frontend | Next.js (static export), React, Tailwind |
+| Dashboard | Vite admin app |
+| Backend | **Standalone** Express API (`backend/`) — npm + ESM + Prisma |
+
+Backend is **not** part of the pnpm workspace. Run it separately:
+
+```bash
+cd backend
+npm install
+npm run db:setup
+npm run dev
+```
 
 ## Project structure
 

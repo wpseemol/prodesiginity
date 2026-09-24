@@ -5,8 +5,8 @@ import {
   ensureTeamUploadDir,
   ensureUserUploadDir,
   uniqueUploadName,
-} from "../lib/uploads";
-import type { AuthRequest } from "./auth";
+} from "../lib/uploads.js";
+import type { AuthRequest } from "./auth.js";
 
 const IMAGE_MIME = new Set([
   "image/jpeg",

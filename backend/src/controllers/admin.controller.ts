@@ -1,9 +1,9 @@
 import { Response } from "express";
 import bcrypt from "bcrypt";
-import prisma from "../lib/prisma";
-import { createStaffSchema } from "../lib/zod/staff";
-import type { AuthRequest } from "../middleware/auth";
-import { publicUserSelect } from "./photo.controller";
+import prisma from "../lib/prisma.js";
+import { createStaffSchema } from "../lib/zod/staff.js";
+import type { AuthRequest } from "../middleware/auth.js";
+import { publicUserSelect } from "./photo.controller.js";
 
 const staffSelect = publicUserSelect;
 

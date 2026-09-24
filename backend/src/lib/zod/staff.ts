@@ -4,7 +4,7 @@ import {
   fullNameSchema,
   passwordSchema,
   usernameSchema,
-} from "./auth";
+} from "./auth.js";
 
 export const createStaffSchema = z.object({
   fullName: fullNameSchema,

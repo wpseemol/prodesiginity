@@ -2,7 +2,7 @@ import { Response, NextFunction } from "express";
 import {
   verifyAccessToken,
   type AccessTokenPayload,
-} from "../lib/tokens";
+} from "../lib/tokens.js";
 import type { Request } from "express";
 
 export type AuthPayload = AccessTokenPayload;
