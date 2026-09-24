@@ -2,26 +2,26 @@
 
 Two targets:
 
-| App | URL | How it deploys |
-| --- | --- | --- |
-| Frontend (static HTML/CSS/JS) | `https://prodesignity.com` | GitHub Action → FTP → zip extract |
-| Backend (Express API) | `https://api.prodesignity.com` | GitHub Action → SSH → pm2 |
+| App                           | URL                            | How it deploys                    |
+| ----------------------------- | ------------------------------ | --------------------------------- |
+| Frontend (static HTML/CSS/JS) | `https://prodesignity.com`     | GitHub Action → FTP → zip extract |
+| Backend (Express API)         | `https://api.prodesignity.com` | GitHub Action → SSH → pm2         |
 
 ---
 
 ## Secrets you already have
 
-| Secret | Used by |
-| --- | --- |
-| `FTP_SERVER` / `FTP_USERNAME` / `FTP_PASSWORD` | Frontend |
-| `SSH_HOST` / `SSH_USERNAME` / `SSH_PASSWORD` / `SSH_PORT` | Backend |
+| Secret                                                    | Used by  |
+| --------------------------------------------------------- | -------- |
+| `FTP_SERVER` / `FTP_USERNAME` / `FTP_PASSWORD`            | Frontend |
+| `SSH_HOST` / `SSH_USERNAME` / `SSH_PASSWORD` / `SSH_PORT` | Backend  |
 
 ## Secrets / variables still to add
 
 ### Repository secret (required for backend)
 
-| Name | Example |
-| --- | --- |
+| Name                 | Example                                                |
+| -------------------- | ------------------------------------------------------ |
 | `BACKEND_REMOTE_DIR` | `/home/u123456789/domains/api.prodesignity.com/nodejs` |
 
 Find the real path over SSH:
@@ -33,10 +33,10 @@ ls ~/domains
 
 ### Repository variables (optional — defaults shown)
 
-| Name | Default |
-| --- | --- |
-| `SITE_URL` | `https://prodesignity.com` |
-| `API_URL` | `https://api.prodesignity.com` |
+| Name               | Default                          |
+| ------------------ | -------------------------------- |
+| `SITE_URL`         | `https://prodesignity.com`       |
+| `API_URL`          | `https://api.prodesignity.com`   |
 | `STAFF_PORTAL_URL` | `https://admin.prodesignity.com` |
 
 GitHub → **Settings → Secrets and variables → Actions → Variables**.
@@ -75,7 +75,7 @@ Minimum production `.env`:
 ```env
 NODE_ENV=production
 PORT=4000
-ALLOWED_ORIGINS=https://prodesignity.com,https://www.prodesignity.com,https://admin.prodesignity.com
+ALLOWED_ORIGINS=https://prodesignity.com,https://www.prodesignity.com,https://dashboard.prodesignity.com
 
 DB_HOST=127.0.0.1
 DB_PORT=3306
@@ -142,10 +142,10 @@ Browser: site should call `https://api.prodesignity.com/api/...` (Network tab).
 
 ## Troubleshooting
 
-| Symptom | Fix |
-| --- | --- |
+| Symptom                                        | Fix                                                       |
+| ---------------------------------------------- | --------------------------------------------------------- |
 | Frontend deploys but API calls go to localhost | Rebuild frontend after `API_URL` var is set; hard-refresh |
-| Backend health 502 | pm2 not running / proxy not pointing at PORT |
-| Deploy fails: missing `.env` | Create `.env` once on the VPS (never commit it) |
-| CORS errors | Add the real site origin to `ALLOWED_ORIGINS` |
-| FTP extract fails | Confirm `SITE_URL` variable matches the live domain |
+| Backend health 502                             | pm2 not running / proxy not pointing at PORT              |
+| Deploy fails: missing `.env`                   | Create `.env` once on the VPS (never commit it)           |
+| CORS errors                                    | Add the real site origin to `ALLOWED_ORIGINS`             |
+| FTP extract fails                              | Confirm `SITE_URL` variable matches the live domain       |
