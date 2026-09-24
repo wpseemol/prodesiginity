@@ -10,6 +10,7 @@ import {
 import { toast } from "sonner";
 import { mediaUrl } from "@/config";
 import { apiFetch } from "@/lib/api";
+import { IMAGE_SPECS } from "@/lib/imageSpecs";
 import { asArr, asStr } from "@/components/homepage/helpers";
 import {
   ContentCard,
@@ -304,7 +305,10 @@ export function RecentProjectsSectionForm({
                 )}
               </button>
               <p className="max-w-28 text-[10px] leading-snug text-muted-foreground">
-                MP4/WebM · thumb image
+                Video {IMAGE_SPECS.projectVideo.width}×
+                {IMAGE_SPECS.projectVideo.height} · thumb{" "}
+                {IMAGE_SPECS.projectThumb.width}×
+                {IMAGE_SPECS.projectThumb.height}px
               </p>
               <input
                 ref={videoRef}

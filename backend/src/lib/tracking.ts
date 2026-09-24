@@ -1,6 +1,6 @@
 import { createHash } from "crypto";
 import type { Request } from "express";
-import prisma from "./prisma";
+import prisma from "./prisma.js";
 
 const COUNTRY_NAMES: Record<string, string> = {
   BD: "Bangladesh",

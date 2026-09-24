@@ -1,19 +1,19 @@
 import { Router } from "express";
-import { createStaffUser, listStaffUsers } from "../controllers/admin.controller";
+import { createStaffUser, listStaffUsers } from "../controllers/admin.controller.js";
 import {
   homepageUploadErrorHandler,
   listHomepageSections,
   updateHomepageSection,
   uploadHomepageLogo,
   uploadHomepageMedia,
-} from "../controllers/homepage.controller";
+} from "../controllers/homepage.controller.js";
 import {
   createTeamMember,
   deleteTeamMember,
   listTeamMembers,
   teamUploadErrorHandler,
   updateTeamMember,
-} from "../controllers/team.controller";
+} from "../controllers/team.controller.js";
 import {
   getAdminSettings,
   settingsUploadErrorHandler,
@@ -22,8 +22,8 @@ import {
   uploadFavicon,
   uploadLoginLogo,
   uploadOgImage,
-} from "../controllers/settings.controller";
-import { getAnalyticsOverview } from "../controllers/tracking.controller";
+} from "../controllers/settings.controller.js";
+import { getAnalyticsOverview } from "../controllers/tracking.controller.js";
 import {
   createService,
   createServiceGroup,
@@ -32,8 +32,8 @@ import {
   listAdminServices,
   updateService,
   updateServiceGroup,
-} from "../controllers/services.controller";
-import { requireAuth, requireAdmin } from "../middleware/auth";
+} from "../controllers/services.controller.js";
+import { requireAuth, requireAdmin } from "../middleware/auth.js";
 import {
   homepageLogoUpload,
   homepageMediaUpload,
@@ -42,7 +42,7 @@ import {
   siteLoginLogoUpload,
   siteOgImageUpload,
   teamPhotoUpload,
-} from "../middleware/upload";
+} from "../middleware/upload.js";
 
 const router = Router();
 

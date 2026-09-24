@@ -1,13 +1,13 @@
 import { Request, Response, NextFunction } from "express";
 import type { Prisma } from "@prisma/client";
-import prisma from "../lib/prisma";
-import { updateSiteSettingsSchema } from "../lib/zod/team";
+import prisma from "../lib/prisma.js";
+import { updateSiteSettingsSchema } from "../lib/zod/team.js";
 import {
   DEFAULT_SITE_CONFIG,
   mergeSiteConfig,
-} from "../lib/zod/siteConfig";
-import { publicSiteUploadPath } from "../lib/uploads";
-import type { AuthRequest } from "../middleware/auth";
+} from "../lib/zod/siteConfig.js";
+import { publicSiteUploadPath } from "../lib/uploads.js";
+import type { AuthRequest } from "../middleware/auth.js";
 
 const SETTINGS_KEY = "default";
 

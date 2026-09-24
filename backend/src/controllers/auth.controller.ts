@@ -1,21 +1,21 @@
 import { Request, Response } from "express";
 import bcrypt from "bcrypt";
-import prisma from "../lib/prisma";
+import prisma from "../lib/prisma.js";
 import {
   deleteAccountSchema,
   loginSchema,
   refreshSchema,
   registerSchema,
   updateProfileSchema,
-} from "../lib/zod/auth";
+} from "../lib/zod/auth.js";
 import {
   issueTokenPair,
   revokeAllUserRefreshTokens,
   revokeRefreshToken,
   rotateRefreshToken,
-} from "../lib/tokens";
-import type { AuthRequest } from "../middleware/auth";
-import { publicUserSelect } from "./photo.controller";
+} from "../lib/tokens.js";
+import type { AuthRequest } from "../middleware/auth.js";
+import { publicUserSelect } from "./photo.controller.js";
 
 function isEmailLogin(value: string) {
   return value.includes("@");

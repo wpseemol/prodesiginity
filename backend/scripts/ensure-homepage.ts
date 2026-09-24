@@ -1,7 +1,7 @@
 import "dotenv/config";
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 import { PrismaClient, type Prisma } from "@prisma/client";
-import { homepageSeedSections } from "../prisma/homepageSeed";
+import { homepageSeedSections } from "../prisma/homepageSeed.js";
 
 const prisma = new PrismaClient({
   adapter: new PrismaMariaDb({

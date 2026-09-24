@@ -1,12 +1,12 @@
 import { Router } from "express";
 
-import authRoutes from "./auth.routes";
-import adminRoutes from "./admin.routes";
-import homepageRoutes from "./homepage.routes";
-import teamRoutes from "./team.routes";
-import settingsRoutes from "./settings.routes";
-import trackingRoutes from "./tracking.routes";
-import servicesRoutes from "./services.routes";
+import authRoutes from "./auth.routes.js";
+import adminRoutes from "./admin.routes.js";
+import homepageRoutes from "./homepage.routes.js";
+import teamRoutes from "./team.routes.js";
+import settingsRoutes from "./settings.routes.js";
+import trackingRoutes from "./tracking.routes.js";
+import servicesRoutes from "./services.routes.js";
 
 const rootRouter = Router();
 

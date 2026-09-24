@@ -52,6 +52,7 @@ function initials(name: string) {
 export function AppSidebar({ user, onLogout }: AppSidebarProps) {
   const location = useLocation();
   const isAdmin = user.role === "admin";
+  const homePath = isAdmin ? "/admin" : "/employee";
   const profilePath = isAdmin ? "/admin/profile" : "/employee/profile";
 
   const navItems: NavItem[] = isAdmin
@@ -73,12 +74,18 @@ export function AppSidebar({ user, onLogout }: AppSidebarProps) {
     <Sidebar collapsible="icon">
       <SidebarHeader className="gap-3 px-3 py-4">
         <div className="flex flex-col gap-1.5 px-1 group-data-[collapsible=icon]:items-center">
-          <div className="group-data-[collapsible=icon]:hidden">
-            <BrandLogo />
-          </div>
-          <div className="hidden group-data-[collapsible=icon]:block">
-            <BrandLogo compact />
-          </div>
+          <Link
+            to={homePath}
+            className="rounded-md outline-none transition-opacity hover:opacity-80 focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label="Go to dashboard home"
+          >
+            <div className="group-data-[collapsible=icon]:hidden">
+              <BrandLogo />
+            </div>
+            <div className="hidden group-data-[collapsible=icon]:block">
+              <BrandLogo compact />
+            </div>
+          </Link>
           <p className="truncate text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
             {isAdmin ? "Admin console" : "Staff portal"}
           </p>

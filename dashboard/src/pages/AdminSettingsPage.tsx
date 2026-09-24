@@ -28,6 +28,8 @@ import { toast } from "sonner";
 import { mediaUrl } from "@/config";
 import { apiFetch } from "@/lib/api";
 import { WEBSITE_LOGOS } from "@/lib/brand";
+import { notifySiteBrandingUpdated } from "@/components/SiteDocumentBranding";
+import { formatImageHint, IMAGE_SPECS } from "@/lib/imageSpecs";
 import {
   EMPTY_SITE_CONFIG,
   normalizeSiteConfig,
@@ -299,6 +301,9 @@ function SettingsManager() {
         return;
       }
       applySettings(data.settings as SiteSettings);
+      notifySiteBrandingUpdated({
+        siteName: (data.settings as SiteSettings).siteName,
+      });
       toast.success("Site config saved — live site updates within ~60s.");
     } catch {
       toast.error("Could not reach the server.");
@@ -406,6 +411,10 @@ function SettingsManager() {
       }
       applySettings(data.settings as SiteSettings);
       if (faviconRef.current) faviconRef.current.value = "";
+      notifySiteBrandingUpdated({
+        faviconUrl: (data.settings as SiteSettings).faviconUrl,
+        siteName: (data.settings as SiteSettings).siteName,
+      });
       toast.success("Favicon updated.");
     } catch {
       toast.error("Could not reach the server.");
@@ -696,22 +705,26 @@ function SettingsManager() {
               <Separator />
 
               <div className="grid gap-4">
-                <div>
-                  <p className="text-sm font-medium">Open Graph image</p>
-                  <p className="text-xs text-muted-foreground">
-                    Shown when the site is shared on Facebook, LinkedIn, X, and
-                    Google. Recommended 1200×630px.
-                  </p>
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-medium">Open Graph image</p>
+                    <p className="text-xs text-muted-foreground">
+                      Facebook, LinkedIn, X, and Google share preview.
+                    </p>
+                  </div>
+                  <span className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+                    {IMAGE_SPECS.ogImage.width}×{IMAGE_SPECS.ogImage.height}px
+                  </span>
                 </div>
                 <div className="overflow-hidden rounded-2xl border bg-muted/20">
                   {ogImageSrc ? (
                     <img
                       src={ogImageSrc}
                       alt="Current Open Graph preview"
-                      className="aspect-[1200/630] w-full max-h-64 object-cover"
+                      className="aspect-[1200/630] w-full max-h-56 object-cover"
                     />
                   ) : (
-                    <div className="flex aspect-[1200/630] max-h-64 items-center justify-center text-sm text-muted-foreground">
+                    <div className="flex aspect-[1200/630] max-h-56 items-center justify-center text-sm text-muted-foreground">
                       No Open Graph image set
                     </div>
                   )}
@@ -730,7 +743,7 @@ function SettingsManager() {
                 <Field
                   id="ogImageFile"
                   label="Upload new Open Graph image"
-                  hint="JPEG, PNG, or WebP · max 5 MB"
+                  hint={formatImageHint(IMAGE_SPECS.ogImage)}
                 >
                   <Input
                     id="ogImageFile"
@@ -758,22 +771,29 @@ function SettingsManager() {
               <Separator />
 
               <div className="grid gap-4">
-                <div>
-                  <p className="text-sm font-medium">Brand logo (SEO)</p>
-                  <p className="text-xs text-muted-foreground">
-                    Used in Google structured data and absolute logo URLs — not
-                    the staff login logo.
-                  </p>
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-medium">Brand logo (SEO)</p>
+                    <p className="text-xs text-muted-foreground">
+                      Google structured data — not the staff login logo.
+                    </p>
+                  </div>
+                  <span className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+                    {IMAGE_SPECS.brandLogo.width}×{IMAGE_SPECS.brandLogo.height}
+                    px
+                  </span>
                 </div>
-                <div className="flex items-center justify-center rounded-2xl border bg-white p-6">
+                <div className="w-fit overflow-hidden rounded-xl border bg-white p-3 shadow-sm">
                   {brandLogoSrc ? (
                     <img
                       src={brandLogoSrc}
                       alt="Current brand logo"
-                      className="h-14 w-auto max-w-full object-contain"
+                      width={120}
+                      height={40}
+                      className="h-8 w-auto max-w-[140px] object-contain object-left"
                     />
                   ) : (
-                    <span className="text-sm text-muted-foreground">
+                    <span className="text-xs text-muted-foreground">
                       No brand logo set
                     </span>
                   )}
@@ -792,7 +812,7 @@ function SettingsManager() {
                 <Field
                   id="brandLogoFile"
                   label="Upload new brand logo"
-                  hint="PNG, SVG-friendly raster, or WebP · max 5 MB"
+                  hint={formatImageHint(IMAGE_SPECS.brandLogo)}
                 >
                   <Input
                     id="brandLogoFile"
@@ -821,35 +841,48 @@ function SettingsManager() {
 
               <div className="grid gap-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-sm font-medium">Dashboard / login logo</p>
+                  <div>
+                    <p className="text-sm font-medium">Dashboard / login logo</p>
+                    <p className="text-xs text-muted-foreground">
+                      Compact mark for the staff login card (
+                      {IMAGE_SPECS.loginLogo.width}×
+                      {IMAGE_SPECS.loginLogo.height}px).
+                    </p>
+                  </div>
                   {usingWebsiteLogo ? (
                     <Badge variant="secondary">Website logo</Badge>
                   ) : (
                     <Badge>Custom logo</Badge>
                   )}
                 </div>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-2xl border bg-white p-4">
-                    <p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-                      Light
-                    </p>
+
+                {!usingWebsiteLogo && settings?.loginLogoUrl ? (
+                  <div className="flex h-20 max-w-xs items-center justify-center overflow-hidden rounded-xl border bg-muted/30 px-4">
                     <img
-                      src={mediaUrl(WEBSITE_LOGOS.light)}
-                      alt="Light logo"
-                      className="h-9 w-auto object-contain"
+                      src={mediaUrl(settings.loginLogoUrl)}
+                      alt="Custom login logo"
+                      className="max-h-10 max-w-[180px] object-contain"
                     />
                   </div>
-                  <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4">
-                    <p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-                      Dark
-                    </p>
-                    <img
-                      src={mediaUrl(WEBSITE_LOGOS.dark)}
-                      alt="Dark logo"
-                      className="h-9 w-auto object-contain"
-                    />
+                ) : (
+                  <div className="grid max-w-lg gap-3 sm:grid-cols-2">
+                    <div className="flex h-20 items-center overflow-hidden rounded-xl border bg-white px-4">
+                      <img
+                        src={mediaUrl(WEBSITE_LOGOS.light)}
+                        alt="Light logo"
+                        className="max-h-9 max-w-[160px] object-contain object-left"
+                      />
+                    </div>
+                    <div className="flex h-20 items-center overflow-hidden rounded-xl border border-slate-800 bg-slate-950 px-4">
+                      <img
+                        src={mediaUrl(WEBSITE_LOGOS.dark)}
+                        alt="Dark logo"
+                        className="max-h-9 max-w-[160px] object-contain object-left"
+                      />
+                    </div>
                   </div>
-                </div>
+                )}
+
                 <div className="flex flex-wrap gap-2">
                   <Button
                     type="button"
@@ -865,7 +898,11 @@ function SettingsManager() {
                     Use website logo
                   </Button>
                 </div>
-                <Field id="customLogo" label="Upload custom logo" hint="Optional override">
+                <Field
+                  id="customLogo"
+                  label="Upload custom login logo"
+                  hint={formatImageHint(IMAGE_SPECS.loginLogo)}
+                >
                   <Input
                     id="customLogo"
                     ref={logoRef}
@@ -1201,7 +1238,7 @@ function SettingsManager() {
                 <Field
                   id="faviconFile"
                   label="Upload favicon"
-                  hint="ICO, PNG, or SVG · max 2 MB"
+                  hint={formatImageHint(IMAGE_SPECS.favicon)}
                 >
                   <Input
                     id="faviconFile"

@@ -1,14 +1,14 @@
 import { Request, Response, NextFunction } from "express";
 import fs from "fs";
 import path from "path";
-import prisma from "../lib/prisma";
-import { createTeamMemberSchema, updateTeamMemberSchema } from "../lib/zod/team";
+import prisma from "../lib/prisma.js";
+import { createTeamMemberSchema, updateTeamMemberSchema } from "../lib/zod/team.js";
 import {
   publicTeamUploadPath,
   TEAM_UPLOAD_ROOT,
   UPLOADS_ROOT,
-} from "../lib/uploads";
-import type { AuthRequest } from "../middleware/auth";
+} from "../lib/uploads.js";
+import type { AuthRequest } from "../middleware/auth.js";
 
 const teamSelect = {
   id: true,

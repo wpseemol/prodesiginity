@@ -1,13 +1,13 @@
 import type { Prisma } from "@prisma/client";
 import type { Request, Response } from "express";
-import prisma from "../lib/prisma";
+import prisma from "../lib/prisma.js";
 import {
   createServiceGroupSchema,
   createServiceSchema,
   updateServiceGroupSchema,
   updateServiceSchema,
-} from "../lib/zod/services";
-import type { AuthRequest } from "../middleware/auth";
+} from "../lib/zod/services.js";
+import type { AuthRequest } from "../middleware/auth.js";
 
 function asStringArray(value: unknown): string[] {
   return Array.isArray(value)

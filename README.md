@@ -4,11 +4,20 @@ Full-stack website for [Prodesignity](https://prodesignity.com) — marketing si
 
 ## Stack
 
-| Layer    | Tech                                                                        |
-| -------- | --------------------------------------------------------------------------- |
-| Frontend | Next.js 16 (App Router, Turbopack), React 19, Tailwind CSS 4, Redux Toolkit |
-| Backend  | Express 5, Prisma 7, MariaDB/MySQL, JWT auth                                |
-| Tooling  | pnpm workspaces, Docker Compose (MySQL + phpMyAdmin)                        |
+| Layer | Tech |
+| --- | --- |
+| Frontend | Next.js (static export), React, Tailwind |
+| Dashboard | Vite admin app |
+| Backend | **Standalone** Express API (`backend/`) — npm + ESM + Prisma |
+
+Backend is **not** part of the pnpm workspace. Run it separately:
+
+```bash
+cd backend
+npm install
+npm run db:setup
+npm run dev
+```
 
 ## Project structure
 
@@ -67,9 +76,9 @@ From the repo root:
 pnpm dev
 ```
 
-| App         | Default URL                                                                  |
-| ----------- | ---------------------------------------------------------------------------- |
-| Frontend    | [http://localhost:3000](http://localhost:3000)                               |
+| App | Default URL |
+| --- | --- |
+| Frontend | [http://localhost:3000](http://localhost:3000) |
 | Backend API | [http://localhost:8000](http://localhost:8000) (or `PORT` in `backend/.env`) |
 
 Run packages alone:
@@ -83,14 +92,14 @@ Point the frontend at the API with `NEXT_PUBLIC_API_URL` (e.g. `http://localhost
 
 ## Root scripts
 
-| Command             | Description                    |
-| ------------------- | ------------------------------ |
-| `pnpm install`      | Install all workspace packages |
-| `pnpm dev`          | Frontend + backend in parallel |
-| `pnpm dev:frontend` | Next.js only                   |
-| `pnpm dev:backend`  | API only                       |
-| `pnpm build`        | Build frontend and backend     |
-| `pnpm lint`         | Lint frontend                  |
+| Command | Description |
+| --- | --- |
+| `pnpm install` | Install all workspace packages |
+| `pnpm dev` | Frontend + backend in parallel |
+| `pnpm dev:frontend` | Next.js only |
+| `pnpm dev:backend` | API only |
+| `pnpm build` | Build frontend and backend |
+| `pnpm lint` | Lint frontend |
 
 ## Environment
 

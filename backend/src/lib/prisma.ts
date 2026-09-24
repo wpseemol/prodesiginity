@@ -16,11 +16,11 @@ function createAdapter() {
       user,
       password,
       database,
-      // Keep the pool small under tsx watch (reloads can leave orphaned pools briefly).
-      connectionLimit: 5,
-      connectTimeout: 10_000,
-      acquireTimeout: 10_000,
-      initializationTimeout: 10_000,
+      // Prefer a healthy pool for standalone npm runs + Hostinger.
+      connectionLimit: 10,
+      connectTimeout: 20_000,
+      acquireTimeout: 20_000,
+      initializationTimeout: 20_000,
       // Drop idle sockets so a restarted MySQL doesn't leave a dead pool.
       idleTimeout: 60,
       // Always validate before reuse after MySQL restarts / network blips.

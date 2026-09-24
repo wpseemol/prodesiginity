@@ -6,7 +6,11 @@ import Footer from "@/components/home/Footer";
 import ScrollToTop from "@/components/ScrollToTop";
 import { siteConfig } from "@/config/site";
 
-const CHROMELESS = [siteConfig.loginPath, siteConfig.dashboardPath];
+const CHROMELESS = [
+    siteConfig.loginPath,
+    siteConfig.dashboardPath,
+    "/api-health",
+];
 
 export default function SiteChrome({
     children,

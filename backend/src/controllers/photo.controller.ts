@@ -1,7 +1,7 @@
 import { Response, NextFunction } from "express";
-import prisma from "../lib/prisma";
-import { publicUploadPath } from "../lib/uploads";
-import type { AuthRequest } from "../middleware/auth";
+import prisma from "../lib/prisma.js";
+import { publicUploadPath } from "../lib/uploads.js";
+import type { AuthRequest } from "../middleware/auth.js";
 
 export const photoSelect = {
   id: true,

@@ -8,6 +8,8 @@ import { mediaUrl } from "@/config";
 
 import { apiFetch } from "@/lib/api";
 
+import { IMAGE_SPECS } from "@/lib/imageSpecs";
+
 import {
 
   updateDashboardUser,
@@ -349,9 +351,7 @@ export function ProfilePhotoManager({
             />
 
             <p className="text-xs text-muted-foreground">
-
-              JPEG, PNG, WebP, or GIF · max 5 MB
-
+              JPEG, PNG, WebP, or GIF · max 5 MB · {IMAGE_SPECS.profilePhoto.width}×{IMAGE_SPECS.profilePhoto.height}px
             </p>
 
             <Button type="submit" disabled={uploading} className="w-fit">

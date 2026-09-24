@@ -3,6 +3,11 @@ import { CameraIcon, FilmIcon, Loader2Icon, UploadIcon } from "lucide-react";
 import { toast } from "sonner";
 import { mediaUrl } from "@/config";
 import { apiFetch } from "@/lib/api";
+import {
+  formatImageHint,
+  IMAGE_SPECS,
+  type ImageSpec,
+} from "@/lib/imageSpecs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,7 +19,10 @@ type MediaUploadFieldProps = {
   value: string;
   onChange: (url: string) => void;
   kind?: MediaKind;
+  /** Override free-form hint. Defaults to recommended dimensions. */
   hint?: string;
+  /** Recommended size shown under the control. */
+  spec?: ImageSpec;
 };
 
 const ACCEPT: Record<MediaKind, string> = {
@@ -29,6 +37,7 @@ export function MediaUploadField({
   onChange,
   kind = "image",
   hint,
+  spec = kind === "video" ? IMAGE_SPECS.projectVideo : IMAGE_SPECS.homepageImage,
 }: MediaUploadFieldProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -38,6 +47,8 @@ export function MediaUploadField({
     kind === "video" ||
     /\.(mp4|webm|mov)(\?|$)/i.test(value) ||
     value.includes("/video/");
+
+  const sizeHint = hint ?? formatImageHint(spec);
 
   const upload = async (file: File | undefined) => {
     if (!file) return;
@@ -69,7 +80,9 @@ export function MediaUploadField({
         return;
       }
       onChange(String(data.url ?? ""));
-      toast.success(file.type.startsWith("video/") ? "Video uploaded." : "Image uploaded.");
+      toast.success(
+        file.type.startsWith("video/") ? "Video uploaded." : "Image uploaded.",
+      );
       if (inputRef.current) inputRef.current.value = "";
     } catch {
       toast.error("Could not reach the server.");
@@ -80,15 +93,16 @@ export function MediaUploadField({
 
   return (
     <div className="grid gap-2 rounded-xl border bg-muted/20 p-3">
-      <Label>{label}</Label>
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <Label>{label}</Label>
+        <span className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+          {spec.width}×{spec.height}px
+        </span>
+      </div>
       <div className="flex flex-wrap items-start gap-3">
         <div className="relative size-24 shrink-0 overflow-hidden rounded-lg border bg-muted">
           {preview && !looksVideo ? (
-            <img
-              src={preview}
-              alt=""
-              className="size-full object-cover"
-            />
+            <img src={preview} alt="" className="size-full object-cover" />
           ) : preview && looksVideo ? (
             <video
               src={preview}
@@ -107,9 +121,7 @@ export function MediaUploadField({
           )}
         </div>
         <div className="min-w-0 flex-1 space-y-2">
-          {hint ? (
-            <p className="text-xs text-muted-foreground">{hint}</p>
-          ) : null}
+          <p className="text-xs text-muted-foreground">{sizeHint}</p>
           <Input
             value={value}
             onChange={(e) => onChange(e.target.value)}
