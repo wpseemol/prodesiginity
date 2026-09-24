@@ -56,3 +56,4 @@ dashboard/dist/
 backend-recovered/
 backend-old-api-backup/
 .vercel
+.env*
