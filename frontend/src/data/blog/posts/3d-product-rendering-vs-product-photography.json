@@ -1,0 +1,266 @@
+{
+    "slug": "3d-product-rendering-vs-product-photography",
+    "title": "3D Product Rendering vs Product Photography: Which One Should You Budget For?",
+    "excerpt": "A photo shoot costs less on day one and more on day sixty. Here is the honest breakdown of when CGI wins, when a camera wins, and how most brands end up running both.",
+    "category": "3D & CGI",
+    "accent": "violet",
+    "icon": "Box",
+    "publishedAt": "2026-08-18",
+    "updatedAt": "2026-09-02",
+    "featured": true,
+    "author": {
+        "name": "Abdullah Pitul",
+        "role": "Founder & 3D Product Designer",
+        "photo": "/assets/images/team/pitul.jpg"
+    },
+    "tags": [
+        "3D rendering",
+        "product photography",
+        "CGI",
+        "creative budget"
+    ],
+    "keyTakeaways": [
+        "Photography is cheaper for a single shot; CGI is cheaper from roughly the third variant onward, because the model is built once and reused forever.",
+        "Choose a camera when the product is soft, textured or handled by people. Choose CGI when the product is rigid, repeatable or does not exist yet.",
+        "CGI removes the physical dependency on a finished sample, so creative can be produced in parallel with manufacturing instead of after it.",
+        "Most brands do not pick one. They shoot hero and lifestyle frames, then render the variant grid, the exploded views and the animation.",
+        "The real cost driver in CGI is not render time — it is how well the source material (dielines, CAD, physical samples) is prepared before modelling starts."
+    ],
+    "body": [
+        {
+            "type": "paragraph",
+            "text": "Every founder asks this question in the same week: the product is nearly ready, the launch date is fixed, and somebody needs to decide whether to book a studio or commission renders. The answer is not a matter of taste. It comes down to how many images you need, how often the product changes, and whether a physical sample will exist in time."
+        },
+        {
+            "type": "paragraph",
+            "text": "This is the framework we use at {{brand}} when a client asks us to make that call for them. It is deliberately unromantic about CGI — there are products we will tell you to photograph."
+        },
+        {
+            "type": "heading",
+            "id": "the-cost-curve",
+            "text": "The cost curve, not the cost"
+        },
+        {
+            "type": "paragraph",
+            "text": "Comparing a day rate against a per-render price is the wrong comparison, and it is the one almost everybody makes. Photography and CGI have different shapes of cost. Photography is cheap to start and roughly linear afterwards: every new colourway, every new size, every new background is another setup, another shoot, another retouch pass. CGI is expensive to start and close to flat afterwards: once the model, the materials and the lighting rig exist, the twelfth variant costs about as much as clicking render."
+        },
+        {
+            "type": "paragraph",
+            "text": "The crossover usually lands somewhere around the third or fourth variant. Below that, book the studio. Above it, the model pays for itself — and keeps paying every time marketing asks for one more size."
+        },
+        {
+            "type": "stats",
+            "items": [
+                {
+                    "value": "1-2",
+                    "label": "Variants where photography is almost always cheaper"
+                },
+                {
+                    "value": "3-4",
+                    "label": "Where the two approaches typically cross over"
+                },
+                {
+                    "value": "10+",
+                    "label": "Where re-shooting stops being viable at all"
+                }
+            ]
+        },
+        {
+            "type": "callout",
+            "tone": "info",
+            "title": "The question that settles it fastest",
+            "text": "How many distinct images will this product need over the next twelve months — including colourways, bundles, seasonal packaging and marketplace variants? If the honest answer is more than four, you are building a 3D asset whether you plan for it now or pay for it in re-shoots later."
+        },
+        {
+            "type": "heading",
+            "id": "when-photography-wins",
+            "text": "When a camera still wins"
+        },
+        {
+            "type": "paragraph",
+            "text": "CGI has genuine weak spots, and pretending otherwise wastes a client's money. Reach for photography when any of the following is true."
+        },
+        {
+            "type": "list",
+            "items": [
+                "The product is soft, irregular or organic — knitwear, fresh food, flowers, anything whose appeal is in an imperfection that would take longer to simulate than to shoot.",
+                "Human interaction is the point. A hand holding the product, skin contact, hair, fabric drape in motion: a model and a camera get there faster and more believably.",
+                "You need one hero image and nothing else, ever. A single frame does not justify building a model.",
+                "The finish is exotic and you have a sample in hand. Iridescent coatings, hand-thrown ceramics and heavily worn leather carry variation that reads as 'real' precisely because nobody authored it.",
+                "The deadline is inside a week and a photographer has an opening. Speed occasionally beats everything else."
+            ]
+        },
+        {
+            "type": "heading",
+            "id": "when-cgi-wins",
+            "text": "When CGI wins outright"
+        },
+        {
+            "type": "paragraph",
+            "text": "The reverse cases are just as clear, and they cover more product categories than most founders expect — cosmetics, supplements, beverages, electronics, tools, homeware and essentially all packaging."
+        },
+        {
+            "type": "steps",
+            "items": [
+                {
+                    "title": "The product does not exist yet",
+                    "body": "This is the single biggest reason brands move to CGI. You can render a bottle from a dieline and a CAD file months before the first production run lands, which means the launch page, the ad creative and the retailer deck are ready on day one instead of six weeks late."
+                },
+                {
+                    "title": "The range has variants",
+                    "body": "Five flavours, four sizes, three finishes. In a studio that is sixty setups. In 3D it is one model and a materials swap, and every image is pixel-identical in framing, lighting and shadow — which is exactly what a marketplace grid needs to look deliberate."
+                },
+                {
+                    "title": "The packaging keeps changing",
+                    "body": "Regulatory text moves, a claim gets rewritten, a distributor demands a different barcode. Re-shooting means a new sample and a new studio day. Re-rendering means swapping a label texture and re-exporting the whole set overnight."
+                },
+                {
+                    "title": "You need to show the inside",
+                    "body": "Cutaways, exploded views, cross-sections and material layers cannot be photographed without destroying a unit — and a destroyed unit rarely photographs well. In 3D the geometry is already there; you just hide the parts in the way."
+                },
+                {
+                    "title": "The still needs to become a video",
+                    "body": "A render is a frame from a scene that can also move. Turntables, liquid pours, packaging opens and exploded assembly animations all reuse the same asset, so the video costs a fraction of what it would as a separate production."
+                }
+            ]
+        },
+        {
+            "type": "heading",
+            "id": "side-by-side",
+            "text": "Side by side"
+        },
+        {
+            "type": "table",
+            "caption": "Practical comparison of CGI and studio photography across the factors clients actually ask about.",
+            "head": ["Factor", "3D rendering", "Product photography"],
+            "rows": [
+                [
+                    "Physical sample needed",
+                    "No — CAD, dielines or detailed photos are enough",
+                    "Yes, and it must be production quality"
+                ],
+                [
+                    "Cost of the first image",
+                    "Higher — the model is built once",
+                    "Lower — one setup, one shot"
+                ],
+                [
+                    "Cost of the tenth variant",
+                    "Marginal",
+                    "Roughly the same as the first"
+                ],
+                [
+                    "Turnaround on a revision",
+                    "Hours — change a material and re-render",
+                    "Days to weeks — re-shoot or heavy retouching"
+                ],
+                [
+                    "Consistency across a range",
+                    "Exact, by construction",
+                    "Depends on rebuilding the set identically"
+                ],
+                [
+                    "Soft, organic, human subjects",
+                    "Slow and expensive to fake convincingly",
+                    "Natural strength"
+                ],
+                [
+                    "Reuse as animation",
+                    "Built in — same scene, add motion",
+                    "A separate production"
+                ]
+            ]
+        },
+        {
+            "type": "heading",
+            "id": "what-actually-drives-cost",
+            "text": "What actually drives the cost of a render"
+        },
+        {
+            "type": "paragraph",
+            "text": "Clients tend to assume render time is the expense. It is not — machines are cheap and they work overnight. The cost sits in modelling and in the material work, and both are driven almost entirely by the quality of what you hand over on day one."
+        },
+        {
+            "type": "list",
+            "items": [
+                "A clean CAD file or a print-ready dieline can cut modelling time by more than half, because the geometry is measured rather than reconstructed by eye.",
+                "Vector artwork for labels beats a flattened JPEG every time. A rasterised label at screen resolution will look soft the moment it is used at print size.",
+                "Named finishes — 'soft-touch matte lamination', 'anodised aluminium', 'PET with 30% haze' — remove an entire revision round of guessing.",
+                "A physical sample, even a rough one, is worth a hundred reference photos when the material has depth to it.",
+                "Deciding aspect ratios and platform crops before rendering, not after, avoids re-framing an entire set."
+            ]
+        },
+        {
+            "type": "callout",
+            "tone": "warning",
+            "title": "The most expensive thing you can do",
+            "text": "Approving a lighting setup, then changing the packaging artwork. Lighting is tuned to the finish it is lighting. A gloss-to-matte switch after sign-off is not a texture swap — it is a relight of every angle in the set."
+        },
+        {
+            "type": "heading",
+            "id": "the-hybrid-answer",
+            "text": "The answer most brands land on"
+        },
+        {
+            "type": "paragraph",
+            "text": "After the first year, almost nobody is running one or the other. The pattern that settles is a split: photograph the things that are hard to fake and render everything that repeats."
+        },
+        {
+            "type": "list",
+            "items": [
+                "Photography for lifestyle, hands, environments and anything where a human is in frame.",
+                "CGI for the marketplace grid, the variant set, packaging mockups, exploded diagrams and every A+ module.",
+                "CGI for launch creative that has to exist before manufacturing finishes.",
+                "Both, composited, for hero images — a rendered product dropped into a photographed environment is common and, done properly, invisible."
+            ]
+        },
+        {
+            "type": "quote",
+            "text": "The brands that scale creative fastest are the ones that stopped treating the 3D model as a deliverable and started treating it as infrastructure.",
+            "attribution": "How we frame it on every discovery call"
+        },
+        {
+            "type": "heading",
+            "id": "how-to-decide-this-week",
+            "text": "How to decide this week"
+        },
+        {
+            "type": "paragraph",
+            "text": "Write down the number of images you need in the next twelve months, note whether a production sample will exist before your launch date, and check whether any of it needs to move. Three answers, five minutes, and the decision usually makes itself. If it does not, that is exactly the kind of thing a thirty-minute call sorts out faster than another week of internal debate."
+        }
+    ],
+    "faqs": [
+        {
+            "q": "Will customers be able to tell a render from a photograph?",
+            "a": "Not on a product page, no — and marketplaces including Amazon accept photorealistic CGI for main images provided it represents the product accurately. Where people do notice is in careless work: perfect symmetry, no dust, no wear, and lighting with no imperfection anywhere. Believable renders deliberately keep a little of that back."
+        },
+        {
+            "q": "Can you render a product from photographs alone if we have no CAD file?",
+            "a": "Usually yes. We need enough coverage to establish proportion — ideally straight-on front, side and top shots plus a few angles — along with real measurements and a note on the finishes. It adds modelling time compared with working from CAD, but it is routine, and most consumer packaging arrives this way."
+        },
+        {
+            "q": "How long does a first render set take?",
+            "a": "For a single SKU with clean source material, typically five to ten working days from kickoff to final frames, with the bulk of that in modelling and material setup. Additional variants of an approved model are much faster because the expensive part is already done."
+        },
+        {
+            "q": "Do we own the 3D model, or just the images?",
+            "a": "You own the delivered assets. Ask about the source scene file specifically when you scope the project — being able to hand your model to another studio later is worth having in writing, and it is the difference between owning infrastructure and renting it."
+        }
+    ],
+    "relatedServices": [
+        "3d-product-visualization",
+        "product-rendering",
+        "product-animation"
+    ],
+    "seo": {
+        "title": "3D Product Rendering vs Product Photography: Which to Budget For",
+        "description": "When CGI is cheaper than a photo shoot, when a camera still wins, and what actually drives the cost of a product render. A practical framework from {{brand}}.",
+        "keywords": [
+            "3d product rendering vs photography",
+            "cgi vs product photography",
+            "product rendering cost",
+            "3d product visualization",
+            "ecommerce product images"
+        ]
+    }
+}
