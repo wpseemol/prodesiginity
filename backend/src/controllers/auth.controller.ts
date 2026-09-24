@@ -132,6 +132,7 @@ export const login = async (req: Request, res: Response) => {
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
       expiresIn: tokens.expiresIn,
+      refreshExpiresInDays: tokens.refreshExpiresInDays,
       user: authUser,
     });
   } catch (error) {
@@ -166,6 +167,7 @@ export const refresh = async (req: Request, res: Response) => {
       accessToken: rotated.accessToken,
       refreshToken: rotated.refreshToken,
       expiresIn: rotated.expiresIn,
+      refreshExpiresInDays: rotated.refreshExpiresInDays,
       user: rotated.user,
     });
   } catch (error) {

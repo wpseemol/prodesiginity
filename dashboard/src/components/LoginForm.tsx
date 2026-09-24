@@ -65,7 +65,14 @@ export default function LoginForm({
         return;
       }
 
-      await setDashboardSession(data.accessToken, data.refreshToken, user);
+      await setDashboardSession(
+        data.accessToken,
+        data.refreshToken,
+        user,
+        typeof data.refreshExpiresInDays === "number"
+          ? data.refreshExpiresInDays
+          : undefined,
+      );
       navigate(nextPath);
     } catch {
       setStatus("error");

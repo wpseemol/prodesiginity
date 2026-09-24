@@ -14,12 +14,26 @@ export const ACCESS_SECRET =
 
 export const REFRESH_SECRET =
   process.env.JWT_REFRESH_SECRET ||
-  `${ACCESS_SECRET}_refresh`;
+  `${ACCESS_SECRET}_refresh_dev_only`;
+
+if (!process.env.JWT_REFRESH_SECRET && process.env.NODE_ENV === "production") {
+  throw new Error("FATAL: JWT_REFRESH_SECRET environment variable is missing.");
+}
 
 export const ACCESS_TOKEN_TTL = process.env.JWT_ACCESS_TTL || "15m";
 export const REFRESH_TOKEN_TTL_DAYS = Number(
   process.env.JWT_REFRESH_TTL_DAYS || 7,
 );
+/** Admin sessions: short-lived refresh (default 1 day). */
+export const ADMIN_REFRESH_TTL_DAYS = Number(
+  process.env.JWT_ADMIN_REFRESH_TTL_DAYS || 1,
+);
+/** Employer/staff sessions: default 3 days. */
+export const EMPLOYER_REFRESH_TTL_DAYS = Number(
+  process.env.JWT_EMPLOYER_REFRESH_TTL_DAYS || 3,
+);
+
+const STAFF_ROLES = new Set(["admin", "employer"]);
 
 export type AccessTokenPayload = {
   userId: number;
@@ -31,8 +45,11 @@ export type AccessTokenPayload = {
 
 export type RefreshTokenPayload = {
   userId: number;
+  role: string;
   type: "refresh";
   jti: string;
+  /** Rotation family — shared across a login chain. */
+  fid: string;
 };
 
 export type AuthUser = {
@@ -54,6 +71,30 @@ function hashToken(token: string) {
   return crypto.createHash("sha256").update(token).digest("hex");
 }
 
+export function isStaffRole(role: string) {
+  return STAFF_ROLES.has(role);
+}
+
+export function refreshTtlDaysForRole(role: string): number {
+  if (role === "admin") return ADMIN_REFRESH_TTL_DAYS;
+  if (role === "employer") return EMPLOYER_REFRESH_TTL_DAYS;
+  return REFRESH_TOKEN_TTL_DAYS;
+}
+
+/** Parse TTL strings like `15m` / `1h` into cookie Max-Age seconds (fallback 15m). */
+export function accessTokenMaxAgeSeconds(): number {
+  const raw = ACCESS_TOKEN_TTL.trim();
+  const match = /^(\d+)([smhd])$/i.exec(raw);
+  if (!match) return 15 * 60;
+  const n = Number(match[1]);
+  const unit = match[2].toLowerCase();
+  if (unit === "s") return n;
+  if (unit === "m") return n * 60;
+  if (unit === "h") return n * 60 * 60;
+  if (unit === "d") return n * 24 * 60 * 60;
+  return 15 * 60;
+}
+
 export function signAccessToken(user: AuthUser) {
   const payload: AccessTokenPayload = {
     userId: user.id,
@@ -63,24 +104,36 @@ export function signAccessToken(user: AuthUser) {
     type: "access",
   };
 
-  return jwt.sign(payload, ACCESS_SECRET, { expiresIn: ACCESS_TOKEN_TTL } as jwt.SignOptions);
+  return jwt.sign(payload, ACCESS_SECRET, {
+    expiresIn: ACCESS_TOKEN_TTL,
+    audience: "prodesignity-api",
+    issuer: "prodesignity-auth",
+  } as jwt.SignOptions);
 }
 
-export async function issueTokenPair(user: AuthUser) {
+export async function issueTokenPair(
+  user: AuthUser,
+  familyId?: string,
+) {
   const jti = crypto.randomUUID();
+  const fid = familyId || crypto.randomUUID();
+  const ttlDays = refreshTtlDaysForRole(user.role);
+
   const refreshPayload: RefreshTokenPayload = {
     userId: user.id,
+    role: user.role,
     type: "refresh",
     jti,
+    fid,
   };
 
   const refreshToken = jwt.sign(refreshPayload, REFRESH_SECRET, {
-    expiresIn: `${REFRESH_TOKEN_TTL_DAYS}d`,
+    expiresIn: `${ttlDays}d`,
+    audience: "prodesignity-refresh",
+    issuer: "prodesignity-auth",
   } as jwt.SignOptions);
 
-  const expiresAt = new Date(
-    Date.now() + REFRESH_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000,
-  );
+  const expiresAt = new Date(Date.now() + ttlDays * 24 * 60 * 60 * 1000);
 
   await prisma.refreshToken.create({
     data: {
@@ -94,18 +147,31 @@ export async function issueTokenPair(user: AuthUser) {
     accessToken: signAccessToken(user),
     refreshToken,
     expiresIn: ACCESS_TOKEN_TTL,
+    refreshExpiresInDays: ttlDays,
   };
 }
 
+/**
+ * Rotate refresh token. Detects reuse of an already-revoked token and
+ * revokes the entire session family (all refresh tokens for that user).
+ */
 export async function rotateRefreshToken(refreshToken: string) {
   let decoded: RefreshTokenPayload;
   try {
-    decoded = jwt.verify(refreshToken, REFRESH_SECRET) as RefreshTokenPayload;
+    decoded = jwt.verify(refreshToken, REFRESH_SECRET, {
+      audience: "prodesignity-refresh",
+      issuer: "prodesignity-auth",
+    }) as RefreshTokenPayload;
   } catch {
-    return null;
+    // Backward-compat: tokens issued before iss/aud hardening
+    try {
+      decoded = jwt.verify(refreshToken, REFRESH_SECRET) as RefreshTokenPayload;
+    } catch {
+      return null;
+    }
   }
 
-  if (decoded.type !== "refresh" || !decoded.userId) {
+  if (decoded.type !== "refresh" || !decoded.userId || !decoded.jti) {
     return null;
   }
 
@@ -114,9 +180,17 @@ export async function rotateRefreshToken(refreshToken: string) {
     where: { tokenHash },
   });
 
+  // Reuse of a revoked refresh token ⇒ assume theft ⇒ kill all sessions.
+  if (stored?.revokedAt) {
+    await revokeAllUserRefreshTokens(stored.userId);
+    console.warn(
+      `[auth] Refresh token reuse detected for userId=${stored.userId}; all sessions revoked.`,
+    );
+    return null;
+  }
+
   if (
     !stored ||
-    stored.revokedAt ||
     stored.expiresAt.getTime() < Date.now() ||
     stored.userId !== decoded.userId
   ) {
@@ -152,7 +226,13 @@ export async function rotateRefreshToken(refreshToken: string) {
     return null;
   }
 
-  const tokens = await issueTokenPair(user);
+  // Role downgrade / mismatch invalidates the chain.
+  if (decoded.role && decoded.role !== user.role) {
+    await revokeAllUserRefreshTokens(user.id);
+    return null;
+  }
+
+  const tokens = await issueTokenPair(user, decoded.fid);
   return { user, ...tokens };
 }
 
@@ -177,10 +257,20 @@ export async function revokeAllUserRefreshTokens(userId: number) {
 
 export function verifyAccessToken(token: string): AccessTokenPayload | null {
   try {
-    const decoded = jwt.verify(token, ACCESS_SECRET) as AccessTokenPayload;
+    const decoded = jwt.verify(token, ACCESS_SECRET, {
+      audience: "prodesignity-api",
+      issuer: "prodesignity-auth",
+    }) as AccessTokenPayload;
     if (decoded.type !== "access") return null;
     return decoded;
   } catch {
-    return null;
+    // Accept pre-hardening tokens during rollout
+    try {
+      const decoded = jwt.verify(token, ACCESS_SECRET) as AccessTokenPayload;
+      if (decoded.type !== "access") return null;
+      return decoded;
+    } catch {
+      return null;
+    }
   }
 }
