@@ -1,41 +1,50 @@
-name: Deploy Backend API
+name: Deploy Backend API to Hostinger
 
-# Future backend deploy — does NOT run on every push.
-# Use Actions → "Deploy Backend API" → Run workflow when ready.
-# Frontend Hostinger deploy stays the primary auto path on main.
+# Express API → Hostinger VPS via SSH password auth.
+# Required secrets: SSH_HOST, SSH_USERNAME, SSH_PASSWORD, SSH_PORT, BACKEND_REMOTE_DIR
+# Optional vars: API_URL (default https://api.prodesignity.com)
 on:
+    push:
+        branches:
+            - main
+        paths:
+            - "backend/**"
+            - ".github/workflows/deploy-backend.yml"
     workflow_dispatch:
         inputs:
             run_migrations:
-                description: "Run prisma db push before deploy"
+                description: "Run prisma db push before restart"
                 type: boolean
                 default: false
-            deploy_target:
-                description: "Where to ship the API build"
-                type: choice
-                options:
-                    - build-only
-                    - ssh-vps
-                default: build-only
 
 concurrency:
     group: deploy-backend
     cancel-in-progress: true
 
-defaults:
-    run:
-        working-directory: backend
-
 jobs:
     build-and-deploy:
         runs-on: ubuntu-latest
-        environment: backend # optional GitHub Environment for secrets/protection
 
         steps:
             - name: Checkout Code
               uses: actions/checkout@v4
-              with:
-                  submodules: recursive
+
+            - name: Require deploy secrets
+              env:
+                  SSH_HOST: ${{ secrets.SSH_HOST }}
+                  SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
+                  SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
+                  BACKEND_REMOTE_DIR: ${{ secrets.BACKEND_REMOTE_DIR }}
+              run: |
+                  set -euo pipefail
+                  missing=0
+                  for key in SSH_HOST SSH_USERNAME SSH_PASSWORD BACKEND_REMOTE_DIR; do
+                    if [ -z "${!key}" ]; then
+                      echo "::error::Missing secret: $key"
+                      missing=1
+                    fi
+                  done
+                  [ "$missing" = "0" ] || exit 1
 
             - name: Setup Node
               uses: actions/setup-node@v4
@@ -49,97 +58,121 @@ jobs:
                   run_install: false
 
             - name: Install dependencies
-              working-directory: .
-              run: pnpm install
+              run: pnpm install --filter prodesignity-api...
 
             - name: Generate Prisma client
+              working-directory: backend
               run: pnpm exec prisma generate
 
             - name: Build TypeScript
+              working-directory: backend
               run: pnpm run build
 
             - name: Sanity-check the build
+              working-directory: backend
               run: |
                   test -f dist/index.js || { echo "::error::dist/index.js missing"; exit 1; }
                   echo "Backend build OK"
-                  find dist -type f | head -n 40
 
-            - name: Prisma db push (optional)
-              if: ${{ inputs.run_migrations }}
-              env:
-                  DATABASE_URL: ${{ secrets.DATABASE_URL }}
-              run: |
-                  test -n "$DATABASE_URL" || { echo "::error::DATABASE_URL secret is required for migrations"; exit 1; }
-                  pnpm exec prisma db push
-
-            # ── build-only: verify CI build; no remote deploy yet ──────────
-            - name: Build-only complete
-              if: ${{ inputs.deploy_target == 'build-only' }}
-              run: |
-                  echo "Build succeeded. Switch deploy_target to ssh-vps when the VPS is ready."
-                  echo "Required secrets for ssh-vps:"
-                  echo "  BACKEND_SSH_HOST, BACKEND_SSH_USER, BACKEND_SSH_KEY"
-                  echo "  BACKEND_REMOTE_DIR (e.g. /var/www/prodesignity-api)"
-                  echo "  DATABASE_URL (for migrations)"
-
-            # ── ssh-vps: rsync dist + package files, then restart process ──
-            - name: Prepare SSH key
-              if: ${{ inputs.deploy_target == 'ssh-vps' }}
+            - name: Package release
               run: |
                   set -euo pipefail
-                  mkdir -p ~/.ssh
-                  echo "${{ secrets.BACKEND_SSH_KEY }}" > ~/.ssh/deploy_key
-                  chmod 600 ~/.ssh/deploy_key
-                  ssh-keyscan -H "${{ secrets.BACKEND_SSH_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null || true
+                  rm -rf /tmp/api-release
+                  mkdir -p /tmp/api-release
+                  cp -r backend/dist /tmp/api-release/dist
+                  cp -r backend/prisma /tmp/api-release/prisma
+                  cp backend/package.json /tmp/api-release/package.json
+                  cp backend/prisma.config.ts /tmp/api-release/prisma.config.ts
+                  cp pnpm-lock.yaml /tmp/api-release/pnpm-lock.yaml
+                  mkdir -p /tmp/api-release/uploads
+                  tar -C /tmp/api-release -czf api-release.tgz .
+                  ls -lh api-release.tgz
 
-            - name: Upload API to VPS
-              if: ${{ inputs.deploy_target == 'ssh-vps' }}
-              working-directory: .
+            - name: Upload release via SCP
+              uses: appleboy/scp-action@v0.1.7
+              with:
+                  host: ${{ secrets.SSH_HOST }}
+                  username: ${{ secrets.SSH_USERNAME }}
+                  password: ${{ secrets.SSH_PASSWORD }}
+                  port: ${{ secrets.SSH_PORT }}
+                  source: api-release.tgz
+                  target: /tmp/
+                  overwrite: true
+
+            - name: Extract, install, restart on server
+              uses: appleboy/ssh-action@v1.2.0
               env:
-                  HOST: ${{ secrets.BACKEND_SSH_HOST }}
-                  USER: ${{ secrets.BACKEND_SSH_USER }}
                   REMOTE_DIR: ${{ secrets.BACKEND_REMOTE_DIR }}
-              run: |
-                  set -euo pipefail
-                  test -n "$HOST" && test -n "$USER" && test -n "$REMOTE_DIR" || {
-                    echo "::error::BACKEND_SSH_HOST, BACKEND_SSH_USER, BACKEND_REMOTE_DIR required"; exit 1;
-                  }
+                  RUN_MIGRATIONS: ${{ github.event.inputs.run_migrations || 'false' }}
+              with:
+                  host: ${{ secrets.SSH_HOST }}
+                  username: ${{ secrets.SSH_USERNAME }}
+                  password: ${{ secrets.SSH_PASSWORD }}
+                  port: ${{ secrets.SSH_PORT }}
+                  script_stop: true
+                  envs: REMOTE_DIR,RUN_MIGRATIONS
+                  script: |
+                      set -euo pipefail
+                      echo "Deploying to $REMOTE_DIR"
+                      mkdir -p "$REMOTE_DIR"
+                      tar -xzf /tmp/api-release.tgz -C "$REMOTE_DIR"
+                      rm -f /tmp/api-release.tgz
+                      cd "$REMOTE_DIR"
 
-                  rsync -az --delete \
-                    -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new" \
-                    --exclude node_modules \
-                    --exclude .env \
-                    backend/dist \
-                    backend/prisma \
-                    backend/package.json \
-                    backend/.npmrc \
-                    "${USER}@${HOST}:${REMOTE_DIR}/"
+                      test -f .env || {
+                        echo "Missing $REMOTE_DIR/.env"
+                        echo "Create it once on the VPS (see deploy/HOSTINGER.md) then re-run."
+                        exit 1
+                      }
 
-                  # Root lockfile helps reproducible installs on the server
-                  rsync -az \
-                    -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new" \
-                    pnpm-lock.yaml \
-                    "${USER}@${HOST}:${REMOTE_DIR}/pnpm-lock.yaml"
+                      export NVM_DIR="$HOME/.nvm"
+                      [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
 
-            - name: Install & restart on VPS
-              if: ${{ inputs.deploy_target == 'ssh-vps' }}
+                      if command -v corepack >/dev/null 2>&1; then
+                        corepack enable || true
+                        corepack prepare pnpm@10.28.0 --activate || true
+                      fi
+                      if ! command -v pnpm >/dev/null 2>&1; then
+                        npm install -g pnpm@10.28.0
+                      fi
+
+                      pnpm install --prod
+                      pnpm exec prisma generate
+
+                      if [ "$RUN_MIGRATIONS" = "true" ]; then
+                        pnpm exec prisma db push
+                      fi
+
+                      if command -v pm2 >/dev/null 2>&1; then
+                        if pm2 describe prodesignity-api >/dev/null 2>&1; then
+                          pm2 restart prodesignity-api --update-env
+                        else
+                          pm2 start dist/index.js --name prodesignity-api
+                        fi
+                        pm2 save
+                      else
+                        echo "pm2 not found. Install once:"
+                        echo "  npm i -g pm2 && cd $REMOTE_DIR && pm2 start dist/index.js --name prodesignity-api && pm2 save && pm2 startup"
+                        exit 1
+                      fi
+
+                      echo "Backend deployed"
+
+            - name: Health check
               env:
-                  HOST: ${{ secrets.BACKEND_SSH_HOST }}
-                  USER: ${{ secrets.BACKEND_SSH_USER }}
-                  REMOTE_DIR: ${{ secrets.BACKEND_REMOTE_DIR }}
+                  API_URL: ${{ vars.API_URL || 'https://api.prodesignity.com' }}
               run: |
                   set -euo pipefail
-                  ssh -i ~/.ssh/deploy_key "${USER}@${HOST}" bash -s <<EOF
-                  set -euo pipefail
-                  cd "${REMOTE_DIR}"
-                  corepack enable
-                  pnpm install --prod
-                  pnpm exec prisma generate
-                  # Prefer pm2 if available; otherwise document systemd unit name.
-                  if command -v pm2 >/dev/null 2>&1; then
-                    pm2 restart prodesignity-api || pm2 start dist/index.js --name prodesignity-api
-                    pm2 save
-                  else
-                    sudo systemctl restart prodesignity-api
-                  fi
-                  EOF
+                  BASE="${API_URL%/}"
+                  echo "Checking ${BASE}/api/health"
+                  for i in 1 2 3 4 5 6; do
+                    CODE=$(curl -s -o /tmp/health.json -w '%{http_code}' --max-time 20 "${BASE}/api/health" || true)
+                    echo "Attempt $i → HTTP $CODE"
+                    if [ "$CODE" = "200" ]; then
+                      cat /tmp/health.json || true
+                      exit 0
+                    fi
+                    sleep 5
+                  done
+                  echo "::error::API health check failed — is the subdomain / reverse proxy pointing at the Node app?"
+                  exit 1

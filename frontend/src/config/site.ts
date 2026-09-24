@@ -17,8 +17,8 @@ export const siteConfig = {
     legalName: "ProDesignity", // TODO: exact registered name if incorporated
     domain: "prodesignity.com",
     url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://prodesignity.com",
-    logo: "/assets/logo/prodesignity-logo.png",
-    ogImage: "/assets/images/Prodesignity-hero-image-change.jpg",
+    logo: "/uploads/assets/logo/prodesignity-logo.png",
+    ogImage: "/uploads/assets/images/Prodesignity-hero-image-change.jpg",
     founded: "2021", // TODO: confirm
 
     tagline:

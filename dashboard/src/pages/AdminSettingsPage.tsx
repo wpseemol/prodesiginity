@@ -93,9 +93,9 @@ const TABS: {
 }[] = [
   {
     id: "brand",
-    label: "Brand",
+    label: "Brand & SEO",
     icon: SettingsIcon,
-    hint: "Site name, tagline, description, logos, OG image.",
+    hint: "Site title, description, logo, and Open Graph image.",
   },
   {
     id: "contact",
@@ -188,6 +188,8 @@ function TrackChip({ on, label }: { on: boolean; label: string }) {
 function SettingsManager() {
   const faviconRef = useRef<HTMLInputElement>(null);
   const logoRef = useRef<HTMLInputElement>(null);
+  const ogImageRef = useRef<HTMLInputElement>(null);
+  const brandLogoRef = useRef<HTMLInputElement>(null);
 
   const [tab, setTab] = useState<SettingsTab>("brand");
   const [settings, setSettings] = useState<SiteSettings | null>(null);
@@ -197,6 +199,8 @@ function SettingsManager() {
   const [savingConfig, setSavingConfig] = useState(false);
   const [uploadingFavicon, setUploadingFavicon] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [uploadingOgImage, setUploadingOgImage] = useState(false);
+  const [uploadingBrandLogo, setUploadingBrandLogo] = useState(false);
   const [resettingLogo, setResettingLogo] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -443,6 +447,72 @@ function SettingsManager() {
     }
   };
 
+  const uploadOgImage = async () => {
+    const file = ogImageRef.current?.files?.[0];
+    if (!file) {
+      toast.message("Choose an Open Graph image first.");
+      return;
+    }
+    setUploadingOgImage(true);
+    try {
+      const body = new FormData();
+      body.append("ogImage", file);
+      const res = await apiFetch("/admin/settings/og-image", {
+        method: "POST",
+        body,
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(
+          typeof data.message === "string"
+            ? data.message
+            : "Could not upload Open Graph image.",
+        );
+        return;
+      }
+      applySettings(data.settings as SiteSettings);
+      if (ogImageRef.current) ogImageRef.current.value = "";
+      toast.success("Open Graph image updated.");
+    } catch {
+      toast.error("Could not reach the server.");
+    } finally {
+      setUploadingOgImage(false);
+    }
+  };
+
+  const uploadBrandLogo = async () => {
+    const file = brandLogoRef.current?.files?.[0];
+    if (!file) {
+      toast.message("Choose a brand logo file first.");
+      return;
+    }
+    setUploadingBrandLogo(true);
+    try {
+      const body = new FormData();
+      body.append("brandLogo", file);
+      const res = await apiFetch("/admin/settings/brand-logo", {
+        method: "POST",
+        body,
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(
+          typeof data.message === "string"
+            ? data.message
+            : "Could not upload brand logo.",
+        );
+        return;
+      }
+      applySettings(data.settings as SiteSettings);
+      if (brandLogoRef.current) brandLogoRef.current.value = "";
+      toast.success("Brand logo updated.");
+    } catch {
+      toast.error("Could not reach the server.");
+    } finally {
+      setUploadingBrandLogo(false);
+    }
+  };
+
   const restoreWebsiteLogo = async () => {
     setResettingLogo(true);
     try {
@@ -499,6 +569,8 @@ function SettingsManager() {
   const faviconSrc = settings?.faviconUrl
     ? mediaUrl(settings.faviconUrl)
     : mediaUrl(WEBSITE_LOGOS.mark);
+  const ogImageSrc = mediaUrl(cfg.ogImage);
+  const brandLogoSrc = mediaUrl(cfg.logo);
 
   const saveConfigButton = (
     <Button type="submit" disabled={savingConfig} className="w-fit">
@@ -553,11 +625,15 @@ function SettingsManager() {
 
           <Separator />
 
-          {/* Brand */}
+          {/* Brand & SEO */}
           {tab === "brand" ? (
             <form className="grid gap-5" onSubmit={saveSiteConfig}>
               <div className="grid gap-4 sm:grid-cols-2">
-                <Field id="cfgName" label="Site name">
+                <Field
+                  id="cfgName"
+                  label="Site title"
+                  hint="Used in browser tab, Google results, and Open Graph"
+                >
                   <Input
                     id="cfgName"
                     value={cfg.name}
@@ -595,26 +671,7 @@ function SettingsManager() {
                     onChange={(e) => patchCfg({ founded: e.target.value })}
                   />
                 </Field>
-                <Field id="cfgOg" label="OG image path" hint="Path or full URL">
-                  <Input
-                    id="cfgOg"
-                    value={cfg.ogImage}
-                    onChange={(e) => patchCfg({ ogImage: e.target.value })}
-                  />
-                </Field>
-                <Field
-                  id="cfgLogo"
-                  label="Logo path"
-                  hint="Used in schema / absolute URLs"
-                  className="sm:col-span-2"
-                >
-                  <Input
-                    id="cfgLogo"
-                    value={cfg.logo}
-                    onChange={(e) => patchCfg({ logo: e.target.value })}
-                  />
-                </Field>
-                <Field id="cfgTagline" label="Tagline" className="sm:col-span-2">
+                <Field id="cfgTagline" label="Tagline">
                   <Input
                     id="cfgTagline"
                     value={cfg.tagline}
@@ -623,8 +680,8 @@ function SettingsManager() {
                 </Field>
                 <Field
                   id="cfgDesc"
-                  label="Description"
-                  hint="Meta description & JSON-LD"
+                  label="SEO description"
+                  hint="Meta description, Google snippet, Open Graph & JSON-LD"
                   className="sm:col-span-2"
                 >
                   <textarea
@@ -634,6 +691,130 @@ function SettingsManager() {
                     onChange={(e) => patchCfg({ description: e.target.value })}
                   />
                 </Field>
+              </div>
+
+              <Separator />
+
+              <div className="grid gap-4">
+                <div>
+                  <p className="text-sm font-medium">Open Graph image</p>
+                  <p className="text-xs text-muted-foreground">
+                    Shown when the site is shared on Facebook, LinkedIn, X, and
+                    Google. Recommended 1200×630px.
+                  </p>
+                </div>
+                <div className="overflow-hidden rounded-2xl border bg-muted/20">
+                  {ogImageSrc ? (
+                    <img
+                      src={ogImageSrc}
+                      alt="Current Open Graph preview"
+                      className="aspect-[1200/630] w-full max-h-64 object-cover"
+                    />
+                  ) : (
+                    <div className="flex aspect-[1200/630] max-h-64 items-center justify-center text-sm text-muted-foreground">
+                      No Open Graph image set
+                    </div>
+                  )}
+                </div>
+                <Field
+                  id="cfgOg"
+                  label="OG image path"
+                  hint="Stored path or full URL — upload below to replace"
+                >
+                  <Input
+                    id="cfgOg"
+                    value={cfg.ogImage}
+                    onChange={(e) => patchCfg({ ogImage: e.target.value })}
+                  />
+                </Field>
+                <Field
+                  id="ogImageFile"
+                  label="Upload new Open Graph image"
+                  hint="JPEG, PNG, or WebP · max 5 MB"
+                >
+                  <Input
+                    id="ogImageFile"
+                    ref={ogImageRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                  />
+                </Field>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={uploadingOgImage}
+                  onClick={() => void uploadOgImage()}
+                  className="w-fit"
+                >
+                  {uploadingOgImage ? (
+                    <Loader2Icon className="animate-spin" />
+                  ) : (
+                    <ImageIcon />
+                  )}
+                  Replace Open Graph image
+                </Button>
+              </div>
+
+              <Separator />
+
+              <div className="grid gap-4">
+                <div>
+                  <p className="text-sm font-medium">Brand logo (SEO)</p>
+                  <p className="text-xs text-muted-foreground">
+                    Used in Google structured data and absolute logo URLs — not
+                    the staff login logo.
+                  </p>
+                </div>
+                <div className="flex items-center justify-center rounded-2xl border bg-white p-6">
+                  {brandLogoSrc ? (
+                    <img
+                      src={brandLogoSrc}
+                      alt="Current brand logo"
+                      className="h-14 w-auto max-w-full object-contain"
+                    />
+                  ) : (
+                    <span className="text-sm text-muted-foreground">
+                      No brand logo set
+                    </span>
+                  )}
+                </div>
+                <Field
+                  id="cfgLogo"
+                  label="Logo path"
+                  hint="Stored path or full URL — upload below to replace"
+                >
+                  <Input
+                    id="cfgLogo"
+                    value={cfg.logo}
+                    onChange={(e) => patchCfg({ logo: e.target.value })}
+                  />
+                </Field>
+                <Field
+                  id="brandLogoFile"
+                  label="Upload new brand logo"
+                  hint="PNG, SVG-friendly raster, or WebP · max 5 MB"
+                >
+                  <Input
+                    id="brandLogoFile"
+                    ref={brandLogoRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                  />
+                </Field>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={uploadingBrandLogo}
+                  onClick={() => void uploadBrandLogo()}
+                  className="w-fit"
+                >
+                  {uploadingBrandLogo ? (
+                    <Loader2Icon className="animate-spin" />
+                  ) : (
+                    <ImageIcon />
+                  )}
+                  Replace brand logo
+                </Button>
               </div>
 
               <Separator />
@@ -1236,7 +1417,7 @@ export default function AdminSettingsPage() {
     <DashboardLayout
       expectedRole="admin"
       title="Settings"
-      description="Site config, contact, social, legal, login, favicon, tracking"
+      description="Site title, SEO description, Open Graph, contact, social, legal, login, favicon, tracking"
     >
       {() => <SettingsManager />}
     </DashboardLayout>

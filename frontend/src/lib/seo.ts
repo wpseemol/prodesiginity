@@ -1,9 +1,15 @@
 import type { Metadata } from "next";
-import { absoluteUrl, siteConfig, socialProfiles } from "@/config/site";
+import {
+    absoluteUrl,
+    siteConfig,
+    socialProfiles,
+    type SiteConfig,
+} from "@/config/site";
 import { KEYWORD_CLUSTERS, KNOWS_ABOUT } from "@/data/seo/keywords";
 import { SITE_FAQ } from "@/data/seo/faq";
 import { resolveTokens } from "@/lib/legal";
 import type { LegalDocument } from "@/data/legal/types";
+import { absoluteMediaUrl } from "@/lib/site-settings";
 
 /**
  * lib/seo.ts
@@ -26,19 +32,22 @@ type BuildMetadataArgs = {
     index?: boolean;
     publishedTime?: string;
     modifiedTime?: string;
+    config?: SiteConfig;
 };
 
 export function buildMetadata({
     title,
     description,
     path,
-    image = siteConfig.ogImage,
+    image,
     index = true,
     publishedTime,
     modifiedTime,
+    config = siteConfig,
 }: BuildMetadataArgs): Metadata {
     const url = absoluteUrl(path);
-    const fullTitle = `${title} | ${siteConfig.name}`;
+    const fullTitle = `${title} | ${config.name}`;
+    const ogImage = absoluteMediaUrl(image ?? config.ogImage, config.url);
 
     return {
         title,
@@ -47,13 +56,13 @@ export function buildMetadata({
         openGraph: {
             type: "website",
             url,
-            siteName: siteConfig.name,
+            siteName: config.name,
             title: fullTitle,
             description,
             locale: "en_US",
             images: [
                 {
-                    url: absoluteUrl(image),
+                    url: ogImage,
                     width: 1200,
                     height: 630,
                     alt: title,
@@ -66,7 +75,7 @@ export function buildMetadata({
             card: "summary_large_image",
             title: fullTitle,
             description,
-            images: [absoluteUrl(image)],
+            images: [ogImage],
         },
         robots: {
             index,
@@ -91,62 +100,68 @@ const SITE_ID = absoluteUrl("/#website");
  * The Organization node. `knowsAbout` and `hasOfferCatalog` are the two fields
  * that most directly tell an AI system what you can be recommended for.
  */
-export function organizationSchema() {
-    const hasAddress = Boolean(siteConfig.address.city);
+export function organizationSchema(config: SiteConfig = siteConfig) {
+    const hasAddress = Boolean(config.address.city);
+    const orgRef = new URL("/#organization", config.url).toString();
+    const sameAs = Object.values(config.social).filter((v) => v.length > 0);
 
     return {
         "@type": "ProfessionalService",
-        "@id": ORG_ID,
-        name: siteConfig.name,
-        legalName: siteConfig.legalName,
-        alternateName: `${siteConfig.name} Studio`,
-        url: siteConfig.url,
+        "@id": orgRef,
+        name: config.name,
+        legalName: config.legalName,
+        alternateName: `${config.name} Studio`,
+        url: config.url,
         logo: {
             "@type": "ImageObject",
-            url: absoluteUrl(siteConfig.logo),
+            url: absoluteMediaUrl(config.logo, config.url),
         },
-        image: absoluteUrl(siteConfig.ogImage),
-        description: siteConfig.description,
-        slogan: siteConfig.tagline,
-        foundingDate: siteConfig.founded,
-        email: siteConfig.email,
-        telephone: siteConfig.phone,
-        priceRange: siteConfig.priceRange,
+        image: absoluteMediaUrl(config.ogImage, config.url),
+        description: config.description,
+        slogan: config.tagline,
+        foundingDate: config.founded,
+        email: config.email,
+        telephone: config.phone,
+        priceRange: config.priceRange,
         ...(hasAddress
             ? {
                   address: {
                       "@type": "PostalAddress",
-                      ...(siteConfig.address.street
-                          ? { streetAddress: siteConfig.address.street }
+                      ...(config.address.street
+                          ? { streetAddress: config.address.street }
                           : {}),
-                      addressLocality: siteConfig.address.city,
-                      addressRegion: siteConfig.address.region,
-                      ...(siteConfig.address.postalCode
-                          ? { postalCode: siteConfig.address.postalCode }
+                      addressLocality: config.address.city,
+                      addressRegion: config.address.region,
+                      ...(config.address.postalCode
+                          ? { postalCode: config.address.postalCode }
                           : {}),
-                      addressCountry: siteConfig.address.country,
+                      addressCountry: config.address.country,
                   },
               }
             : {}),
-        areaServed: siteConfig.serviceAreas.map((area) => ({
+        areaServed: config.serviceAreas.map((area) => ({
             "@type": "Place",
             name: area,
         })),
-        availableLanguage: siteConfig.languages,
+        availableLanguage: config.languages,
         knowsAbout: KNOWS_ABOUT,
-        ...(socialProfiles.length > 0 ? { sameAs: socialProfiles } : {}),
+        ...(sameAs.length > 0
+            ? { sameAs }
+            : socialProfiles.length > 0
+              ? { sameAs: socialProfiles }
+              : {}),
         contactPoint: [
             {
                 "@type": "ContactPoint",
                 contactType: "sales",
-                email: siteConfig.email,
-                availableLanguage: siteConfig.languages,
-                areaServed: siteConfig.serviceAreas,
+                email: config.email,
+                availableLanguage: config.languages,
+                areaServed: config.serviceAreas,
             },
         ],
         hasOfferCatalog: {
             "@type": "OfferCatalog",
-            name: `${siteConfig.name} services`,
+            name: `${config.name} services`,
             itemListElement: KEYWORD_CLUSTERS.map((cluster) => ({
                 "@type": "Offer",
                 itemOffered: {
@@ -154,8 +169,8 @@ export function organizationSchema() {
                     name: cluster.service,
                     description: cluster.definition,
                     serviceType: cluster.primary,
-                    provider: { "@id": ORG_ID },
-                    areaServed: siteConfig.serviceAreas,
+                    provider: { "@id": orgRef },
+                    areaServed: config.serviceAreas,
                     ...(cluster.status === "live"
                         ? { url: absoluteUrl(cluster.path) }
                         : {}),
@@ -165,14 +180,16 @@ export function organizationSchema() {
     };
 }
 
-export function websiteSchema() {
+export function websiteSchema(config: SiteConfig = siteConfig) {
     return {
         "@type": "WebSite",
-        "@id": SITE_ID,
-        url: siteConfig.url,
-        name: siteConfig.name,
-        description: siteConfig.description,
-        publisher: { "@id": ORG_ID },
+        "@id": new URL("/#website", config.url).toString(),
+        url: config.url,
+        name: config.name,
+        description: config.description,
+        publisher: {
+            "@id": new URL("/#organization", config.url).toString(),
+        },
         inLanguage: "en",
     };
 }
@@ -212,10 +229,10 @@ export function faqSchema(items: { question: string; answer: string }[]) {
  * which questions belong to which page. The studio FAQ goes on the homepage
  * only, via homeSchema().
  */
-export function siteSchema() {
+export function siteSchema(config: SiteConfig = siteConfig) {
     return {
         "@context": "https://schema.org",
-        "@graph": [organizationSchema(), websiteSchema()],
+        "@graph": [organizationSchema(config), websiteSchema(config)],
     };
 }
 

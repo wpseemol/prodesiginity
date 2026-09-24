@@ -150,6 +150,20 @@ export const siteLoginLogoUpload = multer({
   limits: { fileSize: 5 * 1024 * 1024, files: 1 },
 }).single("logo");
 
+/** Open Graph / social share image (recommended 1200×630). */
+export const siteOgImageUpload = multer({
+  storage: siteStorage,
+  fileFilter: imageFileFilter,
+  limits: { fileSize: 5 * 1024 * 1024, files: 1 },
+}).single("ogImage");
+
+/** Site brand logo used in schema.org / SEO (not the staff login logo). */
+export const siteBrandLogoUpload = multer({
+  storage: siteStorage,
+  fileFilter: imageFileFilter,
+  limits: { fileSize: 5 * 1024 * 1024, files: 1 },
+}).single("brandLogo");
+
 /** Brand / marquee logos only — hard cap 1 MB. */
 export const homepageLogoUpload = multer({
   storage: homepageStorage,

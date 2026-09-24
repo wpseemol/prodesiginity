@@ -18,8 +18,10 @@ import {
   getAdminSettings,
   settingsUploadErrorHandler,
   updateSiteSettings,
+  uploadBrandLogo,
   uploadFavicon,
   uploadLoginLogo,
+  uploadOgImage,
 } from "../controllers/settings.controller";
 import { getAnalyticsOverview } from "../controllers/tracking.controller";
 import {
@@ -35,8 +37,10 @@ import { requireAuth, requireAdmin } from "../middleware/auth";
 import {
   homepageLogoUpload,
   homepageMediaUpload,
+  siteBrandLogoUpload,
   siteFaviconUpload,
   siteLoginLogoUpload,
+  siteOgImageUpload,
   teamPhotoUpload,
 } from "../middleware/upload";
 
@@ -124,6 +128,26 @@ router.post(
     });
   },
   uploadLoginLogo,
+);
+router.post(
+  "/settings/og-image",
+  (req, res, next) => {
+    siteOgImageUpload(req, res, (err) => {
+      if (err) return settingsUploadErrorHandler(err, req, res, next);
+      return next();
+    });
+  },
+  uploadOgImage,
+);
+router.post(
+  "/settings/brand-logo",
+  (req, res, next) => {
+    siteBrandLogoUpload(req, res, (err) => {
+      if (err) return settingsUploadErrorHandler(err, req, res, next);
+      return next();
+    });
+  },
+  uploadBrandLogo,
 );
 
 export default router;

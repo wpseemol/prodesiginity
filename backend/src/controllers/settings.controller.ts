@@ -367,6 +367,60 @@ export const uploadLoginLogo = async (req: AuthRequest, res: Response) => {
   }
 };
 
+async function patchSiteConfigMedia(
+  field: "ogImage" | "logo",
+  publicPath: string,
+) {
+  const existing = await getOrCreateSettingsAdmin();
+  const merged = mergeSiteConfig({
+    ...mergeSiteConfig(existing.siteConfig),
+    [field]: publicPath,
+  });
+  return prisma.siteSetting.update({
+    where: { key: SETTINGS_KEY },
+    data: { siteConfig: merged as unknown as Prisma.InputJsonValue },
+    select: adminSettingsSelect,
+  });
+}
+
+/** Upload Open Graph / social preview image → siteConfig.ogImage */
+export const uploadOgImage = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "Open Graph image is required" });
+    }
+    const ogImage = publicSiteUploadPath(req.file.filename);
+    const settings = await patchSiteConfigMedia("ogImage", ogImage);
+    return res.status(200).json({
+      message: "Open Graph image updated",
+      url: ogImage,
+      settings: toAdminSettingsPayload(settings),
+    });
+  } catch (error) {
+    console.error("Upload OG image error:", error);
+    return res.status(500).json({ message: "Failed to upload Open Graph image" });
+  }
+};
+
+/** Upload site brand logo → siteConfig.logo (schema / SEO). */
+export const uploadBrandLogo = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "Brand logo file is required" });
+    }
+    const logo = publicSiteUploadPath(req.file.filename);
+    const settings = await patchSiteConfigMedia("logo", logo);
+    return res.status(200).json({
+      message: "Brand logo updated",
+      url: logo,
+      settings: toAdminSettingsPayload(settings),
+    });
+  } catch (error) {
+    console.error("Upload brand logo error:", error);
+    return res.status(500).json({ message: "Failed to upload brand logo" });
+  }
+};
+
 export function settingsUploadErrorHandler(
   err: unknown,
   _req: AuthRequest,
