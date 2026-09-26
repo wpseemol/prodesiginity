@@ -172,16 +172,16 @@ hPanel → PHP Config for that domain (recommended):
 ```bash
 cd ~/domains/api.prodesignity.com/nodejs
 
-# First start
-pm2 delete prodesignity-api 2>/dev/null
-pm2 start dist/index.js --name prodesignity-api --time
+# First start (restart if memory exceeds 200MB)
+npx pm2 delete prodesignity-api 2>/dev/null
+npx pm2 start dist/index.js --name "prodesignity-api" --max-memory-restart 200M
 
 # Survive reboot
-pm2 save
-pm2 startup
+npx pm2 save
+npx pm2 startup
 # → copy/run the command pm2 prints (sudo env PATH=...)
 
-pm2 status
+npx pm2 status
 curl -s http://127.0.0.1:4000/api/health
 curl -s https://api.prodesignity.com/api/health
 ```
@@ -193,8 +193,8 @@ cd ~/domains/api.prodesignity.com/nodejs
 pnpm install --prod
 pnpm exec prisma generate
 pnpm run db:push
-pm2 restart prodesignity-api
-pm2 save
+npx pm2 restart prodesignity-api
+npx pm2 save
 curl -s http://127.0.0.1:4000/api/health
 ```
 
@@ -202,13 +202,13 @@ curl -s http://127.0.0.1:4000/api/health
 
 ```bash
 # See why it died
-pm2 logs prodesignity-api --lines 200
-pm2 describe prodesignity-api
+npx pm2 logs prodesignity-api --lines 200
+npx pm2 describe prodesignity-api
 
-# Auto-restart on crash + memory limit (512MB example)
-pm2 delete prodesignity-api
-pm2 start dist/index.js --name prodesignity-api --time --max-memory-restart 512M
-pm2 save
+# Recreate with memory limit (recommended)
+npx pm2 delete prodesignity-api
+npx pm2 start dist/index.js --name "prodesignity-api" --max-memory-restart 200M
+npx pm2 save
 
 # Optional: cron ping every 5 min (restarts if health fails)
 crontab -e
@@ -217,19 +217,19 @@ crontab -e
 Add this cron line:
 
 ```cron
-*/5 * * * * curl -fsS http://127.0.0.1:4000/api/health >/dev/null || /usr/bin/pm2 restart prodesignity-api
+*/5 * * * * curl -fsS http://127.0.0.1:4000/api/health >/dev/null || npx pm2 restart prodesignity-api
 ```
 
 Common stop causes:
 
 | Symptom | Fix |
 | ------- | --- |
-| 502 from proxy | Node down → `pm2 restart prodesignity-api` |
+| 502 from proxy | Node down → `npx pm2 restart prodesignity-api` |
 | Worked then died after SSH logout | You started with `node`/`pnpm dev` instead of **pm2** |
-| Dies after deploy | Always `pm2 restart` after upload |
-| Memory kill | `--max-memory-restart 512M` + check logs |
+| Dies after deploy | Always `npx pm2 restart` after upload |
+| Memory kill | `--max-memory-restart 200M` + check logs |
 | DB errors | Fix `.env` DB_* ; health must show `"database":"connected"` |
-| Reboot | `pm2 startup` + `pm2 save` must be done once |
+| Reboot | `npx pm2 startup` + `npx pm2 save` must be done once |
 
 **Never** run `pnpm dev` / `tsx watch` on Hostinger production.
 
@@ -291,7 +291,7 @@ ALLOWED_ORIGINS=https://prodesignity.com,https://www.prodesignity.com,https://da
 Then:
 
 ```bash
-pm2 restart prodesignity-api
+npx pm2 restart prodesignity-api
 ```
 
 ---
@@ -299,19 +299,36 @@ pm2 restart prodesignity-api
 ## 10. Useful pm2 cheatsheet
 
 ```bash
-pm2 status
-pm2 logs prodesignity-api --lines 100
-pm2 restart prodesignity-api
-pm2 stop prodesignity-api
-pm2 start prodesignity-api
-pm2 delete prodesignity-api
-pm2 save
-pm2 resurrect
+npx pm2 status
+npx pm2 logs prodesignity-api --lines 100
+npx pm2 restart prodesignity-api
+npx pm2 stop prodesignity-api
+npx pm2 start prodesignity-api
+npx pm2 delete prodesignity-api
+npx pm2 start dist/index.js --name "prodesignity-api" --max-memory-restart 200M
+npx pm2 save
+npx pm2 resurrect
 ```
 
 ---
 
 ## 11. Verify checklist
+
+### Live (from any PC)
+
+```bash
+curl https://api.prodesignity.com/api/health
+# → {"status":"ok","database":"connected","uptime":...}
+
+curl -s https://api.prodesignity.com/api/team
+curl -s https://api.prodesignity.com/api/homepage
+curl -s https://api.prodesignity.com/api/services
+curl -s https://api.prodesignity.com/api/settings
+```
+
+Expected: all return **HTTP 200**. If health fails or returns 502, Node/pm2 is down or the PHP proxy cannot reach `127.0.0.1:4000`.
+
+### On the server (SSH)
 
 ```bash
 curl -s http://127.0.0.1:4000/api/health
@@ -320,7 +337,7 @@ curl -s http://127.0.0.1:4000/api/health
 curl -s https://api.prodesignity.com/api/health
 # → same via proxy
 
-pm2 status
+npx pm2 status
 # → prodesignity-api online
 
 ls ~/domains/api.prodesignity.com/public_html
