@@ -62,11 +62,12 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
     return;
   }
 
+  const maybe = err as unknown as { status?: number; statusCode?: number };
   const status =
-    typeof (err as { status?: number }).status === "number"
-      ? (err as { status: number }).status
-      : typeof (err as { statusCode?: number }).statusCode === "number"
-        ? (err as { statusCode: number }).statusCode
+    typeof maybe.status === "number"
+      ? maybe.status
+      : typeof maybe.statusCode === "number"
+        ? maybe.statusCode
         : 500;
 
   const isJsonParse =

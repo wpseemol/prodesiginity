@@ -52,11 +52,15 @@ export const siteConfig = {
      * Staff portal = separate Vite app (`dashboard/` package).
      * Admin + employee login lives there: {url}/login
      * Production: https://dashboard.prodesignity.com/login
+     * Development: http://localhost:5173/login
      */
     staffPortal: {
+        // Dev always hits the local Vite dashboard; production uses env / live URL.
         url:
-            process.env.NEXT_PUBLIC_STAFF_PORTAL_URL ??
-            "https://dashboard.prodesignity.com",
+            process.env.NODE_ENV === "development"
+                ? "http://localhost:5173"
+                : (process.env.NEXT_PUBLIC_STAFF_PORTAL_URL ??
+                  "https://dashboard.prodesignity.com"),
         loginPath: "/login",
         adminPath: "/admin",
         employeePath: "/employee",
