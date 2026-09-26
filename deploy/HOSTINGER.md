@@ -5,7 +5,9 @@ Two targets:
 | App                           | URL                            | How it deploys                    |
 | ----------------------------- | ------------------------------ | --------------------------------- |
 | Frontend (static HTML/CSS/JS) | `https://prodesignity.com`     | GitHub Action → FTP → zip extract |
-| Backend (Express API)         | `https://api.prodesignity.com` | GitHub Action → SSH → pm2         |
+| Backend (Express API)         | `https://api.prodesignity.com` | GitHub Action → SSH → pm2 + PHP proxy |
+
+**Full backend commands (proxy, MySQL, pm2, POST/file uploads):** see [`BACKEND_API_DEPLOY.md`](./BACKEND_API_DEPLOY.md).
 
 ---
 

@@ -1,0 +1,29 @@
+# ProDesignity API — Hostinger document root (api.prodesignity.com)
+# Upload this file + proxy.php into the subdomain public folder
+# (often: domains/api.prodesignity.com/public_html/)
+
+RewriteEngine On
+
+# Let's Encrypt / SSL challenges
+RewriteCond %{REQUEST_URI} !^/\.well-known/acme-challenge/
+
+# Do not rewrite the proxy script itself (avoids loops)
+RewriteRule ^proxy\.php$ - [L]
+
+# Optional: serve existing static files directly (rare on API vhost)
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteRule ^ - [L]
+
+# Everything else → PHP → Node (pm2 on 127.0.0.1:4000)
+RewriteRule ^ proxy.php [QSA,L]
+
+# ---- PHP upload limits (homepage video up to 120MB) ----
+# If Hostinger ignores these, set the same values in hPanel → PHP Config
+<IfModule mod_php.c>
+  php_value upload_max_filesize 128M
+  php_value post_max_size 128M
+  php_value max_execution_time 180
+  php_value max_input_time 180
+</IfModule>
+
+# Some Hostinger plans use PHP-FPM — limits must be set in hPanel instead.
