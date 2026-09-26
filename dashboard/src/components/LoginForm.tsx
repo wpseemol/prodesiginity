@@ -44,7 +44,14 @@ export default function LoginForm({
         body: JSON.stringify({ login, password }),
       });
 
-      const data = await res.json();
+      let data: Record<string, unknown> = {};
+      try {
+        data = (await res.json()) as Record<string, unknown>;
+      } catch {
+        setStatus("error");
+        setError("Server returned an invalid response. Please try again.");
+        return;
+      }
 
       if (!res.ok) {
         setStatus("error");
@@ -65,18 +72,27 @@ export default function LoginForm({
         return;
       }
 
-      await setDashboardSession(
-        data.accessToken,
-        data.refreshToken,
-        user,
-        typeof data.refreshExpiresInDays === "number"
-          ? data.refreshExpiresInDays
-          : undefined,
-      );
+      try {
+        await setDashboardSession(
+          data.accessToken as string,
+          data.refreshToken as string,
+          user,
+          typeof data.refreshExpiresInDays === "number"
+            ? data.refreshExpiresInDays
+            : undefined,
+        );
+      } catch {
+        setStatus("error");
+        setError("Signed in, but saving the session failed. Please try again.");
+        return;
+      }
+
       navigate(nextPath);
     } catch {
       setStatus("error");
-      setError("Could not reach the server. Please try again.");
+      setError(
+        `Could not reach the API at ${apiBaseUrl}. Is the backend running on port 4000?`,
+      );
     }
   };
 
