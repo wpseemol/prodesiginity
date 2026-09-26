@@ -1,15 +1,9 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
-    AtSignIcon,
     CameraIcon,
-    DicesIcon,
-    EyeIcon,
-    EyeOffIcon,
-    KeyRoundIcon,
     Loader2Icon,
     PencilIcon,
     PlusIcon,
-    ShieldCheckIcon,
     SparklesIcon,
     Trash2Icon,
     UsersRoundIcon,
@@ -41,14 +35,11 @@ type TeamMemberRow = {
     name: string;
     role: string;
     tagline: string | null;
-    email: string | null;
-    username: string | null;
     photoUrl: string;
     photoAlt: string | null;
     photoTitle: string | null;
     isLead: boolean;
     sortOrder: number;
-    userId: number | null;
 };
 
 function initials(name: string) {
@@ -58,33 +49,6 @@ function initials(name: string) {
         .slice(0, 2)
         .map((p) => p[0]?.toUpperCase() ?? "")
         .join("");
-}
-
-/** Meets backend password rules: 8+, upper, lower, digit, special. */
-function generateStaffPassword(length = 12): string {
-    const upper = "ABCDEFGHJKLMNPQRSTUVWXYZ";
-    const lower = "abcdefghijkmnopqrstuvwxyz";
-    const digits = "23456789";
-    const special = "@$!%*?&#_-";
-    const all = upper + lower + digits + special;
-    const pick = (pool: string) =>
-        pool[Math.floor(Math.random() * pool.length)]!;
-    const chars = [pick(upper), pick(lower), pick(digits), pick(special)];
-    for (let i = chars.length; i < length; i += 1) chars.push(pick(all));
-    for (let i = chars.length - 1; i > 0; i -= 1) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [chars[i], chars[j]] = [chars[j]!, chars[i]!];
-    }
-    return chars.join("");
-}
-
-function usernameFromName(fullName: string) {
-    return fullName
-        .trim()
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, ".")
-        .replace(/^\.+|\.+$/g, "")
-        .slice(0, 24);
 }
 
 function TeamManager() {
@@ -102,9 +66,6 @@ function TeamManager() {
     const [name, setName] = useState("");
     const [role, setRole] = useState("");
     const [tagline, setTagline] = useState("");
-    const [username, setUsername] = useState("");
-    const [password, setPassword] = useState("");
-    const [showPassword, setShowPassword] = useState(false);
     const [photoAlt, setPhotoAlt] = useState("");
     const [photoTitle, setPhotoTitle] = useState("");
     const [isLead, setIsLead] = useState(false);
@@ -131,9 +92,6 @@ function TeamManager() {
         setName("");
         setRole("");
         setTagline("");
-        setUsername("");
-        setPassword("");
-        setShowPassword(false);
         setPhotoAlt("");
         setPhotoTitle("");
         setIsLead(false);
@@ -146,19 +104,9 @@ function TeamManager() {
         setName(member.name);
         setRole(member.role);
         setTagline(member.tagline ?? "");
-        setUsername(member.username ?? "");
-        setPassword("");
-        setShowPassword(false);
         setPhotoAlt(member.photoAlt ?? "");
         setPhotoTitle(member.photoTitle ?? "");
         setIsLead(member.isLead);
-    };
-
-    const fillGeneratedPassword = () => {
-        const next = generateStaffPassword();
-        setPassword(next);
-        setShowPassword(true);
-        toast.success("Password generated — copy it before saving.");
     };
 
     const onPickPhoto = (file: File | undefined) => {
@@ -217,16 +165,6 @@ function TeamManager() {
             return;
         }
 
-        if (!isEditMode && !username.trim()) {
-            toast.message("Username is required for staff login.");
-            return;
-        }
-
-        if (!isEditMode && !password) {
-            toast.message("Password is required for staff login.");
-            return;
-        }
-
         setSaving(true);
         try {
             const body = new FormData();
@@ -236,8 +174,6 @@ function TeamManager() {
             body.append("photoAlt", photoAlt.trim());
             body.append("photoTitle", photoTitle.trim());
             body.append("isLead", isLead ? "true" : "false");
-            if (username.trim()) body.append("username", username.trim());
-            if (password) body.append("password", password);
             if (file) body.append("photo", file);
 
             const res = await apiFetch(
@@ -263,10 +199,8 @@ function TeamManager() {
                 isEditMode
                     ? file
                         ? "Team member and photo updated."
-                        : password
-                          ? "Team member and password updated."
-                          : "Team member updated."
-                    : "Team member added with staff login.",
+                        : "Team member updated."
+                    : "Team member added.",
             );
             resetForm();
             await load();
@@ -321,8 +255,8 @@ function TeamManager() {
                             </CardTitle>
                             <CardDescription className="mt-1.5">
                                 {isEditMode
-                                    ? `Updating ${editing.name}. Leave password blank to keep the current login.`
-                                    : "Creates a public profile and a staff login with username & password."}
+                                    ? `Updating ${editing.name} for the marketing site roster.`
+                                    : "Public homepage profile only. Create login accounts on Staff."}
                             </CardDescription>
                         </div>
                         <Badge variant="secondary" className="shrink-0">
@@ -426,22 +360,7 @@ function TeamManager() {
                                     id="teamName"
                                     required
                                     value={name}
-                                    onChange={(e) => {
-                                        const next = e.target.value;
-                                        setName(next);
-                                        if (
-                                            !isEditMode &&
-                                            (!username ||
-                                                username ===
-                                                    usernameFromName(name))
-                                        ) {
-                                            const suggestion =
-                                                usernameFromName(next);
-                                            if (suggestion.length >= 3) {
-                                                setUsername(suggestion);
-                                            }
-                                        }
-                                    }}
+                                    onChange={(e) => setName(e.target.value)}
                                     placeholder="Abdullah Pitul"
                                 />
                             </div>
@@ -468,101 +387,6 @@ function TeamManager() {
                             </div>
                         </section>
 
-                        <section className="grid gap-3 rounded-2xl border border-border/70 bg-muted/30 p-4 dark:bg-muted/15">
-                            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                                <ShieldCheckIcon className="size-3.5" />
-                                Staff login
-                            </div>
-                            <p className="text-xs text-muted-foreground">
-                                {isEditMode
-                                    ? "Update username or set a new password for their dashboard access."
-                                    : "They can sign in at the staff portal with this username and password."}
-                            </p>
-                            <div className="grid gap-2">
-                                <Label htmlFor="teamUsername">
-                                    <span className="inline-flex items-center gap-1.5">
-                                        <AtSignIcon className="size-3.5" />
-                                        Username
-                                    </span>
-                                </Label>
-                                <Input
-                                    id="teamUsername"
-                                    required={!isEditMode}
-                                    value={username}
-                                    onChange={(e) =>
-                                        setUsername(
-                                            e.target.value
-                                                .toLowerCase()
-                                                .replace(/\s+/g, ""),
-                                        )
-                                    }
-                                    placeholder="pitul"
-                                    autoComplete="off"
-                                />
-                            </div>
-                            <div className="grid gap-2">
-                                <div className="flex items-center justify-between gap-2">
-                                    <Label htmlFor="teamPassword">
-                                        <span className="inline-flex items-center gap-1.5">
-                                            <KeyRoundIcon className="size-3.5" />
-                                            {isEditMode
-                                                ? "New password (optional)"
-                                                : "Password"}
-                                        </span>
-                                    </Label>
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="sm"
-                                        className="h-7 px-2 text-xs"
-                                        onClick={fillGeneratedPassword}
-                                    >
-                                        <DicesIcon className="size-3.5" />
-                                        Generate
-                                    </Button>
-                                </div>
-                                <div className="relative">
-                                    <Input
-                                        id="teamPassword"
-                                        type={
-                                            showPassword ? "text" : "password"
-                                        }
-                                        required={!isEditMode}
-                                        value={password}
-                                        onChange={(e) =>
-                                            setPassword(e.target.value)
-                                        }
-                                        placeholder={
-                                            isEditMode
-                                                ? "Leave blank to keep current"
-                                                : "Min 8 chars, upper, lower, number, symbol"
-                                        }
-                                        autoComplete="new-password"
-                                        className="pr-10"
-                                    />
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="icon-sm"
-                                        className="absolute top-1/2 right-1 -translate-y-1/2"
-                                        onClick={() =>
-                                            setShowPassword((v) => !v)
-                                        }
-                                        aria-label={
-                                            showPassword
-                                                ? "Hide password"
-                                                : "Show password"
-                                        }
-                                    >
-                                        {showPassword ? (
-                                            <EyeOffIcon />
-                                        ) : (
-                                            <EyeIcon />
-                                        )}
-                                    </Button>
-                                </div>
-                            </div>
-                        </section>
                         <section className="grid gap-3">
                             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                                 SEO image
@@ -612,7 +436,11 @@ function TeamManager() {
                         </label>
 
                         <div className="flex flex-wrap gap-2 pt-1">
-                            <Button type="submit" disabled={saving} className="min-w-36">
+                            <Button
+                                type="submit"
+                                disabled={saving}
+                                className="min-w-36"
+                            >
                                 {saving ? (
                                     <>
                                         <Loader2Icon className="animate-spin" />
@@ -685,7 +513,7 @@ function TeamManager() {
                                 No team members yet
                             </p>
                             <p className="mt-1 text-xs text-muted-foreground">
-                                Add the first profile with username and password.
+                                Add the first public profile here.
                             </p>
                         </div>
                     ) : (
@@ -702,7 +530,7 @@ function TeamManager() {
                                         }`}
                                     >
                                         <div className="flex items-start gap-3">
-                                            <Avatar className="size-14 rounded-xl ring-2 ring-background shadow-sm">
+                                            <Avatar className="size-14 rounded-xl shadow-sm ring-2 ring-background">
                                                 {mediaUrl(member.photoUrl) ? (
                                                     <AvatarImage
                                                         src={mediaUrl(
@@ -733,16 +561,6 @@ function TeamManager() {
                                                 <p className="mt-0.5 line-clamp-2 text-sm text-muted-foreground">
                                                     {member.role}
                                                 </p>
-                                                {member.username ? (
-                                                    <p className="mt-2 flex items-center gap-1 truncate text-xs text-muted-foreground">
-                                                        <AtSignIcon className="size-3 shrink-0" />
-                                                        {member.username}
-                                                    </p>
-                                                ) : (
-                                                    <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
-                                                        No staff username
-                                                    </p>
-                                                )}
                                             </div>
                                         </div>
                                         <div className="mt-4 flex flex-wrap gap-2">
@@ -791,11 +609,7 @@ function TeamManager() {
                     if (!open && deletingId === null) setPendingDelete(null);
                 }}
                 title={`Delete ${pendingDelete?.name ?? "member"}?`}
-                description={
-                    pendingDelete?.username
-                        ? `Remove ${pendingDelete.name} from the team roster and delete their staff login (@${pendingDelete.username}). This cannot be undone.`
-                        : `Remove ${pendingDelete?.name ?? "this member"} from the team roster. This cannot be undone.`
-                }
+                description={`Remove ${pendingDelete?.name ?? "this member"} from the public team roster. This cannot be undone.`}
                 confirmLabel="Delete member"
                 loading={deletingId !== null}
                 onConfirm={() => {
@@ -811,7 +625,7 @@ export default function AdminTeamPage() {
         <DashboardLayout
             expectedRole="admin"
             title="Team members"
-            description="Add profiles with staff login username & password for the homepage roster"
+            description="Public homepage roster — create staff logins on Staff"
         >
             {() => <TeamManager />}
         </DashboardLayout>

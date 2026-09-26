@@ -1,6 +1,9 @@
 import { useEffect, useState, type ComponentType, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import {
+  DicesIcon,
+  EyeIcon,
+  EyeOffIcon,
   Loader2Icon,
   ShieldCheckIcon,
   UserPlusIcon,
@@ -97,6 +100,24 @@ function staffInitials(name: string) {
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase() ?? "")
     .join("");
+}
+
+/** Meets backend password rules: 8+, upper, lower, digit, special. */
+function generateStaffPassword(length = 12): string {
+  const upper = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+  const lower = "abcdefghijkmnopqrstuvwxyz";
+  const digits = "23456789";
+  const special = "@$!%*?&#_-";
+  const all = upper + lower + digits + special;
+  const pick = (pool: string) =>
+    pool[Math.floor(Math.random() * pool.length)]!;
+  const chars = [pick(upper), pick(lower), pick(digits), pick(special)];
+  for (let i = chars.length; i < length; i += 1) chars.push(pick(all));
+  for (let i = chars.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [chars[i], chars[j]] = [chars[j]!, chars[i]!];
+  }
+  return chars.join("");
 }
 
 function StatCard({
@@ -527,6 +548,7 @@ function AdminStaffManager() {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [role, setRole] = useState<"admin" | "employer">("employer");
   const [status, setStatus] = useState<"idle" | "loading">("idle");
   const [listError, setListError] = useState<string | null>(null);
@@ -585,6 +607,7 @@ function AdminStaffManager() {
       setUsername("");
       setEmail("");
       setPassword("");
+      setShowPassword(false);
       setRole("employer");
       await loadStaff();
     } catch {
@@ -594,13 +617,20 @@ function AdminStaffManager() {
     }
   };
 
+  const fillGeneratedPassword = () => {
+    setPassword(generateStaffPassword());
+    setShowPassword(true);
+    toast.success("Password generated — copy it before creating the account.");
+  };
+
   return (
     <div className="grid gap-6 xl:grid-cols-[360px_1fr]">
       <Card>
         <CardHeader>
           <CardTitle>Create staff account</CardTitle>
           <CardDescription>
-            Add a new admin or employee (employer) account.
+            Login for admin or employee dashboard access (username + email +
+            password).
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -637,15 +667,41 @@ function AdminStaffManager() {
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="staffPassword">Password</Label>
-              <Input
-                id="staffPassword"
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Min 8 chars, upper, lower, number, symbol"
-              />
+              <div className="flex items-center justify-between gap-2">
+                <Label htmlFor="staffPassword">Password</Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-xs"
+                  onClick={fillGeneratedPassword}
+                >
+                  <DicesIcon className="size-3.5" />
+                  Generate
+                </Button>
+              </div>
+              <div className="relative">
+                <Input
+                  id="staffPassword"
+                  type={showPassword ? "text" : "password"}
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Min 8 chars, upper, lower, number, symbol"
+                  className="pr-10"
+                  autoComplete="new-password"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  className="absolute top-1/2 right-1 -translate-y-1/2"
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+                </Button>
+              </div>
             </div>
             <div className="grid gap-2">
               <Label>Role</Label>
@@ -718,7 +774,7 @@ export function AdminStaffPage() {
     <DashboardLayout
       expectedRole="admin"
       title="Staff"
-      description="Create and review team accounts"
+      description="Create login accounts with email & password"
     >
       {() => <AdminStaffManager />}
     </DashboardLayout>

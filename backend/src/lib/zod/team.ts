@@ -1,16 +1,10 @@
 import { z } from "zod";
 import { editableSiteConfigSchema } from "./siteConfig.js";
-import { emailSchema, passwordSchema, usernameSchema } from "./auth.js";
 
 export const createTeamMemberSchema = z.object({
   name: z.string().trim().min(2).max(120),
   role: z.string().trim().min(2).max(160),
   tagline: z.string().trim().max(255).optional().or(z.literal("")),
-  /** Staff portal login username (required on create). */
-  username: usernameSchema,
-  password: passwordSchema,
-  /** Optional contact email; defaults to a staff placeholder from username. */
-  email: emailSchema.optional(),
   photoUrl: z.string().trim().max(512).optional(),
   photoAlt: z.string().trim().max(255).optional().or(z.literal("")),
   photoTitle: z.string().trim().max(160).optional().or(z.literal("")),
@@ -31,10 +25,6 @@ export const updateTeamMemberSchema = z.object({
   name: z.string().trim().min(2).max(120).optional(),
   role: z.string().trim().min(2).max(160).optional(),
   tagline: z.string().trim().max(255).optional().or(z.literal("")),
-  username: usernameSchema.optional(),
-  email: emailSchema.optional(),
-  /** Optional: set a new password for the linked staff login. */
-  password: passwordSchema.optional(),
   photoUrl: z.string().trim().max(512).optional(),
   photoAlt: z.string().trim().max(255).optional().or(z.literal("")),
   photoTitle: z.string().trim().max(160).optional().or(z.literal("")),

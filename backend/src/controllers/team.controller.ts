@@ -1,5 +1,4 @@
 import { Request, Response, NextFunction } from "express";
-import bcrypt from "bcrypt";
 import fs from "fs";
 import path from "path";
 import prisma from "../lib/prisma.js";
@@ -29,55 +28,7 @@ const teamSelect = {
   userId: true,
   createdAt: true,
   updatedAt: true,
-  user: {
-    select: {
-      username: true,
-      email: true,
-    },
-  },
 } as const;
-
-function mapAdminMember(
-  row: {
-    id: number;
-    slug: string;
-    name: string;
-    role: string;
-    tagline: string | null;
-    email: string | null;
-    photoUrl: string;
-    photoAlt: string | null;
-    photoTitle: string | null;
-    isLead: boolean;
-    sortOrder: number;
-    userId: number | null;
-    createdAt: Date;
-    updatedAt: Date;
-    user: { username: string; email: string } | null;
-  },
-) {
-  return {
-    id: row.id,
-    slug: row.slug,
-    name: row.name,
-    role: row.role,
-    tagline: row.tagline,
-    email: row.email ?? row.user?.email ?? null,
-    username: row.user?.username ?? null,
-    photoUrl: row.photoUrl,
-    photoAlt: row.photoAlt,
-    photoTitle: row.photoTitle,
-    isLead: row.isLead,
-    sortOrder: row.sortOrder,
-    userId: row.userId,
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
-  };
-}
-
-function staffEmailFromUsername(username: string) {
-  return `${username}@staff.prodesignity.com`;
-}
 
 function slugify(name: string) {
   return name
@@ -94,20 +45,6 @@ function defaultPhotoAlt(name: string, role: string) {
 
 function defaultPhotoTitle(name: string) {
   return name;
-}
-
-async function uniqueUsername(base: string) {
-  let candidate = base.slice(0, 30);
-  for (let i = 0; i < 12; i += 1) {
-    const taken = await prisma.user.findUnique({
-      where: { username: candidate },
-      select: { id: true },
-    });
-    if (!taken) return candidate;
-    const suffix = (i + 1).toString(36);
-    candidate = `${base.slice(0, Math.max(3, 30 - suffix.length - 1))}-${suffix}`;
-  }
-  return `u${Date.now().toString(36)}`.slice(0, 30);
 }
 
 /** Shape used by the marketing site (homepage + our-service). */
@@ -163,7 +100,7 @@ export const listTeamMembers = async (_req: AuthRequest, res: Response) => {
       orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
       select: teamSelect,
     });
-    return res.status(200).json({ members: rows.map(mapAdminMember) });
+    return res.status(200).json({ members: rows });
   } catch (error) {
     console.error("List team members error:", error);
     return res.status(500).json({ message: "Failed to load team members" });
@@ -190,33 +127,6 @@ export const createTeamMember = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    const username = await uniqueUsername(parsed.data.username);
-    const email =
-      parsed.data.email ?? staffEmailFromUsername(username);
-
-    const existingUser = await prisma.user.findFirst({
-      where: { OR: [{ email }, { username }] },
-      select: { id: true, email: true, username: true },
-    });
-    if (existingUser) {
-      return res.status(409).json({
-        message:
-          existingUser.username === username
-            ? "Username is already taken"
-            : "Email is already registered",
-      });
-    }
-
-    const existingEmailOnTeam = await prisma.teamMember.findUnique({
-      where: { email },
-      select: { id: true },
-    });
-    if (existingEmailOnTeam) {
-      return res.status(409).json({
-        message: "A team member with this login already exists",
-      });
-    }
-
     let slug = parsed.data.slug?.trim() || slugify(parsed.data.name);
     if (!slug) slug = `member-${Date.now()}`;
 
@@ -239,43 +149,24 @@ export const createTeamMember = async (req: AuthRequest, res: Response) => {
     const photoTitle =
       parsed.data.photoTitle?.trim() || defaultPhotoTitle(parsed.data.name);
 
-    const hashedPassword = await bcrypt.hash(parsed.data.password, 10);
-
-    const member = await prisma.$transaction(async (tx) => {
-      const user = await tx.user.create({
-        data: {
-          fullName: parsed.data.name,
-          username,
-          email,
-          password: hashedPassword,
-          role: "employer",
-        },
-        select: { id: true, username: true, email: true },
-      });
-
-      const created = await tx.teamMember.create({
-        data: {
-          slug,
-          name: parsed.data.name,
-          role: parsed.data.role,
-          tagline: parsed.data.tagline || null,
-          email,
-          photoUrl,
-          photoAlt,
-          photoTitle,
-          isLead: parsed.data.isLead ?? false,
-          sortOrder:
-            parsed.data.sortOrder ?? (maxSort._max.sortOrder ?? 0) + 1,
-          userId: user.id,
-        },
-        select: teamSelect,
-      });
-
-      return mapAdminMember(created);
+    const member = await prisma.teamMember.create({
+      data: {
+        slug,
+        name: parsed.data.name,
+        role: parsed.data.role,
+        tagline: parsed.data.tagline || null,
+        photoUrl,
+        photoAlt,
+        photoTitle,
+        isLead: parsed.data.isLead ?? false,
+        sortOrder:
+          parsed.data.sortOrder ?? (maxSort._max.sortOrder ?? 0) + 1,
+      },
+      select: teamSelect,
     });
 
     return res.status(201).json({
-      message: "Team member added with staff login",
+      message: "Team member added",
       member,
     });
   } catch (error) {
@@ -318,114 +209,30 @@ export const updateTeamMember = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    const nextUsername = parsed.data.username;
-    const nextEmail =
-      parsed.data.email?.trim() ||
-      (nextUsername ? staffEmailFromUsername(nextUsername) : undefined);
-
-    if (nextUsername && existing.userId) {
-      const usernameTaken = await prisma.user.findFirst({
-        where: { username: nextUsername, id: { not: existing.userId } },
-        select: { id: true },
-      });
-      if (usernameTaken) {
-        return res.status(409).json({ message: "Username is already taken" });
-      }
-    }
-
-    if (nextEmail && nextEmail !== existing.email) {
-      const emailTaken = await prisma.teamMember.findFirst({
-        where: { email: nextEmail, id: { not: id } },
-        select: { id: true },
-      });
-      if (emailTaken) {
-        return res.status(409).json({
-          message: "A team member with this login already exists",
-        });
-      }
-      const userEmailTaken = await prisma.user.findFirst({
-        where: {
-          email: nextEmail,
-          ...(existing.userId ? { id: { not: existing.userId } } : {}),
-        },
-        select: { id: true },
-      });
-      if (userEmailTaken) {
-        return res.status(409).json({ message: "Email is already registered" });
-      }
-    }
-
-    const memberRow = await prisma.$transaction(async (tx) => {
-      let linkedUserId = existing.userId;
-
-      if (
-        existing.userId &&
-        (nextEmail ||
-          nextUsername ||
-          parsed.data.password ||
-          parsed.data.name)
-      ) {
-        await tx.user.update({
-          where: { id: existing.userId },
-          data: {
-            ...(parsed.data.name !== undefined
-              ? { fullName: parsed.data.name }
-              : {}),
-            ...(nextUsername ? { username: nextUsername } : {}),
-            ...(nextEmail ? { email: nextEmail } : {}),
-            ...(parsed.data.password
-              ? { password: await bcrypt.hash(parsed.data.password, 10) }
-              : {}),
-          },
-        });
-      } else if (!existing.userId && nextUsername && parsed.data.password) {
-        // Backfill staff login for older roster rows that had no account.
-        const username = await uniqueUsername(nextUsername);
-        const email = nextEmail ?? staffEmailFromUsername(username);
-        const user = await tx.user.create({
-          data: {
-            fullName: parsed.data.name ?? existing.name,
-            username,
-            email,
-            password: await bcrypt.hash(parsed.data.password, 10),
-            role: "employer",
-          },
-          select: { id: true },
-        });
-        linkedUserId = user.id;
-      }
-
-      return tx.teamMember.update({
-        where: { id },
-        data: {
-          ...(parsed.data.name !== undefined ? { name: parsed.data.name } : {}),
-          ...(parsed.data.role !== undefined ? { role: parsed.data.role } : {}),
-          ...(parsed.data.tagline !== undefined
-            ? { tagline: parsed.data.tagline || null }
-            : {}),
-          ...(nextEmail ? { email: nextEmail } : {}),
-          ...(linkedUserId !== existing.userId
-            ? { userId: linkedUserId }
-            : {}),
-          ...(nextPhotoUrl ? { photoUrl: nextPhotoUrl } : {}),
-          ...(parsed.data.photoAlt !== undefined
-            ? { photoAlt: parsed.data.photoAlt || null }
-            : {}),
-          ...(parsed.data.photoTitle !== undefined
-            ? { photoTitle: parsed.data.photoTitle || null }
-            : {}),
-          ...(parsed.data.isLead !== undefined
-            ? { isLead: parsed.data.isLead }
-            : {}),
-          ...(parsed.data.sortOrder !== undefined
-            ? { sortOrder: parsed.data.sortOrder }
-            : {}),
-        },
-        select: teamSelect,
-      });
+    const member = await prisma.teamMember.update({
+      where: { id },
+      data: {
+        ...(parsed.data.name !== undefined ? { name: parsed.data.name } : {}),
+        ...(parsed.data.role !== undefined ? { role: parsed.data.role } : {}),
+        ...(parsed.data.tagline !== undefined
+          ? { tagline: parsed.data.tagline || null }
+          : {}),
+        ...(nextPhotoUrl ? { photoUrl: nextPhotoUrl } : {}),
+        ...(parsed.data.photoAlt !== undefined
+          ? { photoAlt: parsed.data.photoAlt || null }
+          : {}),
+        ...(parsed.data.photoTitle !== undefined
+          ? { photoTitle: parsed.data.photoTitle || null }
+          : {}),
+        ...(parsed.data.isLead !== undefined
+          ? { isLead: parsed.data.isLead }
+          : {}),
+        ...(parsed.data.sortOrder !== undefined
+          ? { sortOrder: parsed.data.sortOrder }
+          : {}),
+      },
+      select: teamSelect,
     });
-
-    const member = mapAdminMember(memberRow);
 
     if (
       file &&
@@ -461,19 +268,7 @@ export const deleteTeamMember = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ message: "Team member not found" });
     }
 
-    await prisma.$transaction(async (tx) => {
-      await tx.teamMember.delete({ where: { id } });
-      if (existing.userId) {
-        const linked = await tx.user.findUnique({
-          where: { id: existing.userId },
-          select: { id: true, role: true },
-        });
-        // Only remove employer accounts created for this roster profile.
-        if (linked?.role === "employer") {
-          await tx.user.delete({ where: { id: linked.id } });
-        }
-      }
-    });
+    await prisma.teamMember.delete({ where: { id } });
 
     if (existing.photoUrl.startsWith("/uploads/team/")) {
       const filename = path.basename(existing.photoUrl);
