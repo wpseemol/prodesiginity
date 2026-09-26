@@ -29,10 +29,34 @@ app.get("/api", (_req, res) => {
 });
 // Routes
 app.use("/api", rootRouter);
-// Centralized error handler
+// 404 for unknown API paths (keeps response JSON, does not crash)
+app.use((req, res) => {
+    res.status(404).json({
+        error: "Not Found",
+        path: req.path,
+        method: req.method,
+    });
+});
+// Centralized error handler — never let request errors take down the process
 app.use((err, _req, res, _next) => {
-    console.error(err.stack);
-    res.status(500).json({ error: "Internal Server Error" });
+    console.error("[express]", err.stack || err.message || err);
+    if (res.headersSent) {
+        return;
+    }
+    const maybe = err;
+    const status = typeof maybe.status === "number"
+        ? maybe.status
+        : typeof maybe.statusCode === "number"
+            ? maybe.statusCode
+            : 500;
+    const isJsonParse = err instanceof SyntaxError || /JSON|Unexpected token/i.test(err.message || "");
+    res.status(status).json({
+        error: status >= 500
+            ? "Internal Server Error"
+            : isJsonParse
+                ? "Invalid JSON body"
+                : err.message || "Request failed",
+    });
 });
 export default app;
 //# sourceMappingURL=app.js.map
