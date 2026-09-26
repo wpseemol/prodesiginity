@@ -1,4 +1,4 @@
-# Prodesignity API (standalone npm + ESM)
+# Prodesignity API (pnpm + ESM)
 # Build from backend/:
 #   docker build -t prodesignity-api .
 # Or from repo root:
@@ -11,17 +11,19 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends openssl ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-COPY package.json package-lock.json* ./
+RUN corepack enable && corepack prepare pnpm@10.28.0 --activate
+
+COPY package.json pnpm-lock.yaml* .npmrc* ./
 COPY prisma ./prisma
 COPY prisma.config.ts ./
 
-RUN npm install
+RUN pnpm install --frozen-lockfile=false
 
 COPY tsconfig.json ./
 COPY src ./src
 
-RUN npx prisma generate
-RUN npm run build
+RUN pnpm exec prisma generate
+RUN pnpm run build
 
 FROM node:22-bookworm-slim AS runner
 WORKDIR /app
@@ -31,8 +33,10 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends openssl ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
+RUN corepack enable && corepack prepare pnpm@10.28.0 --activate
+
 COPY --from=build /app/package.json ./
-COPY --from=build /app/package-lock.json* ./
+COPY --from=build /app/pnpm-lock.yaml* ./
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/prisma ./prisma

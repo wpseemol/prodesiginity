@@ -45,10 +45,41 @@ app.get("/api", (_req, res) => {
 // Routes
 app.use("/api", rootRouter);
 
-// Centralized error handler
+// 404 for unknown API paths (keeps response JSON, does not crash)
+app.use((req: Request, res: Response) => {
+  res.status(404).json({
+    error: "Not Found",
+    path: req.path,
+    method: req.method,
+  });
+});
+
+// Centralized error handler — never let request errors take down the process
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-  console.error(err.stack);
-  res.status(500).json({ error: "Internal Server Error" });
+  console.error("[express]", err.stack || err.message || err);
+
+  if (res.headersSent) {
+    return;
+  }
+
+  const status =
+    typeof (err as { status?: number }).status === "number"
+      ? (err as { status: number }).status
+      : typeof (err as { statusCode?: number }).statusCode === "number"
+        ? (err as { statusCode: number }).statusCode
+        : 500;
+
+  const isJsonParse =
+    err instanceof SyntaxError || /JSON|Unexpected token/i.test(err.message || "");
+
+  res.status(status).json({
+    error:
+      status >= 500
+        ? "Internal Server Error"
+        : isJsonParse
+          ? "Invalid JSON body"
+          : err.message || "Request failed",
+  });
 });
 
 export default app;

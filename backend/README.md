@@ -1,15 +1,24 @@
-# ProDesignity API — standalone
+# ProDesignity API
 
-Express + Prisma API. Runs with **npm** only (not tied to the monorepo frontend/dashboard).
+Express + Prisma API. Part of the monorepo **pnpm** workspace (`prodesignity-api`).
 
 ## Quick start
 
+From repo root:
+
 ```bash
-cd backend
+pnpm install
+pnpm --filter prodesignity-api db:setup   # generate + db push + seed
+pnpm --filter prodesignity-api dev        # http://localhost:4000
+```
+
+Or inside `backend/`:
+
+```bash
 cp .env.example .env   # edit DB + JWT
-npm install
-npm run db:setup       # generate + db push + seed
-npm run dev            # http://localhost:4000
+pnpm install           # from root is preferred
+pnpm run db:setup
+pnpm run dev
 ```
 
 Health: `GET http://localhost:4000/api/health`
@@ -18,14 +27,21 @@ Health: `GET http://localhost:4000/api/health`
 
 | Command | What it does |
 | --- | --- |
-| `npm run dev` | Watch mode (`tsx`) |
-| `npm run build` | Compile to `dist/` (ESM) |
-| `npm start` | Run `dist/index.js` |
-| `npm run db:setup` | `prisma generate` + `db push` + seed |
-| `npm run db:seed` | Demo admin/employee + homepage sections |
-| `npm run db:seed:deploy` | Full deploy seed (users, homepage, team, settings, services, tracking) |
-| `npm run db:setup:deploy` | `generate` + `db push` + full deploy seed |
-| `npm run prisma:generate` | Regenerate Prisma Client |
+| `pnpm run dev` | Watch mode (`tsx`) |
+| `pnpm run build` | Compile to `dist/` (ESM) |
+| `pnpm start` | Run `dist/index.js` |
+| `pnpm run db:setup` | `prisma generate` + `db push` + seed |
+| `pnpm run db:seed` | Demo admin/employee + homepage sections |
+| `pnpm run db:seed:deploy` | Full deploy seed (users, homepage, team, settings, services, tracking) |
+| `pnpm run db:setup:deploy` | `generate` + `db push` + full deploy seed |
+| `pnpm run prisma:generate` | Regenerate Prisma Client |
+
+From monorepo root you can also use:
+
+```bash
+pnpm dev:backend
+pnpm build:backend
+```
 
 ## Demo users (after seed)
 
@@ -41,13 +57,15 @@ Override with `SEED_ADMIN_*` / `SEED_EMPLOYEE_*` in `.env` before seeding produc
 ```bash
 cd /path/to/api   # BACKEND_REMOTE_DIR
 # ensure .env has DATABASE_URL + JWT_SECRET + ALLOWED_ORIGINS including dashboard
-npm run db:setup:deploy
+corepack enable && corepack prepare pnpm@10.28.0 --activate
+pnpm install
+pnpm run db:setup:deploy
 ```
 
 Or if schema is already pushed:
 
 ```bash
-npm run db:seed:deploy
+pnpm run db:seed:deploy
 ```
 
 ## Module format
@@ -62,7 +80,7 @@ Start MySQL (Docker from repo root):
 docker compose up -d mysql
 ```
 
-Then `npm run db:setup` inside `backend/`.
+Then `pnpm run db:setup` inside `backend/` (or via `--filter prodesignity-api`).
 
 ## Env
 

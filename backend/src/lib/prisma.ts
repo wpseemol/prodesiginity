@@ -16,11 +16,13 @@ function createAdapter() {
       user,
       password,
       database,
-      // Prefer a healthy pool for standalone npm runs + Hostinger.
+      // Prefer a healthy pool for local + Hostinger deploys.
       connectionLimit: 10,
-      connectTimeout: 20_000,
-      acquireTimeout: 20_000,
-      initializationTimeout: 20_000,
+      // Fail request-level DB errors quickly so the API stays responsive
+      // instead of hanging ~20s (feels like the server "stopped").
+      connectTimeout: 8_000,
+      acquireTimeout: 8_000,
+      initializationTimeout: 8_000,
       // Drop idle sockets so a restarted MySQL doesn't leave a dead pool.
       idleTimeout: 60,
       // Always validate before reuse after MySQL restarts / network blips.
