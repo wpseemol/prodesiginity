@@ -12,6 +12,7 @@ import { mediaUrl } from "@/config";
 import { apiFetch } from "@/lib/api";
 import { IMAGE_SPECS } from "@/lib/imageSpecs";
 import { asArr, asStr } from "@/components/homepage/helpers";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import {
   ContentCard,
   EditorPanel,
@@ -105,6 +106,9 @@ export function RecentProjectsSectionForm({
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [form, setForm] = useState<ProjectDraft>(emptyProject);
   const [uploading, setUploading] = useState<"video" | "thumb" | null>(null);
+  const [pendingDeleteIndex, setPendingDeleteIndex] = useState<number | null>(
+    null,
+  );
 
   const set = (patch: Record<string, unknown>) =>
     onChange({ ...content, ...patch });
@@ -185,13 +189,12 @@ export function RecentProjectsSectionForm({
   };
 
   const deleteProject = (index: number) => {
-    const project = projects[index];
-    if (!window.confirm(`Delete “${project.title}”?`)) return;
     if (editIndex === index) cancelForm();
     else if (editIndex !== null && editIndex > index) {
       setEditIndex(editIndex - 1);
     }
     setProjects(projects.filter((_, i) => i !== index));
+    setPendingDeleteIndex(null);
     toast.success("Video removed — Save section to publish.");
   };
 
@@ -431,7 +434,7 @@ export function RecentProjectsSectionForm({
                       size="icon-sm"
                       variant="ghost"
                       className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                      onClick={() => deleteProject(index)}
+                      onClick={() => setPendingDeleteIndex(index)}
                       aria-label={`Delete ${project.title}`}
                     >
                       <Trash2Icon />
@@ -443,6 +446,19 @@ export function RecentProjectsSectionForm({
           })}
         </div>
       )}
+
+      <ConfirmDialog
+        open={pendingDeleteIndex !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingDeleteIndex(null);
+        }}
+        title={`Delete “${pendingDeleteIndex !== null ? projects[pendingDeleteIndex]?.title ?? "video" : "video"}”?`}
+        description="This removes the video from the section. Save the section to publish the change."
+        confirmLabel="Delete video"
+        onConfirm={() => {
+          if (pendingDeleteIndex !== null) deleteProject(pendingDeleteIndex);
+        }}
+      />
     </div>
   );
 }

@@ -8,6 +8,7 @@ import {
   updateDashboardUser,
   type DashboardUser,
 } from "@/lib/session";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ProfilePhotoManager } from "@/components/ProfilePhotoManager";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -43,6 +44,7 @@ function ProfileManager({
   const [deletePassword, setDeletePassword] = useState("");
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   const handleUpdate = async (e: FormEvent) => {
     e.preventDefault();
@@ -91,16 +93,7 @@ function ProfileManager({
     }
   };
 
-  const handleDelete = async (e: FormEvent) => {
-    e.preventDefault();
-    if (
-      !window.confirm(
-        "Delete your account permanently? This cannot be undone.",
-      )
-    ) {
-      return;
-    }
-
+  const handleDelete = async () => {
     setDeleting(true);
     try {
       const res = await apiFetch("/auth/me", {
@@ -117,6 +110,7 @@ function ProfileManager({
         return;
       }
 
+      setConfirmDeleteOpen(false);
       await logoutRequest();
       toast.success("Account deleted.");
       navigate("/login", { replace: true });
@@ -125,6 +119,15 @@ function ProfileManager({
     } finally {
       setDeleting(false);
     }
+  };
+
+  const requestDelete = (e: FormEvent) => {
+    e.preventDefault();
+    if (!deletePassword.trim()) {
+      toast.message("Enter your password to delete the account.");
+      return;
+    }
+    setConfirmDeleteOpen(true);
   };
 
   return (
@@ -218,7 +221,7 @@ function ProfileManager({
               Enter your password to confirm deletion of @{user.username}.
             </AlertDescription>
           </Alert>
-          <form className="grid gap-4" onSubmit={handleDelete}>
+          <form className="grid gap-4" onSubmit={requestDelete}>
             <div className="grid gap-2">
               <Label htmlFor="deletePassword">Password</Label>
               <Input
@@ -250,6 +253,18 @@ function ProfileManager({
         </CardContent>
       </Card>
       </div>
+
+      <ConfirmDialog
+        open={confirmDeleteOpen}
+        onOpenChange={(open) => {
+          if (!deleting) setConfirmDeleteOpen(open);
+        }}
+        title="Delete your account permanently?"
+        description={`This removes @${user.username} and cannot be undone.`}
+        confirmLabel="Delete account"
+        loading={deleting}
+        onConfirm={() => void handleDelete()}
+      />
     </div>
   );
 }

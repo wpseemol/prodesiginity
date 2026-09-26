@@ -20,6 +20,7 @@ import {
   paragraphsToHtml,
   textToHtml,
 } from "@/components/editor/SimpleEditor";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -213,6 +214,12 @@ function ServicesManager() {
   const [gBlurb, setGBlurb] = useState("");
   const [gIcon, setGIcon] = useState("Layout");
   const [editingGroup, setEditingGroup] = useState<GroupRow | null>(null);
+  const [pendingDeleteService, setPendingDeleteService] =
+    useState<ServiceRow | null>(null);
+  const [pendingDeleteGroup, setPendingDeleteGroup] = useState<GroupRow | null>(
+    null,
+  );
+  const [deletingTarget, setDeletingTarget] = useState(false);
 
   const groupName = useMemo(() => {
     const map = new Map(groups.map((g) => [g.id, g.title]));
@@ -404,7 +411,7 @@ function ServicesManager() {
   };
 
   const handleDeleteService = async (row: ServiceRow) => {
-    if (!window.confirm(`Delete “${row.title}”?`)) return;
+    setDeletingTarget(true);
     try {
       const res = await apiFetch(`/admin/services/${row.id}`, {
         method: "DELETE",
@@ -416,11 +423,14 @@ function ServicesManager() {
         );
         return;
       }
+      setPendingDeleteService(null);
       toast.success("Service deleted.");
       if (editing?.id === row.id) resetServiceForm();
       await load();
     } catch {
       toast.error("Could not reach the server.");
+    } finally {
+      setDeletingTarget(false);
     }
   };
 
@@ -465,7 +475,7 @@ function ServicesManager() {
   };
 
   const handleDeleteGroup = async (row: GroupRow) => {
-    if (!window.confirm(`Delete group “${row.title}”?`)) return;
+    setDeletingTarget(true);
     try {
       const res = await apiFetch(`/admin/services/groups/${row.id}`, {
         method: "DELETE",
@@ -477,10 +487,13 @@ function ServicesManager() {
         );
         return;
       }
+      setPendingDeleteGroup(null);
       toast.success("Group deleted.");
       await load();
     } catch {
       toast.error("Could not reach the server.");
+    } finally {
+      setDeletingTarget(false);
     }
   };
 
@@ -1005,7 +1018,7 @@ function ServicesManager() {
                             type="button"
                             size="sm"
                             variant="destructive"
-                            onClick={() => void handleDeleteService(row)}
+                            onClick={() => setPendingDeleteService(row)}
                           >
                             <Trash2Icon />
                           </Button>
@@ -1133,7 +1146,7 @@ function ServicesManager() {
                             type="button"
                             size="sm"
                             variant="destructive"
-                            onClick={() => void handleDeleteGroup(row)}
+                            onClick={() => setPendingDeleteGroup(row)}
                           >
                             <Trash2Icon />
                           </Button>
@@ -1147,6 +1160,34 @@ function ServicesManager() {
           )}
         </CardContent>
       </Card>
+
+      <ConfirmDialog
+        open={pendingDeleteService !== null}
+        onOpenChange={(open) => {
+          if (!open && !deletingTarget) setPendingDeleteService(null);
+        }}
+        title={`Delete “${pendingDeleteService?.title ?? "service"}”?`}
+        description="This permanently removes the service page. This cannot be undone."
+        confirmLabel="Delete service"
+        loading={deletingTarget}
+        onConfirm={() => {
+          if (pendingDeleteService) void handleDeleteService(pendingDeleteService);
+        }}
+      />
+
+      <ConfirmDialog
+        open={pendingDeleteGroup !== null}
+        onOpenChange={(open) => {
+          if (!open && !deletingTarget) setPendingDeleteGroup(null);
+        }}
+        title={`Delete group “${pendingDeleteGroup?.title ?? "group"}”?`}
+        description="Services in this group will need a new group assigned. This cannot be undone."
+        confirmLabel="Delete group"
+        loading={deletingTarget}
+        onConfirm={() => {
+          if (pendingDeleteGroup) void handleDeleteGroup(pendingDeleteGroup);
+        }}
+      />
     </div>
   );
 }

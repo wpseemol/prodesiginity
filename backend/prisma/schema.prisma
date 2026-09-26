@@ -16,6 +16,7 @@ model User {
   photoId       Int?           @map("photo_id")
   photo         Photo?         @relation("UserProfilePhoto", fields: [photoId], references: [id], onDelete: SetNull)
   photos        Photo[]        @relation("UserPhotos")
+  teamMember    TeamMember?
   created_at    DateTime       @default(now())
   refreshTokens RefreshToken[]
 
@@ -75,6 +76,8 @@ model TeamMember {
   name       String   @db.VarChar(120)
   role       String   @db.VarChar(160)
   tagline    String?  @db.VarChar(255)
+  /** Login email shown in admin; linked staff user when set. */
+  email      String?  @unique @db.VarChar(254)
   photoUrl   String   @map("photo_url") @db.VarChar(512)
   /** SEO: HTML img alt / description */
   photoAlt   String?  @map("photo_alt") @db.VarChar(255)
@@ -82,6 +85,8 @@ model TeamMember {
   photoTitle String?  @map("photo_title") @db.VarChar(160)
   isLead     Boolean  @default(false) @map("is_lead")
   sortOrder  Int      @default(0) @map("sort_order")
+  userId     Int?     @unique @map("user_id")
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
 

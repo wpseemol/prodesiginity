@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import {
   CheckIcon,
   ImagePlusIcon,
@@ -13,6 +13,7 @@ import { mediaUrl } from "@/config";
 import { apiFetch } from "@/lib/api";
 import { asArr, asStr } from "@/components/homepage/helpers";
 import type { SectionFormProps } from "@/components/homepage/types";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -130,6 +131,9 @@ export function BrandsSectionForm({ content, onChange }: SectionFormProps) {
   ).map(normalizeBrand);
 
   const fileRef = useRef<HTMLInputElement>(null);
+  const [pendingDeleteIndex, setPendingDeleteIndex] = useState<number | null>(
+    null,
+  );
 
   const setBrands = (next: BrandFormValues[]) =>
     onChange({ ...content, brands: next });
@@ -184,10 +188,9 @@ export function BrandsSectionForm({ content, onChange }: SectionFormProps) {
   };
 
   const deleteBrand = (index: number) => {
-    const brand = brands[index];
-    if (!window.confirm(`Delete “${brand.name}”?`)) return;
     dispatch(adjustEditIndexAfterDelete({ deletedIndex: index }));
     setBrands(brands.filter((_, i) => i !== index));
+    setPendingDeleteIndex(null);
     toast.success("Brand removed — Save section to publish.");
   };
 
@@ -446,7 +449,7 @@ export function BrandsSectionForm({ content, onChange }: SectionFormProps) {
                     size="icon-sm"
                     variant="ghost"
                     className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                    onClick={() => deleteBrand(index)}
+                    onClick={() => setPendingDeleteIndex(index)}
                     aria-label={`Delete ${brand.name}`}
                   >
                     <Trash2Icon />
@@ -457,6 +460,19 @@ export function BrandsSectionForm({ content, onChange }: SectionFormProps) {
           })}
         </div>
       )}
+
+      <ConfirmDialog
+        open={pendingDeleteIndex !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingDeleteIndex(null);
+        }}
+        title={`Delete “${pendingDeleteIndex !== null ? brands[pendingDeleteIndex]?.name ?? "brand" : "brand"}”?`}
+        description="This removes the logo from the brands list. Save the section to publish the change."
+        confirmLabel="Delete logo"
+        onConfirm={() => {
+          if (pendingDeleteIndex !== null) deleteBrand(pendingDeleteIndex);
+        }}
+      />
     </div>
   );
 }
