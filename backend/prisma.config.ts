@@ -1,9 +1,15 @@
 import "dotenv/config";
-import { defineConfig, env } from "prisma/config";
+import { defineConfig } from "prisma/config";
 
-/** Prisma CLI expects mysql://; the runtime MariaDB adapter accepts either. */
+/**
+ * Prisma CLI needs a URL in config even for `prisma generate` (no DB call).
+ * Prefer real DATABASE_URL; fall back so CI / frontend-only installs don't fail.
+ */
 function cliDatabaseUrl() {
-  const raw = env("DATABASE_URL");
+  const raw =
+    process.env.DATABASE_URL?.trim() ||
+    "mysql://prisma:prisma@127.0.0.1:3306/prisma";
+
   if (raw.startsWith("mariadb://")) {
     return raw.replace(/^mariadb:\/\//, "mysql://");
   }

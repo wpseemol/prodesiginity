@@ -43,7 +43,8 @@ jobs:
 
             - name: Install dependencies
               working-directory: .
-              run: pnpm install
+              # Frontend only — skip backend postinstall (prisma generate / DATABASE_URL)
+              run: pnpm install --filter=prodesignity...
 
             - name: Build
               env:
