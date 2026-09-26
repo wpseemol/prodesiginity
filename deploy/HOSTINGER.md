@@ -7,7 +7,7 @@ Two targets:
 | Frontend (static HTML/CSS/JS) | `https://prodesignity.com`     | GitHub Action → FTP → zip extract |
 | Backend (Express API)         | `https://api.prodesignity.com` | GitHub Action → SSH → pm2 + PHP proxy |
 
-**Full backend commands (proxy, MySQL, pm2, POST/file uploads):** see [`BACKEND_API_DEPLOY.md`](./BACKEND_API_DEPLOY.md).
+**Full backend commands (proxy, MySQL, pm2):** see [`../backend/deploy/BACKEND_API_DEPLOY.md`](../backend/deploy/BACKEND_API_DEPLOY.md).
 
 ---
 
