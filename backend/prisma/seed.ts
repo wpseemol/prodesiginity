@@ -12,24 +12,30 @@ type SeedUser = {
 };
 
 /**
- * Demo defaults for local/dev. On production, set SEED_* env vars
- * (and preferably change passwords after first login).
+ * Only seeds a real admin when ALL of these are set:
+ *   SEED_ADMIN_USERNAME, SEED_ADMIN_EMAIL, SEED_ADMIN_PASSWORD
+ * Demo accounts are never created by default.
  */
 function buildSeedUsers(): SeedUser[] {
+  const username = process.env.SEED_ADMIN_USERNAME?.trim();
+  const email = process.env.SEED_ADMIN_EMAIL?.trim();
+  const password = process.env.SEED_ADMIN_PASSWORD?.trim();
+  const fullName = process.env.SEED_ADMIN_NAME?.trim() || "Admin";
+
+  if (!username || !email || !password) {
+    console.log(
+      "Skipping user seed (set SEED_ADMIN_USERNAME, SEED_ADMIN_EMAIL, SEED_ADMIN_PASSWORD to create a real admin).",
+    );
+    return [];
+  }
+
   return [
     {
-      fullName: process.env.SEED_ADMIN_NAME ?? "Demo Admin",
-      username: process.env.SEED_ADMIN_USERNAME ?? "admin",
-      email: process.env.SEED_ADMIN_EMAIL ?? "admin@prodesignity.com",
-      password: process.env.SEED_ADMIN_PASSWORD ?? "DemoAdmin1!",
+      fullName,
+      username,
+      email,
+      password,
       role: "admin",
-    },
-    {
-      fullName: process.env.SEED_EMPLOYEE_NAME ?? "Demo Employee",
-      username: process.env.SEED_EMPLOYEE_USERNAME ?? "employee",
-      email: process.env.SEED_EMPLOYEE_EMAIL ?? "employee@prodesignity.com",
-      password: process.env.SEED_EMPLOYEE_PASSWORD ?? "DemoEmployee1!",
-      role: "employer",
     },
   ];
 }
@@ -106,10 +112,15 @@ async function main() {
   const users = await seedUsers();
   await seedHomepage();
 
-  console.log("\nDashboard login credentials (https://dashboard.prodesignity.com):");
-  for (const user of users) {
-    const label = user.role === "admin" ? "Admin   " : "Employee";
-    console.log(`  ${label} → ${user.username} / ${user.password}`);
+  if (users.length > 0) {
+    console.log("\nDashboard login:");
+    for (const user of users) {
+      console.log(`  Admin → ${user.username} / (your SEED_ADMIN_PASSWORD)`);
+    }
+  } else {
+    console.log(
+      "\nNo users seeded. Create staff via Team members (auto login) or set SEED_ADMIN_* env vars.",
+    );
   }
 }
 

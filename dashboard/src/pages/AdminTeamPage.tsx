@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
+    AtSignIcon,
     CameraIcon,
+    DicesIcon,
+    EyeIcon,
+    EyeOffIcon,
+    KeyRoundIcon,
     Loader2Icon,
     PencilIcon,
     PlusIcon,
@@ -35,6 +40,7 @@ type TeamMemberRow = {
     name: string;
     role: string;
     tagline: string | null;
+    username: string | null;
     photoUrl: string;
     photoAlt: string | null;
     photoTitle: string | null;
@@ -51,6 +57,32 @@ function initials(name: string) {
         .join("");
 }
 
+function generateStaffPassword(length = 12): string {
+    const upper = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+    const lower = "abcdefghijkmnopqrstuvwxyz";
+    const digits = "23456789";
+    const special = "@$!%*?&#_-";
+    const all = upper + lower + digits + special;
+    const pick = (pool: string) =>
+        pool[Math.floor(Math.random() * pool.length)]!;
+    const chars = [pick(upper), pick(lower), pick(digits), pick(special)];
+    for (let i = chars.length; i < length; i += 1) chars.push(pick(all));
+    for (let i = chars.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [chars[i], chars[j]] = [chars[j]!, chars[i]!];
+    }
+    return chars.join("");
+}
+
+function usernameFromName(fullName: string) {
+    return fullName
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, ".")
+        .replace(/^\.+|\.+$/g, "")
+        .slice(0, 24);
+}
+
 function TeamManager() {
     const fileRef = useRef<HTMLInputElement>(null);
     const [members, setMembers] = useState<TeamMemberRow[]>([]);
@@ -64,11 +96,12 @@ function TeamManager() {
     const [editing, setEditing] = useState<TeamMemberRow | null>(null);
 
     const [name, setName] = useState("");
-    const [role, setRole] = useState("");
-    const [tagline, setTagline] = useState("");
-    const [photoAlt, setPhotoAlt] = useState("");
-    const [photoTitle, setPhotoTitle] = useState("");
+    const [designation, setDesignation] = useState("");
     const [isLead, setIsLead] = useState(false);
+    const [username, setUsername] = useState("");
+    const [currentPassword, setCurrentPassword] = useState("");
+    const [password, setPassword] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
     const [photoFile, setPhotoFile] = useState<File | null>(null);
     const [photoPreview, setPhotoPreview] = useState<string | null>(null);
 
@@ -90,11 +123,12 @@ function TeamManager() {
     const resetForm = () => {
         setEditing(null);
         setName("");
-        setRole("");
-        setTagline("");
-        setPhotoAlt("");
-        setPhotoTitle("");
+        setDesignation("");
         setIsLead(false);
+        setUsername("");
+        setCurrentPassword("");
+        setPassword("");
+        setShowPassword(false);
         clearPhotoSelection();
     };
 
@@ -102,11 +136,12 @@ function TeamManager() {
         clearPhotoSelection();
         setEditing(member);
         setName(member.name);
-        setRole(member.role);
-        setTagline(member.tagline ?? "");
-        setPhotoAlt(member.photoAlt ?? "");
-        setPhotoTitle(member.photoTitle ?? "");
+        setDesignation(member.role ?? "");
         setIsLead(member.isLead);
+        setUsername(member.username ?? "");
+        setCurrentPassword("");
+        setPassword("");
+        setShowPassword(false);
     };
 
     const onPickPhoto = (file: File | undefined) => {
@@ -120,6 +155,18 @@ function TeamManager() {
         }
         setPhotoFile(file);
         setPhotoPreview(URL.createObjectURL(file));
+    };
+
+    const fillGeneratedPassword = async () => {
+        const next = generateStaffPassword();
+        setPassword(next);
+        setShowPassword(true);
+        try {
+            await navigator.clipboard.writeText(next);
+            toast.success("Password generated and copied to clipboard.");
+        } catch {
+            toast.success("Password generated — copy it before saving.");
+        }
     };
 
     const load = async () => {
@@ -161,7 +208,23 @@ function TeamManager() {
         const file = photoFile ?? fileRef.current?.files?.[0] ?? null;
 
         if (!isEditMode && !file) {
-            toast.message("Choose a photo for the team member.");
+            toast.message("Choose a photo.");
+            return;
+        }
+        if (!username.trim()) {
+            toast.message("Username is required.");
+            return;
+        }
+        if (!isEditMode && !password) {
+            toast.message("Password is required.");
+            return;
+        }
+        if (isEditMode && password && editing.username && !currentPassword) {
+            toast.message("Enter your admin password to confirm the change.");
+            return;
+        }
+        if (!designation.trim()) {
+            toast.message("Designation is required.");
             return;
         }
 
@@ -169,11 +232,15 @@ function TeamManager() {
         try {
             const body = new FormData();
             body.append("name", name);
-            body.append("role", role);
-            body.append("tagline", tagline.trim());
-            body.append("photoAlt", photoAlt.trim());
-            body.append("photoTitle", photoTitle.trim());
+            body.append("role", designation.trim());
             body.append("isLead", isLead ? "true" : "false");
+            body.append("username", username.trim());
+            if (password) {
+                body.append("password", password);
+                if (isEditMode && editing.username) {
+                    body.append("currentPassword", currentPassword);
+                }
+            }
             if (file) body.append("photo", file);
 
             const res = await apiFetch(
@@ -197,10 +264,8 @@ function TeamManager() {
 
             toast.success(
                 isEditMode
-                    ? file
-                        ? "Team member and photo updated."
-                        : "Team member updated."
-                    : "Team member added.",
+                    ? "Team member updated."
+                    : "Team member created with staff login.",
             );
             resetForm();
             await load();
@@ -238,202 +303,219 @@ function TeamManager() {
     };
 
     return (
-        <div className="grid gap-6 xl:grid-cols-[420px_1fr]">
+        <div className="grid gap-6 xl:grid-cols-[400px_1fr]">
             <Card className="overflow-hidden border-border/70 bg-gradient-to-b from-white to-slate-50/80 shadow-xl shadow-slate-900/5 dark:from-[#0D121F] dark:to-[#0A0F1A] dark:shadow-black/40">
                 <CardHeader className="border-b border-border/60 bg-primary/5 dark:bg-primary/10">
-                    <div className="flex items-start justify-between gap-3">
-                        <div>
-                            <CardTitle className="flex items-center gap-2 text-lg">
-                                {isEditMode ? (
-                                    <PencilIcon className="size-4 text-primary" />
-                                ) : (
-                                    <SparklesIcon className="size-4 text-primary" />
-                                )}
-                                {isEditMode
-                                    ? "Edit team member"
-                                    : "Add team member"}
-                            </CardTitle>
-                            <CardDescription className="mt-1.5">
-                                {isEditMode
-                                    ? `Updating ${editing.name} for the marketing site roster.`
-                                    : "Public homepage profile only. Create login accounts on Staff."}
-                            </CardDescription>
-                        </div>
-                        <Badge variant="secondary" className="shrink-0">
-                            {isEditMode ? "Editing" : "New"}
-                        </Badge>
-                    </div>
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                        {isEditMode ? (
+                            <PencilIcon className="size-4 text-primary" />
+                        ) : (
+                            <SparklesIcon className="size-4 text-primary" />
+                        )}
+                        {isEditMode ? "Edit member" : "Quick add"}
+                    </CardTitle>
+                    <CardDescription className="mt-1.5">
+                            {isEditMode
+                                ? "Update name, designation, photo, username, or password. Mark as team lead for admin access."
+                                : "Name, designation, photo, username & password — staff login auto-created. Lead = admin."}
+                    </CardDescription>
                 </CardHeader>
                 <CardContent className="pt-5">
-                    <form className="grid gap-5" onSubmit={handleSubmit}>
-                        <div className="rounded-2xl border border-dashed border-primary/25 bg-primary/5 p-4 dark:bg-primary/10">
-                            <div className="flex items-start gap-4">
-                                <button
-                                    type="button"
-                                    onClick={() => fileRef.current?.click()}
-                                    className="group relative size-28 shrink-0 overflow-hidden rounded-2xl border border-border/80 bg-muted shadow-inner transition hover:border-primary/50"
-                                >
-                                    {currentPhotoSrc ? (
-                                        <img
-                                            src={currentPhotoSrc}
-                                            alt={
-                                                photoAlt || name || "Team photo"
-                                            }
-                                            title={
-                                                photoTitle || name || undefined
-                                            }
-                                            className="size-full object-cover transition duration-300 group-hover:scale-105"
-                                        />
-                                    ) : (
-                                        <div className="flex size-full flex-col items-center justify-center gap-1 text-muted-foreground">
-                                            <CameraIcon className="size-5 opacity-70" />
-                                            <span className="text-[10px] font-medium uppercase tracking-wide">
-                                                Photo
-                                            </span>
-                                        </div>
-                                    )}
-                                    <span className="absolute inset-x-0 bottom-0 bg-black/55 py-1 text-center text-[10px] font-medium text-white opacity-0 transition group-hover:opacity-100">
-                                        Change
+                    <form className="grid gap-4" onSubmit={handleSubmit}>
+                        <button
+                            type="button"
+                            onClick={() => fileRef.current?.click()}
+                            className="group relative mx-auto flex size-28 overflow-hidden rounded-2xl border border-dashed border-primary/30 bg-primary/5 shadow-inner transition hover:border-primary/50 dark:bg-primary/10"
+                        >
+                            {currentPhotoSrc ? (
+                                <img
+                                    src={currentPhotoSrc}
+                                    alt={name || "Team photo"}
+                                    className="size-full object-cover transition duration-300 group-hover:scale-105"
+                                />
+                            ) : (
+                                <div className="flex size-full flex-col items-center justify-center gap-1 text-muted-foreground">
+                                    <CameraIcon className="size-5 opacity-70" />
+                                    <span className="text-[10px] font-medium uppercase tracking-wide">
+                                        Photo
                                     </span>
-                                </button>
-                                <div className="min-w-0 flex-1 space-y-2.5">
-                                    <p className="text-sm font-semibold">
-                                        Profile photo
-                                    </p>
-                                    <p className="text-xs leading-relaxed text-muted-foreground">
-                                        {photoFile
-                                            ? `Selected: ${photoFile.name}`
-                                            : isEditMode
-                                              ? `Current image kept until you change it. Ideal ${IMAGE_SPECS.teamPhoto.width}×${IMAGE_SPECS.teamPhoto.height}px.`
-                                              : formatImageHint(
-                                                    IMAGE_SPECS.teamPhoto,
-                                                )}
-                                    </p>
-                                    <div className="flex flex-wrap gap-2">
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() =>
-                                                fileRef.current?.click()
-                                            }
-                                        >
-                                            <CameraIcon />
-                                            {isEditMode || photoFile
-                                                ? "Change photo"
-                                                : "Choose photo"}
-                                        </Button>
-                                        {photoFile ? (
-                                            <Button
-                                                type="button"
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={clearPhotoSelection}
-                                            >
-                                                <XIcon />
-                                                Undo
-                                            </Button>
-                                        ) : null}
-                                    </div>
                                 </div>
-                            </div>
-                            <input
-                                id="teamPhoto"
-                                ref={fileRef}
-                                type="file"
-                                accept="image/jpeg,image/png,image/webp,image/gif"
-                                className="sr-only"
-                                onChange={(e) =>
-                                    onPickPhoto(e.target.files?.[0])
-                                }
+                            )}
+                        </button>
+                        <p className="text-center text-xs text-muted-foreground">
+                            {photoFile
+                                ? photoFile.name
+                                : isEditMode
+                                  ? "Click photo to change"
+                                  : formatImageHint(IMAGE_SPECS.teamPhoto)}
+                        </p>
+                        <input
+                            ref={fileRef}
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp,image/gif"
+                            className="sr-only"
+                            onChange={(e) => onPickPhoto(e.target.files?.[0])}
+                        />
+
+                        <div className="grid gap-2">
+                            <Label htmlFor="teamName">Name</Label>
+                            <Input
+                                id="teamName"
+                                required
+                                value={name}
+                                onChange={(e) => {
+                                    const next = e.target.value;
+                                    setName(next);
+                                    if (
+                                        !isEditMode &&
+                                        (!username ||
+                                            username ===
+                                                usernameFromName(name))
+                                    ) {
+                                        const suggestion =
+                                            usernameFromName(next);
+                                        if (suggestion.length >= 3) {
+                                            setUsername(suggestion);
+                                        }
+                                    }
+                                }}
+                                placeholder="Abdullah Pitul"
                             />
                         </div>
 
-                        <section className="grid gap-3">
-                            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                                <UsersRoundIcon className="size-3.5" />
-                                Profile
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="teamName">Full name</Label>
-                                <Input
-                                    id="teamName"
-                                    required
-                                    value={name}
-                                    onChange={(e) => setName(e.target.value)}
-                                    placeholder="Abdullah Pitul"
-                                />
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="teamRole">Role / title</Label>
-                                <Input
-                                    id="teamRole"
-                                    required
-                                    value={role}
-                                    onChange={(e) => setRole(e.target.value)}
-                                    placeholder="Founder & 3D Product Designer"
-                                />
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="teamTagline">
-                                    Tagline (optional)
-                                </Label>
-                                <Input
-                                    id="teamTagline"
-                                    value={tagline}
-                                    onChange={(e) => setTagline(e.target.value)}
-                                    placeholder="Shown on lead card"
-                                />
-                            </div>
-                        </section>
+                        <div className="grid gap-2">
+                            <Label htmlFor="teamDesignation">
+                                Designation
+                            </Label>
+                            <Input
+                                id="teamDesignation"
+                                required
+                                value={designation}
+                                onChange={(e) =>
+                                    setDesignation(e.target.value)
+                                }
+                                placeholder="Founder & 3D Product Designer"
+                            />
+                        </div>
 
-                        <section className="grid gap-3">
-                            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                                SEO image
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="photoTitle">Image title</Label>
-                                <Input
-                                    id="photoTitle"
-                                    value={photoTitle}
-                                    onChange={(e) =>
-                                        setPhotoTitle(e.target.value)
-                                    }
-                                    placeholder="e.g. Abdullah Pitul — Founder"
-                                />
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="photoAlt">
-                                    Image description / alt
-                                </Label>
-                                <Input
-                                    id="photoAlt"
-                                    value={photoAlt}
-                                    onChange={(e) =>
-                                        setPhotoAlt(e.target.value)
-                                    }
-                                    placeholder="e.g. Abdullah Pitul, Founder & 3D Product Designer"
-                                />
-                            </div>
-                        </section>
-
-                        <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-border/70 bg-background/60 px-3 py-2.5 text-sm transition hover:border-primary/40">
+                        <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border/70 bg-muted/30 px-3 py-3">
                             <input
                                 type="checkbox"
+                                className="mt-1 size-4 rounded border-border"
                                 checked={isLead}
                                 onChange={(e) => setIsLead(e.target.checked)}
-                                className="size-4 rounded border"
                             />
-                            <span>
-                                <span className="font-medium">
-                                    Mark as lead / founder card
+                            <span className="min-w-0 space-y-0.5">
+                                <span className="block text-sm font-medium">
+                                    Team lead
                                 </span>
-                                <span className="mt-0.5 block text-xs text-muted-foreground">
-                                    Highlights this member on the marketing
-                                    site.
+                                <span className="block text-xs text-muted-foreground">
+                                    Lead gets an admin dashboard login. Other
+                                    members stay as employer (staff only).
                                 </span>
                             </span>
                         </label>
+
+                        <div className="grid gap-2">
+                            <Label htmlFor="teamUsername">
+                                <span className="inline-flex items-center gap-1.5">
+                                    <AtSignIcon className="size-3.5" />
+                                    Username
+                                </span>
+                            </Label>
+                            <Input
+                                id="teamUsername"
+                                required
+                                value={username}
+                                onChange={(e) =>
+                                    setUsername(
+                                        e.target.value
+                                            .toLowerCase()
+                                            .replace(/\s+/g, ""),
+                                    )
+                                }
+                                placeholder="pitul"
+                                autoComplete="off"
+                            />
+                        </div>
+
+                        <div className="grid gap-2">
+                            <div className="flex items-center justify-between gap-2">
+                                <Label htmlFor="teamPassword">
+                                    <span className="inline-flex items-center gap-1.5">
+                                        <KeyRoundIcon className="size-3.5" />
+                                        {isEditMode
+                                            ? "New password (optional)"
+                                            : "Password"}
+                                    </span>
+                                </Label>
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 px-2 text-xs"
+                                    onClick={() => void fillGeneratedPassword()}
+                                >
+                                    <DicesIcon className="size-3.5" />
+                                    Generate
+                                </Button>
+                            </div>
+                            {isEditMode && editing?.username ? (
+                                <Input
+                                    id="teamCurrentPassword"
+                                    type="password"
+                                    value={currentPassword}
+                                    onChange={(e) =>
+                                        setCurrentPassword(e.target.value)
+                                    }
+                                    placeholder="Your admin password (to confirm)"
+                                    autoComplete="current-password"
+                                />
+                            ) : null}
+                            <div className="relative">
+                                <Input
+                                    id="teamPassword"
+                                    type={showPassword ? "text" : "password"}
+                                    required={!isEditMode}
+                                    value={password}
+                                    onChange={(e) =>
+                                        setPassword(e.target.value)
+                                    }
+                                    placeholder={
+                                        isEditMode
+                                            ? "Leave blank to keep current"
+                                            : "Or click Generate"
+                                    }
+                                    autoComplete="new-password"
+                                    className="pr-10"
+                                />
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon-sm"
+                                    className="absolute top-1/2 right-1 -translate-y-1/2"
+                                    onClick={() => setShowPassword((v) => !v)}
+                                    aria-label={
+                                        showPassword
+                                            ? "Hide password"
+                                            : "Show password"
+                                    }
+                                >
+                                    {showPassword ? (
+                                        <EyeOffIcon />
+                                    ) : (
+                                        <EyeIcon />
+                                    )}
+                                </Button>
+                            </div>
+                            {isEditMode && editing?.username ? (
+                                <p className="text-xs text-muted-foreground">
+                                    To change their password, confirm with your
+                                    admin password, then enter or generate a new
+                                    one.
+                                </p>
+                            ) : null}
+                        </div>
 
                         <div className="flex flex-wrap gap-2 pt-1">
                             <Button
@@ -444,17 +526,17 @@ function TeamManager() {
                                 {saving ? (
                                     <>
                                         <Loader2Icon className="animate-spin" />
-                                        {isEditMode ? "Saving…" : "Adding…"}
+                                        {isEditMode ? "Saving…" : "Creating…"}
                                     </>
                                 ) : isEditMode ? (
                                     <>
                                         <PencilIcon />
-                                        Save changes
+                                        Save
                                     </>
                                 ) : (
                                     <>
                                         <PlusIcon />
-                                        Add member
+                                        Create
                                     </>
                                 )}
                             </Button>
@@ -475,23 +557,16 @@ function TeamManager() {
             </Card>
 
             <Card className="overflow-hidden border-border/70 shadow-xl shadow-slate-900/5 dark:shadow-black/40">
-                <CardHeader className="border-b border-border/60 bg-gradient-to-r from-slate-50 to-transparent dark:from-white/5">
-                    <div className="flex flex-wrap items-end justify-between gap-3">
-                        <div>
-                            <CardTitle className="flex items-center gap-2 text-lg">
-                                <UsersRoundIcon className="size-4 text-primary" />
-                                Team roster
-                            </CardTitle>
-                            <CardDescription className="mt-1.5">
-                                {members.length} member
-                                {members.length === 1 ? "" : "s"} on the
-                                marketing site.
-                            </CardDescription>
-                        </div>
-                        <Badge variant="outline">
-                            {members.filter((m) => m.isLead).length} lead
-                        </Badge>
-                    </div>
+                <CardHeader className="border-b border-border/60">
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                        <UsersRoundIcon className="size-4 text-primary" />
+                        Team roster
+                    </CardTitle>
+                    <CardDescription>
+                        {members.length} member
+                        {members.length === 1 ? "" : "s"} — profile + staff
+                        login
+                    </CardDescription>
                 </CardHeader>
                 <CardContent className="pt-5">
                     {error ? (
@@ -504,16 +579,16 @@ function TeamManager() {
                     {loading ? (
                         <div className="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground">
                             <Loader2Icon className="size-4 animate-spin" />
-                            Loading roster…
+                            Loading…
                         </div>
                     ) : members.length === 0 ? (
                         <div className="rounded-2xl border border-dashed py-14 text-center">
                             <UsersRoundIcon className="mx-auto mb-3 size-8 text-muted-foreground/50" />
                             <p className="text-sm font-medium">
-                                No team members yet
+                                No members yet
                             </p>
                             <p className="mt-1 text-xs text-muted-foreground">
-                                Add the first public profile here.
+                                Quick-add with name, photo, username & password.
                             </p>
                         </div>
                     ) : (
@@ -523,7 +598,7 @@ function TeamManager() {
                                 return (
                                     <li
                                         key={member.id}
-                                        className={`group relative overflow-hidden rounded-2xl border p-4 transition duration-200 ${
+                                        className={`rounded-2xl border p-4 transition ${
                                             selected
                                                 ? "border-primary/50 bg-primary/5 shadow-md shadow-primary/10"
                                                 : "border-border/70 bg-card hover:border-primary/30 hover:shadow-md"
@@ -536,10 +611,7 @@ function TeamManager() {
                                                         src={mediaUrl(
                                                             member.photoUrl,
                                                         )}
-                                                        alt={
-                                                            member.photoAlt ||
-                                                            member.name
-                                                        }
+                                                        alt={member.name}
                                                         className="rounded-xl object-cover"
                                                     />
                                                 ) : null}
@@ -548,19 +620,30 @@ function TeamManager() {
                                                 </AvatarFallback>
                                             </Avatar>
                                             <div className="min-w-0 flex-1">
-                                                <div className="flex flex-wrap items-center gap-1.5">
-                                                    <p className="truncate font-semibold tracking-tight">
-                                                        {member.name}
-                                                    </p>
+                                                <p className="truncate font-semibold tracking-tight">
+                                                    {member.name}
                                                     {member.isLead ? (
-                                                        <Badge className="h-5">
-                                                            Lead
+                                                        <Badge className="ml-2 align-middle text-[10px]">
+                                                            Lead · Admin
                                                         </Badge>
                                                     ) : null}
-                                                </div>
+                                                </p>
                                                 <p className="mt-0.5 line-clamp-2 text-sm text-muted-foreground">
                                                     {member.role}
                                                 </p>
+                                                {member.username ? (
+                                                    <p className="mt-1 flex items-center gap-1 truncate text-xs text-muted-foreground">
+                                                        <AtSignIcon className="size-3 shrink-0" />
+                                                        {member.username}
+                                                    </p>
+                                                ) : (
+                                                    <Badge
+                                                        variant="outline"
+                                                        className="mt-1 text-amber-600 dark:text-amber-400"
+                                                    >
+                                                        No login
+                                                    </Badge>
+                                                )}
                                             </div>
                                         </div>
                                         <div className="mt-4 flex flex-wrap gap-2">
@@ -609,8 +692,12 @@ function TeamManager() {
                     if (!open && deletingId === null) setPendingDelete(null);
                 }}
                 title={`Delete ${pendingDelete?.name ?? "member"}?`}
-                description={`Remove ${pendingDelete?.name ?? "this member"} from the public team roster. This cannot be undone.`}
-                confirmLabel="Delete member"
+                description={
+                    pendingDelete?.username
+                        ? `Removes the public profile and staff login (@${pendingDelete.username}).`
+                        : `Remove ${pendingDelete?.name ?? "this member"} from the roster.`
+                }
+                confirmLabel="Delete"
                 loading={deletingId !== null}
                 onConfirm={() => {
                     if (pendingDelete) void handleDelete(pendingDelete);
@@ -625,7 +712,7 @@ export default function AdminTeamPage() {
         <DashboardLayout
             expectedRole="admin"
             title="Team members"
-            description="Public homepage roster — create staff logins on Staff"
+            description="Fast create: name, designation, photo, username & password"
         >
             {() => <TeamManager />}
         </DashboardLayout>

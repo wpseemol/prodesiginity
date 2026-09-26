@@ -20,6 +20,8 @@ export interface TeamMember {
     role: string;
     /** One extra line. Only rendered on the lead card. */
     tagline?: string;
+    /** Longer bio from staff public profile. */
+    description?: string;
     photo: string;
     lead?: boolean;
 }

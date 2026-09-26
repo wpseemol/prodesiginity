@@ -1,9 +1,6 @@
-import { useEffect, useState, type ComponentType, type FormEvent } from "react";
+import { useEffect, useState, type ComponentType } from "react";
 import { Link } from "react-router-dom";
 import {
-  DicesIcon,
-  EyeIcon,
-  EyeOffIcon,
   Loader2Icon,
   ShieldCheckIcon,
   UserPlusIcon,
@@ -15,7 +12,6 @@ import {
   SettingsIcon,
   ActivityIcon,
 } from "lucide-react";
-import { toast } from "sonner";
 import { mediaUrl } from "@/config";
 import { apiFetch } from "@/lib/api";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
@@ -30,15 +26,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -100,24 +87,6 @@ function staffInitials(name: string) {
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase() ?? "")
     .join("");
-}
-
-/** Meets backend password rules: 8+, upper, lower, digit, special. */
-function generateStaffPassword(length = 12): string {
-  const upper = "ABCDEFGHJKLMNPQRSTUVWXYZ";
-  const lower = "abcdefghijkmnopqrstuvwxyz";
-  const digits = "23456789";
-  const special = "@$!%*?&#_-";
-  const all = upper + lower + digits + special;
-  const pick = (pool: string) =>
-    pool[Math.floor(Math.random() * pool.length)]!;
-  const chars = [pick(upper), pick(lower), pick(digits), pick(special)];
-  for (let i = chars.length; i < length; i += 1) chars.push(pick(all));
-  for (let i = chars.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [chars[i], chars[j]] = [chars[j]!, chars[i]!];
-  }
-  return chars.join("");
 }
 
 function StatCard({
@@ -544,16 +513,11 @@ function StaffTable({
 
 function AdminStaffManager() {
   const [staff, setStaff] = useState<StaffUser[]>([]);
-  const [fullName, setFullName] = useState("");
-  const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [role, setRole] = useState<"admin" | "employer">("employer");
-  const [status, setStatus] = useState<"idle" | "loading">("idle");
   const [listError, setListError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const loadStaff = async () => {
+    setLoading(true);
     try {
       const res = await apiFetch("/admin/users");
       const data = await res.json();
@@ -569,6 +533,8 @@ function AdminStaffManager() {
       setStaff(data.users ?? []);
     } catch {
       setListError("Could not reach the server.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -576,172 +542,28 @@ function AdminStaffManager() {
     void loadStaff();
   }, []);
 
-  const handleCreate = async (e: FormEvent) => {
-    e.preventDefault();
-    setStatus("loading");
-
-    try {
-      const res = await apiFetch("/admin/users", {
-        method: "POST",
-        body: JSON.stringify({ fullName, username, email, password, role }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        toast.error(
-          typeof data.message === "string"
-            ? data.message
-            : "Failed to create account.",
-        );
-        setStatus("idle");
-        return;
-      }
-
-      toast.success(
-        typeof data.message === "string"
-          ? data.message
-          : "Account created successfully.",
-      );
-      setFullName("");
-      setUsername("");
-      setEmail("");
-      setPassword("");
-      setShowPassword(false);
-      setRole("employer");
-      await loadStaff();
-    } catch {
-      toast.error("Could not reach the server. Please try again.");
-    } finally {
-      setStatus("idle");
-    }
-  };
-
-  const fillGeneratedPassword = () => {
-    setPassword(generateStaffPassword());
-    setShowPassword(true);
-    toast.success("Password generated — copy it before creating the account.");
-  };
-
   return (
-    <div className="grid gap-6 xl:grid-cols-[360px_1fr]">
+    <div className="grid gap-6">
       <Card>
-        <CardHeader>
-          <CardTitle>Create staff account</CardTitle>
-          <CardDescription>
-            Login for admin or employee dashboard access (username + email +
-            password).
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form className="grid gap-4" onSubmit={handleCreate}>
-            <div className="grid gap-2">
-              <Label htmlFor="fullName">Full name</Label>
-              <Input
-                id="fullName"
-                required
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder="Jane Doe"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="username">Username</Label>
-              <Input
-                id="username"
-                required
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="jane.doe"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="staffEmail">Email</Label>
-              <Input
-                id="staffEmail"
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@prodesignity.com"
-              />
-            </div>
-            <div className="grid gap-2">
-              <div className="flex items-center justify-between gap-2">
-                <Label htmlFor="staffPassword">Password</Label>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 px-2 text-xs"
-                  onClick={fillGeneratedPassword}
-                >
-                  <DicesIcon className="size-3.5" />
-                  Generate
-                </Button>
-              </div>
-              <div className="relative">
-                <Input
-                  id="staffPassword"
-                  type={showPassword ? "text" : "password"}
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Min 8 chars, upper, lower, number, symbol"
-                  className="pr-10"
-                  autoComplete="new-password"
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  className="absolute top-1/2 right-1 -translate-y-1/2"
-                  onClick={() => setShowPassword((v) => !v)}
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                >
-                  {showPassword ? <EyeOffIcon /> : <EyeIcon />}
-                </Button>
-              </div>
-            </div>
-            <div className="grid gap-2">
-              <Label>Role</Label>
-              <Select
-                value={role}
-                onValueChange={(value) => {
-                  if (value === "admin" || value === "employer") {
-                    setRole(value);
-                  }
-                }}
+        <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3 space-y-0">
+          <div className="space-y-1">
+            <CardTitle>Staff accounts</CardTitle>
+            <CardDescription>
+              Real logins in the system. Adding someone on{" "}
+              <Link
+                to="/admin/team"
+                className="font-medium text-primary underline-offset-4 hover:underline"
               >
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="employer">Employee</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <Button type="submit" disabled={status === "loading"}>
-              {status === "loading" ? (
-                <>
-                  <Loader2Icon className="animate-spin" />
-                  Creating…
-                </>
-              ) : (
-                "Create account"
-              )}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Staff accounts</CardTitle>
-          <CardDescription>
-            Admins and employees currently in the system.
-          </CardDescription>
+                Team members
+              </Link>{" "}
+              automatically creates their staff account (username &amp;
+              password).
+            </CardDescription>
+          </div>
+          <Button render={<Link to="/admin/team" />} size="sm">
+            <UserPlusIcon />
+            Add on Team
+          </Button>
         </CardHeader>
         <CardContent>
           {listError ? (
@@ -750,7 +572,14 @@ function AdminStaffManager() {
               <AlertDescription>{listError}</AlertDescription>
             </Alert>
           ) : null}
-          <StaffTable staff={staff} emptyLabel="No staff accounts yet." />
+          {loading ? (
+            <div className="flex items-center gap-2 py-10 text-sm text-muted-foreground">
+              <Loader2Icon className="size-4 animate-spin" />
+              Loading staff…
+            </div>
+          ) : (
+            <StaffTable staff={staff} emptyLabel="No staff accounts yet." />
+          )}
         </CardContent>
       </Card>
     </div>
@@ -774,7 +603,7 @@ export function AdminStaffPage() {
     <DashboardLayout
       expectedRole="admin"
       title="Staff"
-      description="Create login accounts with email & password"
+      description="Live accounts — auto-created when you add Team members"
     >
       {() => <AdminStaffManager />}
     </DashboardLayout>

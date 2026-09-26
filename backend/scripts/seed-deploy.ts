@@ -5,12 +5,13 @@
  *   npm run db:seed:deploy
  *
  * Seeds:
- *   - admin + employee users (login at dashboard.prodesignity.com)
+ *   - optional admin user (only if SEED_ADMIN_* env vars are set)
  *   - homepage CMS sections
  *   - team + site settings
  *   - services catalog
  *   - site config / tracking tables
- */
+ *
+ * Staff employee logins are created from Team members in the dashboard./
 import { spawnSync } from "node:child_process";
 
 const steps = [

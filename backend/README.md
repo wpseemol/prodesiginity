@@ -45,12 +45,18 @@ pnpm build:backend
 
 ## Demo users (after seed)
 
-Login at [dashboard.prodesignity.com](https://dashboard.prodesignity.com/login):
+Seed no longer creates demo accounts.
 
-- Admin: `admin` / `DemoAdmin1!`
-- Employee: `employee` / `DemoEmployee1!`
+To create a real admin via seed, set in `.env` before `pnpm run db:seed`:
 
-Override with `SEED_ADMIN_*` / `SEED_EMPLOYEE_*` in `.env` before seeding production.
+```
+SEED_ADMIN_NAME=Your Name
+SEED_ADMIN_USERNAME=yourname
+SEED_ADMIN_EMAIL=you@prodesignity.com
+SEED_ADMIN_PASSWORD=YourStrongPass1!
+```
+
+Or add people on **Team members** in the dashboard — each create auto-makes a staff login (username + password).
 
 ## Production / VPS (Hostinger)
 

@@ -1,5 +1,12 @@
-import { BriefcaseIcon, CheckCircle2Icon } from "lucide-react";
+import { Link } from "react-router-dom";
+import {
+  ArrowRightIcon,
+  BriefcaseIcon,
+  CheckCircle2Icon,
+  UserRoundIcon,
+} from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -12,8 +19,8 @@ export default function StaffHomePage() {
   return (
     <DashboardLayout
       expectedRole="employer"
-      title="Workspace"
-      description="Employee dashboard"
+      title="Staff dashboard"
+      description="Your personal workspace"
     >
       {({ user }) => (
         <div className="grid gap-6">
@@ -22,8 +29,8 @@ export default function StaffHomePage() {
               Welcome, {user.fullName}
             </h2>
             <p className="text-sm text-muted-foreground">
-              Your staff workspace is ready. Tools will appear here as they are
-              built.
+              Manage your public team profile — photo, name, and description.
+              Designation is controlled by an admin.
             </p>
           </div>
 
@@ -35,9 +42,9 @@ export default function StaffHomePage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-semibold tracking-tight">
-                  Employee
+                  Team member
                 </div>
-                <p className="text-xs text-muted-foreground">{user.email}</p>
+                <p className="text-xs text-muted-foreground">@{user.username}</p>
               </CardContent>
             </Card>
 
@@ -57,18 +64,23 @@ export default function StaffHomePage() {
             </Card>
           </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Getting started</CardTitle>
-              <CardDescription>
-                This portal will grow with staffing tools, assignments, and
-                project workflows.
-              </CardDescription>
+          <Card className="border-primary/25 bg-primary/5">
+            <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-4 space-y-0">
+              <div className="space-y-1">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <UserRoundIcon className="size-4 text-primary" />
+                  Public team profile
+                </CardTitle>
+                <CardDescription>
+                  Upload your photo and write your description for the website
+                  roster. Designation is set by an admin.
+                </CardDescription>
+              </div>
+              <Button render={<Link to="/employee/public-profile" />} size="sm">
+                Edit profile
+                <ArrowRightIcon />
+              </Button>
             </CardHeader>
-            <CardContent className="text-sm text-muted-foreground">
-              For now, confirm your sign-in works and check back as new modules
-              are added for the employee role.
-            </CardContent>
           </Card>
         </div>
       )}

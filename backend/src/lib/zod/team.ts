@@ -1,10 +1,14 @@
 import { z } from "zod";
 import { editableSiteConfigSchema } from "./siteConfig.js";
+import { passwordSchema, usernameSchema } from "./auth.js";
 
 export const createTeamMemberSchema = z.object({
   name: z.string().trim().min(2).max(120),
   role: z.string().trim().min(2).max(160),
   tagline: z.string().trim().max(255).optional().or(z.literal("")),
+  description: z.string().trim().max(4000).optional().or(z.literal("")),
+  username: usernameSchema,
+  password: passwordSchema,
   photoUrl: z.string().trim().max(512).optional(),
   photoAlt: z.string().trim().max(255).optional().or(z.literal("")),
   photoTitle: z.string().trim().max(160).optional().or(z.literal("")),
@@ -25,14 +29,35 @@ export const updateTeamMemberSchema = z.object({
   name: z.string().trim().min(2).max(120).optional(),
   role: z.string().trim().min(2).max(160).optional(),
   tagline: z.string().trim().max(255).optional().or(z.literal("")),
+  description: z.string().trim().max(4000).optional().or(z.literal("")),
+  username: usernameSchema.optional(),
+  /** Optional: set a new password for the linked staff login. */
+  password: passwordSchema.optional(),
+  /** Required with password when the member already has a login. */
+  currentPassword: z.string().min(1).optional(),
   photoUrl: z.string().trim().max(512).optional(),
   photoAlt: z.string().trim().max(255).optional().or(z.literal("")),
   photoTitle: z.string().trim().max(160).optional().or(z.literal("")),
   isLead: z
-    .union([z.boolean(), z.literal("true"), z.literal("false"), z.literal("1"), z.literal("0")])
+    .union([
+      z.boolean(),
+      z.literal("true"),
+      z.literal("false"),
+      z.literal("1"),
+      z.literal("0"),
+    ])
     .optional()
     .transform((v) => v === true || v === "true" || v === "1"),
   sortOrder: z.coerce.number().int().min(0).max(9999).optional(),
+});
+
+/** Staff self-edit: name / photo / bio only — designation (role) is admin-only. */
+export const updateMyTeamProfileSchema = z.object({
+  name: z.string().trim().min(2).max(120).optional(),
+  tagline: z.string().trim().max(255).optional().or(z.literal("")),
+  description: z.string().trim().max(4000).optional().or(z.literal("")),
+  photoAlt: z.string().trim().max(255).optional().or(z.literal("")),
+  photoTitle: z.string().trim().max(160).optional().or(z.literal("")),
 });
 
 const optionalId = z

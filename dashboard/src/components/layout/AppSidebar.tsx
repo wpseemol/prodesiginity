@@ -66,8 +66,13 @@ export function AppSidebar({ user, onLogout }: AppSidebarProps) {
         { title: "Profile", to: profilePath, icon: UserRoundIcon },
       ]
     : [
-        { title: "Workspace", to: "/employee", icon: BriefcaseIcon },
-        { title: "Profile", to: profilePath, icon: UserRoundIcon },
+        { title: "Dashboard", to: "/employee", icon: BriefcaseIcon },
+        {
+          title: "Public profile",
+          to: "/employee/public-profile",
+          icon: UsersRoundIcon,
+        },
+        { title: "Account", to: profilePath, icon: UserRoundIcon },
       ];
 
   return (

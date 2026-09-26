@@ -308,9 +308,9 @@ function TeamCard({
                             {member.role}
                         </p>
 
-                        {member.tagline ? (
-                            <p className="mt-2 text-[11px] sm:text-xs font-medium text-slate-500 dark:text-slate-400 leading-relaxed">
-                                {member.tagline}
+                        {member.description || member.tagline ? (
+                            <p className="mt-2 text-[11px] sm:text-xs font-medium text-slate-500 dark:text-slate-400 leading-relaxed line-clamp-3">
+                                {member.description || member.tagline}
                             </p>
                         ) : null}
                     </div>
@@ -329,6 +329,12 @@ function TeamCard({
                 <p className="mt-1.5 text-[11px] sm:text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
                     {member.role}
                 </p>
+
+                {member.description || member.tagline ? (
+                    <p className="mt-2 text-[11px] sm:text-xs font-medium text-slate-500 dark:text-slate-400 leading-relaxed line-clamp-3">
+                        {member.description || member.tagline}
+                    </p>
+                ) : null}
             </div>
         </div>
     );

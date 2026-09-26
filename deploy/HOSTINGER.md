@@ -131,27 +131,16 @@ One-time (or after empty DB), over SSH in `BACKEND_REMOTE_DIR`:
 ```bash
 cd "$HOME/domains/api.prodesignity.com/nodejs"
 
-# optional: set stronger passwords before seeding
-# nano .env  → SEED_ADMIN_PASSWORD=... SEED_EMPLOYEE_PASSWORD=...
+# optional: create a real admin on seed
+# nano .env  → SEED_ADMIN_USERNAME=... SEED_ADMIN_EMAIL=... SEED_ADMIN_PASSWORD=...
 
 npm run db:setup:deploy
 # or, if schema already pushed:
 # npm run db:seed:deploy
 ```
 
-This creates:
-
-- Admin / employee accounts for `https://dashboard.prodesignity.com/login`
-- Homepage CMS sections, team, site settings, services, tracking tables
-
-Default demo logins (unless overridden by `SEED_*`):
-
-| Role     | Username   | Password         |
-| -------- | ---------- | ---------------- |
-| Admin    | `admin`    | `DemoAdmin1!`    |
-| Employee | `employee` | `DemoEmployee1!` |
-
-Change passwords after first login.
+This seeds homepage CMS (and an admin only if `SEED_ADMIN_*` is set).  
+Staff logins are created from the dashboard **Team members** page (auto staff account).
 
 ---
 

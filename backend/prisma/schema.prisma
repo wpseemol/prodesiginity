@@ -75,7 +75,9 @@ model TeamMember {
   slug       String   @unique @db.VarChar(80)
   name       String   @db.VarChar(120)
   role       String   @db.VarChar(160)
-  tagline    String?  @db.VarChar(255)
+  tagline    String?  @db.Text
+  /** Longer public bio shown on marketing site (staff can edit). */
+  description String? @db.Text
   /** Login email shown in admin; linked staff user when set. */
   email      String?  @unique @db.VarChar(254)
   photoUrl   String   @map("photo_url") @db.VarChar(512)

@@ -14,6 +14,7 @@ import AdminServicesPage from "@/pages/AdminServicesPage";
 import LoginPage from "@/pages/LoginPage";
 import ProfilePage from "@/pages/ProfilePage";
 import StaffHomePage from "@/pages/StaffHomePage";
+import StaffPublicProfilePage from "@/pages/StaffPublicProfilePage";
 
 export default function App() {
   return (
@@ -41,6 +42,10 @@ export default function App() {
                 element={<ProfilePage expectedRole="admin" />}
               />
               <Route path="/employee" element={<StaffHomePage />} />
+              <Route
+                path="/employee/public-profile"
+                element={<StaffPublicProfilePage />}
+              />
               <Route
                 path="/employee/profile"
                 element={<ProfilePage expectedRole="employer" />}
