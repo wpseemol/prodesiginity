@@ -1,6 +1,13 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { EyeIcon, EyeOffIcon, Loader2Icon } from "lucide-react";
+import {
+  ArrowRightIcon,
+  EyeIcon,
+  EyeOffIcon,
+  Loader2Icon,
+  LockIcon,
+  UserIcon,
+} from "lucide-react";
 import { apiBaseUrl } from "@/config";
 import { setDashboardSession, type DashboardUser } from "@/lib/session";
 import { Button } from "@/components/ui/button";
@@ -97,12 +104,13 @@ export default function LoginForm({
   };
 
   return (
-    <form className="grid gap-5" onSubmit={handleSubmit}>
-      <div className="grid gap-1.5 text-center sm:text-left">
-        <p className="mx-auto inline-flex w-fit items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary sm:mx-0">
+    <form className="grid gap-6" onSubmit={handleSubmit}>
+      <div className="grid gap-2">
+        <p className="inline-flex w-fit items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+          <span className="size-1.5 rounded-full bg-primary" aria-hidden />
           {badgeText}
         </p>
-        <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
+        <h1 className="text-3xl font-bold tracking-tight">{title}</h1>
         <p className="text-sm text-muted-foreground">{subtitle}</p>
       </div>
 
@@ -115,21 +123,26 @@ export default function LoginForm({
 
       <div className="grid gap-2">
         <Label htmlFor="login">Username or email</Label>
-        <Input
-          id="login"
-          type="text"
-          name="login"
-          autoComplete="username"
-          required
-          value={login}
-          onChange={(e) => setLogin(e.target.value)}
-          placeholder="admin or you@prodesignity.com"
-        />
+        <div className="relative">
+          <UserIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            id="login"
+            type="text"
+            name="login"
+            autoComplete="username"
+            required
+            value={login}
+            onChange={(e) => setLogin(e.target.value)}
+            placeholder="admin or you@prodesignity.com"
+            className="h-11 pl-9"
+          />
+        </div>
       </div>
 
       <div className="grid gap-2">
         <Label htmlFor="password">Password</Label>
         <div className="relative">
+          <LockIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             id="password"
             type={showPassword ? "text" : "password"}
@@ -139,7 +152,7 @@ export default function LoginForm({
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Enter your password"
-            className="pr-10"
+            className="h-11 pr-10 pl-9"
           />
           <Button
             type="button"
@@ -154,16 +167,27 @@ export default function LoginForm({
         </div>
       </div>
 
-      <Button type="submit" className="w-full" disabled={status === "loading"}>
+      <Button
+        type="submit"
+        className="group h-11 w-full bg-gradient-to-r from-primary to-brand-violet text-white shadow-lg shadow-primary/25 hover:opacity-95"
+        disabled={status === "loading"}
+      >
         {status === "loading" ? (
           <>
             <Loader2Icon className="animate-spin" />
             Signing in…
           </>
         ) : (
-          "Sign in"
+          <>
+            Sign in
+            <ArrowRightIcon className="transition-transform group-hover:translate-x-0.5" />
+          </>
         )}
       </Button>
+
+      <p className="text-center text-xs text-muted-foreground">
+        Forgot your password? Ask an administrator to reset it.
+      </p>
     </form>
   );
 }
