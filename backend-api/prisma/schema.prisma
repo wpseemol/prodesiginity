@@ -269,6 +269,38 @@ model BlogPost {
   @@map("blog_posts")
 }
 
+/// Open position listed on /careers. Applicants pick it by title, so titles
+/// must stay unique and match the apply form's role rules.
+model CareerJob {
+  id          Int      @id @default(autoincrement())
+  title       String   @db.VarChar(120)
+  department  String   @db.VarChar(80)
+  type        String   @db.VarChar(40)
+  location    String   @db.VarChar(80)
+  experience  String   @db.VarChar(40)
+  salary      String   @db.VarChar(60)
+  description String   @db.Text
+  published   Boolean  @default(true)
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([sortOrder])
+  @@index([published])
+  @@map("career_jobs")
+}
+
+/// Singleton (key = "default") holding the editable /careers page copy.
+model CareersPage {
+  id        Int      @id @default(autoincrement())
+  key       String   @unique @default("default") @db.VarChar(32)
+  content   Json
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("careers_page")
+}
+
 /// Application sent from the /careers form. The CV lives in private storage
 /// (never under /uploads) and is only streamed to admins.
 model JobApplication {

@@ -10,6 +10,7 @@
  *   - team + site settings
  *   - services catalog
  *   - site config / tracking tables
+ *   - careers page copy + job openings
  *
  * Staff employee logins are created from Team members in the dashboard./
 import { spawnSync } from "node:child_process";
@@ -20,6 +21,7 @@ const steps = [
   ["tsx", "scripts/ensure-site-config.ts"],
   ["tsx", "scripts/ensure-services.ts"],
   ["tsx", "scripts/ensure-tracking-settings.ts"],
+  ["tsx", "scripts/ensure-careers-content.ts"],
 ] as const;
 
 function run(cmd: string, args: readonly string[]) {

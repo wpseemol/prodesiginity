@@ -74,7 +74,7 @@ export const siteConfig = {
         eyebrow: "Client login",
         headline: "Sign in to your client account",
         description:
-            "Track 3D renders, packaging drafts, and e-commerce assets for your brand. This portal is for ProDesignity clients — not for admin or employee staff accounts.",
+            "Track 3D renders, packaging drafts, and e-commerce assets for your brand — all in one place, from brief to final delivery.",
         points: [
             "Review project progress and delivery status",
             "Access approved renders, mockups, and source files",

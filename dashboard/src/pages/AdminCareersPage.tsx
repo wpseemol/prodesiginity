@@ -17,6 +17,7 @@ import {
   FileTextIcon,
   GlobeIcon,
   InboxIcon,
+  LayoutTemplateIcon,
   Loader2Icon,
   MailIcon,
   MapPinIcon,
@@ -35,6 +36,8 @@ import { apiFetch } from "@/lib/api";
 import { DEFAULT_SITE_SETTINGS } from "@/lib/brand";
 import { cn } from "@/lib/utils";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { CareersPageEditor } from "@/components/careers/CareersPageEditor";
+import { JobsManager } from "@/components/careers/JobsManager";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -1206,14 +1209,55 @@ function CareersInbox({ user }: { user: DashboardUser }) {
   );
 }
 
+const CAREERS_TABS = [
+  { id: "applications", label: "Applications", icon: InboxIcon },
+  { id: "jobs", label: "Job openings", icon: BriefcaseIcon },
+  { id: "page", label: "Page content", icon: LayoutTemplateIcon },
+] as const;
+type CareersTab = (typeof CAREERS_TABS)[number]["id"];
+
+function CareersAdmin({ user }: { user: DashboardUser }) {
+  const [params, setParams] = useSearchParams();
+  const requested = params.get("tab");
+  const tab: CareersTab = CAREERS_TABS.some((t) => t.id === requested) ? (requested as CareersTab) : "applications";
+
+  const selectTab = (next: CareersTab) => {
+    setParams(next === "applications" ? {} : { tab: next }, { replace: true });
+  };
+
+  return (
+    <div className="grid gap-6">
+      <div className="flex gap-1 overflow-x-auto rounded-xl bg-muted p-1 sm:w-fit">
+        {CAREERS_TABS.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => selectTab(t.id)}
+            aria-pressed={tab === t.id}
+            className={cn(
+              "flex flex-1 shrink-0 items-center justify-center gap-2 rounded-lg px-4 py-1.5 text-sm font-medium whitespace-nowrap transition-colors sm:flex-none",
+              tab === t.id ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            <t.icon className="size-4" />
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === "jobs" ? <JobsManager /> : tab === "page" ? <CareersPageEditor /> : <CareersInbox user={user} />}
+    </div>
+  );
+}
+
 export default function AdminCareersPage() {
   return (
     <DashboardLayout
       expectedRole="admin"
       title="Careers"
-      description="Review applications, read CVs and reply to candidates by email"
+      description="Review applications, manage job openings and edit the careers page"
     >
-      {({ user }) => <CareersInbox user={user} />}
+      {({ user }) => <CareersAdmin user={user} />}
     </DashboardLayout>
   );
 }

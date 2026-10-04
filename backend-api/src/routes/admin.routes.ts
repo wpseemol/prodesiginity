@@ -39,6 +39,14 @@ import {
   updateService,
   updateServiceGroup,
 } from "../controllers/services.controller.js";
+import {
+  createCareerJob,
+  deleteCareerJob,
+  getAdminCareersContent,
+  reorderCareerJobs,
+  updateCareerJob,
+  updateCareersPage,
+} from "../controllers/careersContent.controller.js";
 import { requireAuth, requireAdmin } from "../middleware/auth.js";
 import {
   homepageLogoUpload,
@@ -112,6 +120,13 @@ router.delete("/services/groups/:id", deleteServiceGroup);
 router.post("/services", createService);
 router.put("/services/:id", updateService);
 router.delete("/services/:id", deleteService);
+
+router.get("/careers", getAdminCareersContent);
+router.put("/careers/page", updateCareersPage);
+router.post("/careers/jobs", createCareerJob);
+router.put("/careers/jobs/order", reorderCareerJobs);
+router.put("/careers/jobs/:id", updateCareerJob);
+router.delete("/careers/jobs/:id", deleteCareerJob);
 
 router.get("/settings", getAdminSettings);
 router.put("/settings", updateSiteSettings);

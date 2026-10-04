@@ -3,9 +3,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowUpRight, Loader2, ShieldCheck, UsersRound } from "lucide-react";
+import { Loader2, ShieldCheck } from "lucide-react";
 import { getAuthUser, signInWithGoogle } from "@/lib/auth";
-import { siteConfig, staffLoginUrl } from "@/config/site";
+import { siteConfig } from "@/config/site";
 import GoogleIcon from "@/components/auth/GoogleIcon";
 
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? "";
@@ -30,7 +30,7 @@ function loadGoogleIdentity(): Promise<void> {
     return gsiPromise;
 }
 
-/** Client login: Google only. Staff use the separate dashboard login. */
+/** Client login: Google only. */
 export default function LoginForm() {
     const router = useRouter();
     const buttonRef = useRef<HTMLDivElement>(null);
@@ -153,35 +153,6 @@ export default function LoginForm() {
                 We only receive your name, email and profile photo from Google. No password is
                 stored with us.
             </p>
-
-            <div className="flex items-center gap-3 text-[11px] font-bold tracking-widest text-slate-400 uppercase dark:text-slate-500">
-                <span className="h-px flex-1 bg-border-color dark:bg-dark-border-color" />
-                Staff access
-                <span className="h-px flex-1 bg-border-color dark:bg-dark-border-color" />
-            </div>
-
-            <a
-                href={staffLoginUrl()}
-                className="group flex items-center justify-between gap-3 rounded-2xl border border-border-color px-4 py-3 transition-colors hover:border-primary/40 hover:bg-primary/5 dark:border-dark-border-color"
-            >
-                <span className="flex items-center gap-3">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary dark:text-dark-primary">
-                        <UsersRound className="h-4 w-4" aria-hidden="true" />
-                    </span>
-                    <span>
-                        <span className="block text-sm font-semibold text-slate-800 dark:text-slate-100">
-                            Team member?
-                        </span>
-                        <span className="block text-xs text-slate-500 dark:text-slate-400">
-                            Sign in to the staff portal
-                        </span>
-                    </span>
-                </span>
-                <ArrowUpRight
-                    className="h-4 w-4 shrink-0 text-slate-400 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-primary"
-                    aria-hidden="true"
-                />
-            </a>
 
             <p className="text-center text-xs leading-relaxed text-slate-500 dark:text-slate-400">
                 By continuing you agree to our{" "}

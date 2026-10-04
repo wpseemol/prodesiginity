@@ -4,10 +4,9 @@
  * CV's real file signature.
  */
 import { z } from "zod";
-import { BD_CITIES, OPEN_POSITIONS } from "@/data/careerData";
+import { BD_CITIES } from "@/data/careerData";
 
 export const GENERAL_ROLE = "General Consideration / Other";
-export const CAREER_ROLES = [...OPEN_POSITIONS.map((p) => p.title), GENERAL_ROLE];
 export const EXPERIENCE_LEVELS = ["0-1 years", "1-3 years", "3-5 years", "5+ years"] as const;
 
 export const RESUME_MAX_BYTES = 5 * 1024 * 1024;
@@ -28,10 +27,7 @@ const isFile = (value: unknown): value is File =>
     typeof File !== "undefined" && value instanceof File;
 
 export const careerSchema = z.object({
-    jobTitle: z
-        .string()
-        .min(1, "Select the role you are applying for")
-        .refine((v) => CAREER_ROLES.includes(v), "Select a role from the list"),
+    jobTitle: z.string().min(1, "Select the role you are applying for"),
     name: z
         .string()
         .trim()
@@ -76,6 +72,16 @@ export const careerSchema = z.object({
         }, "Upload a PDF, DOC or DOCX file"),
     consent: z.boolean().refine((v) => v, "Please confirm you agree to the privacy notice"),
 });
+
+/** Openings are managed in the dashboard, so the allowed roles arrive at runtime. */
+export function careerSchemaFor(roles: readonly string[]) {
+    return careerSchema.extend({
+        jobTitle: careerSchema.shape.jobTitle.refine(
+            (v) => v === GENERAL_ROLE || roles.includes(v),
+            "Select a role from the list",
+        ),
+    });
+}
 
 export type CareerFormInput = z.input<typeof careerSchema>;
 export type CareerFormValues = z.output<typeof careerSchema>;

@@ -15,7 +15,7 @@ export const EXPERIENCE_LEVELS = ["0-1 years", "1-3 years", "3-5 years", "5+ yea
 const CONTROL_CHARS = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g;
 const NAME_RE = /^[\p{L}\p{M}][\p{L}\p{M} .'-]*$/u;
 const CITY_RE = /^[\p{L}\p{M}][\p{L}\p{M} .'/()-]*$/u;
-const ROLE_RE = /^[\p{L}\p{N}][\p{L}\p{N} &/().,'+-]*$/u;
+export const ROLE_RE = /^[\p{L}\p{N}][\p{L}\p{N} &/().,'+-]*$/u;
 const PHONE_RE = /^\+?[0-9]{10,15}$/;
 
 const oneLine = (max: number) =>

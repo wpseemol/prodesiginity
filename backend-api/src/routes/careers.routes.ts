@@ -9,11 +9,14 @@ import {
   replyToApplication,
   updateApplication,
 } from "../controllers/careers.controller.js";
+import { getPublicCareersPage } from "../controllers/careersContent.controller.js";
 import { requireAdmin, requireAuth } from "../middleware/auth.js";
 import { careersApplyLimiter, careersReplyLimiter } from "../middleware/rateLimit.js";
 import { careerResumeUpload } from "../middleware/upload.js";
 
 const router = Router();
+
+router.get("/page", getPublicCareersPage);
 
 router.post(
   "/apply",

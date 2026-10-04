@@ -1,4 +1,8 @@
-import { Laptop, DollarSign, Globe, Clock } from "lucide-react";
+/**
+ * Careers page fallback. The live copy and openings come from the dashboard
+ * (Admin → Careers) via lib/careers.ts; this is only used when the API is
+ * unreachable at build time.
+ */
 
 export interface JobPosition {
     id: string;
@@ -12,9 +16,37 @@ export interface JobPosition {
 }
 
 export interface CareerPerk {
-    icon: React.ElementType;
+    /** Name from components/serviceIconRegistry.ts */
+    icon: string;
     title: string;
-    desc: string;
+    description: string;
+}
+
+export interface CareersContent {
+    hero: {
+        badge: string;
+        title: string;
+        highlight: string;
+        subtitle: string;
+        openingsButton: string;
+        applyButton: string;
+    };
+    form: {
+        badge: string;
+        title: string;
+        subtitle: string;
+    };
+    perks: {
+        title: string;
+        subtitle: string;
+        items: CareerPerk[];
+    };
+    openings: {
+        eyebrow: string;
+        title: string;
+        hint: string;
+        emptyText: string;
+    };
 }
 
 export const OPEN_POSITIONS: JobPosition[] = [
@@ -108,28 +140,60 @@ export const OPEN_POSITIONS: JobPosition[] = [
     },
 ];
 
-export const CAREER_PERKS: CareerPerk[] = [
-    {
-        icon: Laptop,
-        title: "100% Remote-First Culture",
-        desc: "Work comfortably from your home setup anywhere across Bangladesh with flexible core hours.",
+export const CAREERS_CONTENT: CareersContent = {
+    hero: {
+        badge: "Careers at ProDesignity",
+        title: "Build the Future of Digital Commerce",
+        highlight: "With Elite Creators",
+        subtitle:
+            "We are looking for exceptional video editors, full-stack Shopify developers, brand strategists, and 3D artists ready to produce world-class creative output.",
+        openingsButton: "Explore Open Positions",
+        applyButton: "Direct Fast Apply",
     },
-    {
-        icon: DollarSign,
-        title: "Competitive USD-Pegged Pay",
-        desc: "Performance bonuses, yearly increments, and timely monthly payouts with zero delays.",
+    form: {
+        badge: "Direct Application",
+        title: "Submit Your Candidacy",
+        subtitle:
+            "Fill out your details and upload your CV. It goes straight to our hiring team, who reply by email.",
     },
-    {
-        icon: Globe,
-        title: "Tier-1 Global Brands",
-        desc: "Direct portfolio exposure building assets for international enterprise clients and funded startups.",
+    perks: {
+        title: "Why You'll Love Working Here",
+        subtitle: "Zero micromanagement, autonomous workflows, and real impact.",
+        items: [
+            {
+                icon: "Laptop",
+                title: "100% Remote-First Culture",
+                description:
+                    "Work comfortably from your home setup anywhere across Bangladesh with flexible core hours.",
+            },
+            {
+                icon: "DollarSign",
+                title: "Competitive USD-Pegged Pay",
+                description:
+                    "Performance bonuses, yearly increments, and timely monthly payouts with zero delays.",
+            },
+            {
+                icon: "Globe",
+                title: "Tier-1 Global Brands",
+                description:
+                    "Direct portfolio exposure building assets for international enterprise clients and funded startups.",
+            },
+            {
+                icon: "Clock",
+                title: "Paid Time Off & Festival Bonuses",
+                description:
+                    "Generous leave policy, Eid festival allowances, and designated mental health wellness days.",
+            },
+        ],
     },
-    {
-        icon: Clock,
-        title: "Paid Time Off & Festival Bonuses",
-        desc: "Generous leave policy, Eid festival allowances, and designated mental health wellness days.",
+    openings: {
+        eyebrow: "Current Opportunities",
+        title: "Open Positions",
+        hint: "Select any role below to prefill the application form.",
+        emptyText:
+            "We have no open roles right now, but we always want to meet great people. Send a general application and we will keep your CV on file.",
     },
-];
+};
 
 export const BD_CITIES = [
     "Dhaka",

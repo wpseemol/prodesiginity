@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type DragEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -30,20 +30,22 @@ import {
     FormMessage,
 } from "@/components/ui/form";
 import { apiBaseUrl } from "@/config/api";
-import { BD_CITIES, OPEN_POSITIONS } from "@/data/careerData";
+import { BD_CITIES, type CareersContent, type JobPosition } from "@/data/careerData";
 import {
     CAREER_DEFAULTS,
     COVER_MAX,
     EXPERIENCE_LEVELS,
     GENERAL_ROLE,
     RESUME_ACCEPT,
-    careerSchema,
+    careerSchemaFor,
     type CareerFormInput,
     type CareerFormValues,
 } from "@/lib/validation/career";
 import { cn } from "@/lib/utils";
 
 interface CareerFormProps {
+    content: CareersContent["form"];
+    jobs: JobPosition[];
     selectedRole: string;
     onRoleChange: (role: string) => void;
 }
@@ -101,9 +103,10 @@ function withMimeType(file: File) {
     return file.type || !expected ? file : new File([file], file.name, { type: expected });
 }
 
-export default function CareerForm({ selectedRole, onRoleChange }: CareerFormProps) {
+export default function CareerForm({ content, jobs, selectedRole, onRoleChange }: CareerFormProps) {
+    const schema = useMemo(() => careerSchemaFor(jobs.map((job) => job.title)), [jobs]);
     const form = useForm<CareerFormInput, unknown, CareerFormValues>({
-        resolver: zodResolver(careerSchema),
+        resolver: zodResolver(schema),
         defaultValues: CAREER_DEFAULTS,
         mode: "onTouched",
     });
@@ -197,12 +200,9 @@ export default function CareerForm({ selectedRole, onRoleChange }: CareerFormPro
         <section id="application-form" className="scroll-mt-12 py-24">
             <div className="container mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
                 <div className="mb-12 text-center">
-                    <HeaderPill text="Direct Application" className="mb-4" />
-                    <h2 className="text-3xl font-black tracking-tight sm:text-4xl">Submit Your Candidacy</h2>
-                    <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                        Fill out your details and upload your CV. It goes straight to our hiring team, who
-                        reply by email.
-                    </p>
+                    <HeaderPill text={content.badge} className="mb-4" />
+                    <h2 className="text-3xl font-black tracking-tight sm:text-4xl">{content.title}</h2>
+                    <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{content.subtitle}</p>
                 </div>
 
                 <div className="rounded-3xl border border-border-color bg-card-bg p-6 shadow-2xl sm:p-10 dark:border-dark-border-color dark:bg-dark-card-bg">
@@ -283,7 +283,7 @@ export default function CareerForm({ selectedRole, onRoleChange }: CareerFormPro
                                                         <option value="" disabled>
                                                             Select your desired role
                                                         </option>
-                                                        {OPEN_POSITIONS.map((pos) => (
+                                                        {jobs.map((pos) => (
                                                             <option key={pos.id} value={pos.title} className="bg-white dark:bg-[#070B14]">
                                                                 {pos.title} ({pos.department})
                                                             </option>
