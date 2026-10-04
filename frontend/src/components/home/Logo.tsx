@@ -32,7 +32,7 @@ export default function Logo() {
                         >
                             <Image
                                 src="/assets/logo/prodesignity-logo-dark.png"
-                                width={160}
+                                width={125}
                                 height={40}
                                 alt="ProDesignity Logo"
                                 className="h-full w-auto object-contain"
@@ -50,7 +50,7 @@ export default function Logo() {
                         >
                             <Image
                                 src="/assets/logo/prodesignity-logo-light.svg"
-                                width={160}
+                                width={125}
                                 height={40}
                                 alt="ProDesignity Logo"
                                 className="h-full w-auto object-contain"

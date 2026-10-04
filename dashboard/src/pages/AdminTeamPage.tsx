@@ -20,6 +20,7 @@ import { apiFetch } from "@/lib/api";
 import { updateDashboardUser, type DashboardUser } from "@/lib/session";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { TeamImageFields } from "@/components/team/TeamImageFields";
+import { appendAvatarChoice, type AvatarChoice } from "@/lib/avatarChoice";
 import { initials } from "@/lib/accountImage";
 import {
     appendExtras,
@@ -98,7 +99,6 @@ type TeamManagerProps = {
 
 function TeamManager({ currentUser, onUserUpdated }: TeamManagerProps) {
     const photo = useImagePick();
-    const avatar = useImagePick();
     const [members, setMembers] = useState<TeamMemberRow[]>([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -117,16 +117,15 @@ function TeamManager({ currentUser, onUserUpdated }: TeamManagerProps) {
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const [removePhoto, setRemovePhoto] = useState(false);
-    const [removeAvatar, setRemoveAvatar] = useState(false);
+    const [avatarChoice, setAvatarChoice] = useState<AvatarChoice>("keep");
     const [extras, setExtras] = useState<ProfileExtras>(EMPTY_EXTRAS);
 
     const isEditMode = editing !== null;
 
     const clearImageSelection = () => {
         photo.clear();
-        avatar.clear();
         setRemovePhoto(false);
-        setRemoveAvatar(false);
+        setAvatarChoice("keep");
     };
 
     /** Keep the sidebar picture in sync when admins edit their own profile. */
@@ -251,10 +250,7 @@ function TeamManager({ currentUser, onUserUpdated }: TeamManagerProps) {
             else if (isEditMode && removePhoto) {
                 body.append("removePhoto", "true");
             }
-            if (avatar.file) body.append("avatar", avatar.file);
-            else if (isEditMode && removeAvatar) {
-                body.append("removeAvatar", "true");
-            }
+            appendAvatarChoice(body, avatarChoice);
 
             const res = await apiFetch(
                 isEditMode ? `/admin/team/${editing.id}` : "/admin/team",
@@ -331,7 +327,7 @@ function TeamManager({ currentUser, onUserUpdated }: TeamManagerProps) {
                     <CardDescription className="mt-1.5">
                             {isEditMode
                                 ? "Update name, designation, photo, avatar, username, or password. Mark as team lead for admin access."
-                                : "Name, designation, username & password — staff login auto-created. Photo and avatar are optional. Lead = admin."}
+                                : "Name, designation, username & password — staff login auto-created. Photo and avatar are optional; pick the avatar from your presets. Lead = admin."}
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="pt-5">
@@ -339,13 +335,13 @@ function TeamManager({ currentUser, onUserUpdated }: TeamManagerProps) {
                         <TeamImageFields
                             name={name}
                             photo={photo}
-                            avatar={avatar}
                             savedPhotoUrl={editing?.photoUrl}
-                            savedAvatarUrl={editing?.avatarUrl}
                             removePhoto={removePhoto}
                             onRemovePhotoChange={setRemovePhoto}
-                            removeAvatar={removeAvatar}
-                            onRemoveAvatarChange={setRemoveAvatar}
+                            savedAvatarUrl={editing?.avatarUrl}
+                            avatarChoice={avatarChoice}
+                            onAvatarChoiceChange={setAvatarChoice}
+                            canManagePresets
                             compact
                         />
 

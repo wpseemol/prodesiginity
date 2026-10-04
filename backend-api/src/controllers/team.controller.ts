@@ -140,11 +140,23 @@ function photoData(nextPhotoUrl: string | undefined, removePhoto?: boolean) {
   return removePhoto ? { photoUrl: null } : {};
 }
 
-function uploadedFile(req: Request, field: "photo" | "avatar") {
+function uploadedPhoto(req: Request) {
   const files = req.files;
   if (!files || Array.isArray(files)) return undefined;
-  return files[field]?.[0];
+  return files.photo?.[0];
 }
+
+/** URL of the chosen avatar preset; `null` when that preset no longer exists. */
+async function presetAvatarUrl(presetId: number | undefined) {
+  if (presetId === undefined) return undefined;
+  const preset = await prisma.avatarPreset.findUnique({
+    where: { id: presetId },
+    select: { url: true },
+  });
+  return preset?.url ?? null;
+}
+
+const MISSING_PRESET = "That avatar is no longer available. Pick another one.";
 
 /** Best-effort delete of a file we stored under /uploads/team/. */
 function removeTeamUpload(url: string | null | undefined) {
@@ -312,8 +324,12 @@ export const createTeamMember = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    const file = uploadedFile(req, "photo");
-    const avatarFile = uploadedFile(req, "avatar");
+    const file = uploadedPhoto(req);
+    const avatarUrl = await presetAvatarUrl(parsed.data.avatarPresetId);
+    if (avatarUrl === null) {
+      if (file) removeTeamUpload(publicTeamUploadPath(file.filename));
+      return res.status(404).json({ message: MISSING_PRESET });
+    }
     const photoUrl = file
       ? publicTeamUploadPath(file.filename)
       : parsed.data.photoUrl?.trim() || null;
@@ -383,10 +399,7 @@ export const createTeamMember = async (req: AuthRequest, res: Response) => {
           photoUrl,
           photoAlt,
           photoTitle,
-          ...profileExtrasData(
-            parsed.data,
-            avatarFile ? publicTeamUploadPath(avatarFile.filename) : undefined,
-          ),
+          ...profileExtrasData(parsed.data, avatarUrl),
           isLead,
           sortOrder:
             parsed.data.sortOrder ?? (maxSort._max.sortOrder ?? 0) + 1,
@@ -427,14 +440,15 @@ export const updateTeamMember = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    const file = uploadedFile(req, "photo");
-    const avatarFile = uploadedFile(req, "avatar");
+    const file = uploadedPhoto(req);
+    const nextAvatarUrl = await presetAvatarUrl(parsed.data.avatarPresetId);
+    if (nextAvatarUrl === null) {
+      if (file) removeTeamUpload(publicTeamUploadPath(file.filename));
+      return res.status(404).json({ message: MISSING_PRESET });
+    }
     const nextPhotoUrl = file
       ? publicTeamUploadPath(file.filename)
       : parsed.data.photoUrl?.trim();
-    const nextAvatarUrl = avatarFile
-      ? publicTeamUploadPath(avatarFile.filename)
-      : undefined;
 
     const nextIsLead =
       parsed.data.isLead !== undefined ? parsed.data.isLead : existing.isLead;
@@ -690,13 +704,14 @@ export const updateMyTeamProfile = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    const file = uploadedFile(req, "photo");
-    const avatarFile = uploadedFile(req, "avatar");
+    const file = uploadedPhoto(req);
+    const nextAvatarUrl = await presetAvatarUrl(parsed.data.avatarPresetId);
+    if (nextAvatarUrl === null) {
+      if (file) removeTeamUpload(publicTeamUploadPath(file.filename));
+      return res.status(404).json({ message: MISSING_PRESET });
+    }
     const nextPhotoUrl = file
       ? publicTeamUploadPath(file.filename)
-      : undefined;
-    const nextAvatarUrl = avatarFile
-      ? publicTeamUploadPath(avatarFile.filename)
       : undefined;
 
     const memberRow = await prisma.$transaction(async (tx) => {

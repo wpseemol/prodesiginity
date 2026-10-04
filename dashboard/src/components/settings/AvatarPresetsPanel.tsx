@@ -183,7 +183,8 @@ export function AvatarPresetsPanel() {
           <p className="text-sm font-semibold">Profile avatars</p>
           <p className="text-xs text-muted-foreground">
             Staff (on their Profile page) and website clients (on their account page) can pick one of these as
-            their profile picture. Square images work best — at least 256×256px, max 2 MB.
+            their profile picture. They're also the avatar choices for public team profiles. Square images work
+            best — at least 256×256px, max 2 MB.
           </p>
         </div>
         <Badge variant="secondary" className="font-normal">

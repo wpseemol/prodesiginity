@@ -77,7 +77,12 @@ const profileExtras = {
   avatarShape: z.enum(AVATAR_SHAPES).optional(),
   socials: socialsSchema.optional(),
   skills: skillsSchema.optional(),
-  /** Drop the custom avatar image and fall back to the photo. */
+  /** One of the admin's avatar presets (Settings → Avatars). */
+  avatarPresetId: z.preprocess(
+    (v) => (v === "" || v === null ? undefined : v),
+    z.coerce.number().int().positive().optional(),
+  ),
+  /** Drop the avatar and fall back to the photo. */
   removeAvatar: boolFlag,
 };
 

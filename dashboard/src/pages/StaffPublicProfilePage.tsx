@@ -12,6 +12,7 @@ import { apiFetch } from "@/lib/api";
 import { updateDashboardUser, type DashboardUser } from "@/lib/session";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { TeamImageFields } from "@/components/team/TeamImageFields";
+import { appendAvatarChoice, type AvatarChoice } from "@/lib/avatarChoice";
 import {
   appendExtras,
   EMPTY_EXTRAS,
@@ -62,7 +63,6 @@ function StaffPublicProfileManager({
   onUserUpdated,
 }: StaffPublicProfileManagerProps) {
   const photo = useImagePick();
-  const avatar = useImagePick();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -74,7 +74,7 @@ function StaffPublicProfileManager({
   const [description, setDescription] = useState("");
   const [extras, setExtras] = useState<ProfileExtras>(EMPTY_EXTRAS);
   const [removePhoto, setRemovePhoto] = useState(false);
-  const [removeAvatar, setRemoveAvatar] = useState(false);
+  const [avatarChoice, setAvatarChoice] = useState<AvatarChoice>("keep");
 
   const applyMember = (row: MyTeamProfile) => {
     setMember(row);
@@ -84,7 +84,7 @@ function StaffPublicProfileManager({
     setDescription(row.description ?? "");
     setExtras(extrasFromMember(row));
     setRemovePhoto(false);
-    setRemoveAvatar(false);
+    setAvatarChoice("keep");
   };
 
   const load = async () => {
@@ -104,7 +104,6 @@ function StaffPublicProfileManager({
       }
       applyMember(data.member as MyTeamProfile);
       photo.clear();
-      avatar.clear();
     } catch {
       setError("Could not reach the server.");
     } finally {
@@ -136,8 +135,7 @@ function StaffPublicProfileManager({
       appendExtras(body, extras);
       if (photo.file) body.append("photo", photo.file);
       else if (removePhoto) body.append("removePhoto", "true");
-      if (avatar.file) body.append("avatar", avatar.file);
-      else if (removeAvatar) body.append("removeAvatar", "true");
+      appendAvatarChoice(body, avatarChoice);
 
       const res = await apiFetch("/team/me", {
         method: "PUT",
@@ -156,7 +154,6 @@ function StaffPublicProfileManager({
       const saved = data.member as MyTeamProfile;
       applyMember(saved);
       photo.clear();
-      avatar.clear();
       const nextUser: DashboardUser = {
         ...currentUser,
         fullName: saved.name,
@@ -224,13 +221,12 @@ function StaffPublicProfileManager({
           <TeamImageFields
             name={name}
             photo={photo}
-            avatar={avatar}
             savedPhotoUrl={member.photoUrl}
-            savedAvatarUrl={member.avatarUrl}
             removePhoto={removePhoto}
             onRemovePhotoChange={setRemovePhoto}
-            removeAvatar={removeAvatar}
-            onRemoveAvatarChange={setRemoveAvatar}
+            savedAvatarUrl={member.avatarUrl}
+            avatarChoice={avatarChoice}
+            onAvatarChoiceChange={setAvatarChoice}
           />
 
           <div className="grid gap-5 sm:grid-cols-2">

@@ -188,16 +188,13 @@ export const profilePhotoUpload = withContentCheck(
   }).single("photo"),
 );
 
-/** Team portrait (`photo`) and optional avatar image (`avatar`). */
+/** Team portrait (`photo`). Avatars are picked from the admin's presets. */
 export const teamPhotoUpload = withContentCheck(
   multer({
     storage: teamStorage,
     fileFilter: imageFileFilter,
-    limits: { fileSize: 5 * 1024 * 1024, files: 2 },
-  }).fields([
-    { name: "photo", maxCount: 1 },
-    { name: "avatar", maxCount: 1 },
-  ]),
+    limits: { fileSize: 5 * 1024 * 1024, files: 1 },
+  }).fields([{ name: "photo", maxCount: 1 }]),
 );
 
 export const siteFaviconUpload = withContentCheck(

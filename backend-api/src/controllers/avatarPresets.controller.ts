@@ -89,11 +89,17 @@ export const listAdminAvatarPresets = async (_req: AuthRequest, res: Response) =
       select: { ...presetSelect, _count: { select: { users: true } } },
       orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
     });
+    const teamUses = await prisma.teamMember.groupBy({
+      by: ["avatarUrl"],
+      where: { avatarUrl: { in: presets.map((preset) => preset.url) } },
+      _count: { _all: true },
+    });
+    const teamCount = new Map(teamUses.map((row) => [row.avatarUrl, row._count._all]));
     return res.status(200).json({
       max: MAX_AVATAR_PRESETS,
       presets: presets.map(({ _count, ...preset }) => ({
         ...preset,
-        usedBy: _count.users,
+        usedBy: _count.users + (teamCount.get(preset.url) ?? 0),
       })),
     });
   } catch (error) {
@@ -179,7 +185,10 @@ export const reorderAvatarPresets = async (req: AuthRequest, res: Response) => {
   }
 };
 
-/** DELETE /api/admin/avatar-presets/:id — users who picked it fall back to their photo. */
+/**
+ * DELETE /api/admin/avatar-presets/:id — users and team profiles that picked
+ * it fall back to their photo (then initials).
+ */
 export const deleteAvatarPreset = async (req: AuthRequest, res: Response) => {
   try {
     const id = parseId(req.params.id);
@@ -191,7 +200,13 @@ export const deleteAvatarPreset = async (req: AuthRequest, res: Response) => {
     });
     if (!preset) return res.status(404).json({ message: "Avatar not found" });
 
-    await prisma.avatarPreset.delete({ where: { id } });
+    await prisma.$transaction([
+      prisma.teamMember.updateMany({
+        where: { avatarUrl: preset.url },
+        data: { avatarUrl: null },
+      }),
+      prisma.avatarPreset.delete({ where: { id } }),
+    ]);
     removeUploadedFile(preset.url);
     return res.status(200).json({ message: "Avatar deleted" });
   } catch (error) {
