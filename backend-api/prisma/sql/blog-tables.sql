@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS `blog_posts` (
     `excerpt` VARCHAR(600) NOT NULL,
     `category_id` INTEGER NOT NULL,
     `author_id` INTEGER NULL,
+    `byline_member_id` INTEGER NULL,
     `cover_image` VARCHAR(512) NULL,
     `cover_alt` VARCHAR(255) NULL,
     `video_url` VARCHAR(512) NULL,
@@ -33,6 +34,7 @@ CREATE TABLE IF NOT EXISTS `blog_posts` (
     `key_takeaways` JSON NOT NULL,
     `faqs` JSON NOT NULL,
     `tags` JSON NOT NULL,
+    `related_services` JSON NULL,
     `seo` JSON NOT NULL,
     `featured` BOOLEAN NOT NULL DEFAULT false,
     `status` ENUM('draft', 'published') NOT NULL DEFAULT 'draft',
@@ -43,8 +45,13 @@ CREATE TABLE IF NOT EXISTS `blog_posts` (
     UNIQUE INDEX `blog_posts_slug_key`(`slug`),
     INDEX `blog_posts_category_id_idx`(`category_id`),
     INDEX `blog_posts_author_id_idx`(`author_id`),
+    INDEX `blog_posts_byline_member_id_idx`(`byline_member_id`),
     INDEX `blog_posts_status_published_at_idx`(`status`, `published_at`),
     PRIMARY KEY (`id`),
     CONSTRAINT `blog_posts_category_id_fkey` FOREIGN KEY (`category_id`) REFERENCES `blog_categories`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE,
-    CONSTRAINT `blog_posts_author_id_fkey` FOREIGN KEY (`author_id`) REFERENCES `users`(`id`) ON DELETE SET NULL ON UPDATE CASCADE
+    CONSTRAINT `blog_posts_author_id_fkey` FOREIGN KEY (`author_id`) REFERENCES `users`(`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT `blog_posts_byline_member_id_fkey` FOREIGN KEY (`byline_member_id`) REFERENCES `team_members`(`id`) ON DELETE SET NULL ON UPDATE CASCADE
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- Columns added after the first release are applied to existing tables by
+-- scripts/ensure-blog-columns.ts (MySQL has no ADD COLUMN IF NOT EXISTS).

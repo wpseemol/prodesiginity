@@ -40,6 +40,7 @@ export const API_ROUTES: ApiRoute[] = [
   { method: "POST", path: "/api/manage/blog/categories", auth: "admin" },
   { method: "PUT", path: "/api/manage/blog/categories/:id", auth: "admin" },
   { method: "DELETE", path: "/api/manage/blog/categories/:id", auth: "admin" },
+  { method: "GET", path: "/api/manage/blog/byline-members", auth: "admin", note: "byline picker" },
   { method: "GET", path: "/api/manage/blog/posts", auth: "user", note: "staff see own posts" },
   { method: "GET", path: "/api/manage/blog/posts/:id", auth: "user", note: "owner or admin" },
   { method: "POST", path: "/api/manage/blog/posts", auth: "user", note: "admin + staff" },

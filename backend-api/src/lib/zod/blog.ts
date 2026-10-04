@@ -145,7 +145,11 @@ const blockSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("table"),
     caption: optionalText("Table caption", 200),
-    head: z.array(text("Table header", 1, 120)).min(1).max(8),
+    head: z
+      .array(text("Table header", 0, 120))
+      .min(1)
+      .max(8)
+      .refine((cells) => cells.some((c) => c.length > 0), "A table needs at least one header"),
     rows: z.array(z.array(text("Table cell", 0, 400)).max(8)).min(1).max(60),
   }),
   z.object({
@@ -199,6 +203,8 @@ const blogPostFields = {
     .array(z.object({ q: text("FAQ question", 3, 300), a: text("FAQ answer", 3, 2000) }))
     .max(20, "Use at most 20 FAQs"),
   tags: z.array(text("Tag", 1, 40)).max(20, "Use at most 20 tags"),
+  relatedServices: z.array(slugSchema(80)).max(6, "Link at most 6 related services"),
+  bylineMemberId: z.union([z.coerce.number().int().positive(), z.null()]),
   seo: z.object({
     title: optionalText("SEO title", 160),
     description: optionalText("SEO description", 320),
@@ -215,6 +221,8 @@ export const createBlogPostSchema = z.object({
   keyTakeaways: blogPostFields.keyTakeaways.optional(),
   faqs: blogPostFields.faqs.optional(),
   tags: blogPostFields.tags.optional(),
+  relatedServices: blogPostFields.relatedServices.optional(),
+  bylineMemberId: blogPostFields.bylineMemberId.optional(),
   seo: blogPostFields.seo.optional(),
   featured: blogPostFields.featured.optional(),
   status: blogPostFields.status.optional(),

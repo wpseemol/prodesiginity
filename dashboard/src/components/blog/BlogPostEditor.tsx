@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Controller, useFieldArray, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -11,6 +11,7 @@ import {
   Trash2Icon,
 } from "lucide-react";
 import { toast } from "sonner";
+import { apiBaseUrl } from "@/config";
 import { apiFetch } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
@@ -50,7 +51,11 @@ import {
   type BlogCategoryRow,
   type BlogPostFormValues,
   type BlogPostRow,
+  type BylineMember,
+  type ServiceOption,
 } from "./blogTypes";
+
+const MAX_RELATED_SERVICES = 6;
 
 type BlogPostEditorProps = {
   initial: BlogPostRow | null;
@@ -77,6 +82,33 @@ export function BlogPostEditor({ initial, categories, isAdmin, onCancel, onSaved
   const isEdit = initial !== null;
   const [slugTouched, setSlugTouched] = useState(isEdit);
   const [confirmLeave, setConfirmLeave] = useState(false);
+  const [services, setServices] = useState<ServiceOption[]>([]);
+  const [members, setMembers] = useState<BylineMember[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      try {
+        const res = await fetch(`${apiBaseUrl}/services`);
+        if (!res.ok) return;
+        const data = (await res.json()) as { services?: ServiceOption[] };
+        if (active) setServices(data.services ?? []);
+      } catch {
+        // related services stay empty; the rest of the form still works
+      }
+    })();
+    if (isAdmin) {
+      void (async () => {
+        const res = await apiFetch("/manage/blog/byline-members");
+        if (!res.ok) return;
+        const data = (await res.json()) as { members?: BylineMember[] };
+        if (active) setMembers(data.members ?? []);
+      })();
+    }
+    return () => {
+      active = false;
+    };
+  }, [isAdmin]);
 
   const form = useForm<BlogPostFormValues>({
     resolver: zodResolver(blogPostFormSchema),
@@ -516,6 +548,41 @@ export function BlogPostEditor({ initial, categories, isAdmin, onCancel, onSaved
                     )}
                   />
                 ) : null}
+                {isAdmin ? (
+                  <Controller
+                    name="bylineMemberId"
+                    control={form.control}
+                    render={({ field }) => (
+                      <Field>
+                        <FieldLabel htmlFor="post-byline">
+                          Byline <Optional />
+                        </FieldLabel>
+                        <Select
+                          value={field.value || "author"}
+                          onValueChange={(v) => field.onChange(!v || v === "author" ? "" : v)}
+                        >
+                          <SelectTrigger id="post-byline" className="w-full">
+                            <SelectValue>
+                              {members.find((m) => String(m.id) === field.value)?.name ??
+                                "Article author"}
+                            </SelectValue>
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="author">Article author</SelectItem>
+                            {members.map((m) => (
+                              <SelectItem key={m.id} value={String(m.id)}>
+                                {m.name} — {m.role}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FieldDescription>
+                          Show a team member as the writer, e.g. someone without a dashboard login.
+                        </FieldDescription>
+                      </Field>
+                    )}
+                  />
+                ) : null}
               </FieldGroup>
             </CardContent>
           </Card>
@@ -563,6 +630,59 @@ export function BlogPostEditor({ initial, categories, isAdmin, onCancel, onSaved
                   )}
                 />
               </FieldGroup>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Related services</CardTitle>
+              <CardDescription>
+                Linked under the article. Pick up to {MAX_RELATED_SERVICES}.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Controller
+                name="relatedServices"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Field data-invalid={fieldState.invalid}>
+                    {services.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">Loading services…</p>
+                    ) : (
+                      <div className="flex max-h-64 flex-wrap gap-1.5 overflow-y-auto">
+                        {services.map((s) => {
+                          const selected = field.value.includes(s.slug);
+                          const full = !selected && field.value.length >= MAX_RELATED_SERVICES;
+                          return (
+                            <button
+                              key={s.slug}
+                              type="button"
+                              aria-pressed={selected}
+                              disabled={full}
+                              onClick={() =>
+                                field.onChange(
+                                  selected
+                                    ? field.value.filter((v) => v !== s.slug)
+                                    : [...field.value, s.slug],
+                                )
+                              }
+                              className={cn(
+                                "rounded-full border px-2.5 py-1 text-xs transition-colors disabled:opacity-40",
+                                selected
+                                  ? "border-primary bg-primary/10 font-medium text-primary"
+                                  : "hover:border-primary/40",
+                              )}
+                            >
+                              {s.title}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                    {fieldState.invalid ? <FieldError errors={[fieldState.error]} /> : null}
+                  </Field>
+                )}
+              />
             </CardContent>
           </Card>
 

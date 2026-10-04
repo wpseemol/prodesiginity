@@ -90,6 +90,7 @@ model TeamMember {
   sortOrder  Int      @default(0) @map("sort_order")
   userId     Int?     @unique @map("user_id")
   user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  blogBylines BlogPost[] @relation("BlogPostByline")
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
 
@@ -225,6 +226,10 @@ model BlogPost {
   category     BlogCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   authorId     Int?         @map("author_id")
   author       User?        @relation("BlogPostAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  /// Team member shown in the byline. Set when the writer has no login, or an
+  /// admin publishes on someone's behalf; otherwise the byline is the author.
+  bylineMemberId Int?        @map("byline_member_id")
+  bylineMember   TeamMember? @relation("BlogPostByline", fields: [bylineMemberId], references: [id], onDelete: SetNull)
   coverImage   String?      @map("cover_image") @db.VarChar(512)
   coverAlt     String?      @map("cover_alt") @db.VarChar(255)
   videoUrl     String?      @map("video_url") @db.VarChar(512)
@@ -234,6 +239,8 @@ model BlogPost {
   keyTakeaways Json         @map("key_takeaways")
   faqs         Json
   tags         Json
+  /// Service slugs listed under the article as "related services".
+  relatedServices Json?     @map("related_services")
   seo          Json
   featured     Boolean      @default(false)
   status       BlogStatus   @default(draft)
@@ -243,6 +250,7 @@ model BlogPost {
 
   @@index([categoryId])
   @@index([authorId])
+  @@index([bylineMemberId])
   @@index([status, publishedAt])
   @@map("blog_posts")
 }

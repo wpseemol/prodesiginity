@@ -134,6 +134,7 @@ function toPost(raw: Json): BlogPost | null {
         faqs: objList(raw.faqs)
             .map((f) => ({ q: str(f.q), a: str(f.a) }))
             .filter((f) => f.q && f.a),
+        relatedServices: strList(raw.relatedServices),
         seo: {
             title: str(seo.title) || title,
             description: str(seo.description) || excerpt,

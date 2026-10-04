@@ -19,6 +19,10 @@ export type BlogAuthor = { id: number | null; name: string; role: string; photo:
 
 export type ApiBlock = { type: string; [key: string]: unknown };
 
+export type BylineMember = { id: number; name: string; role: string; photoUrl: string | null };
+
+export type ServiceOption = { slug: string; title: string; group: string };
+
 export type BlogPostRow = {
   id: number;
   slug: string;
@@ -28,6 +32,7 @@ export type BlogPostRow = {
   category: { id: number; slug: string; name: string; icon: string | null; imageUrl: string | null };
   author: BlogAuthor;
   authorId: number | null;
+  bylineMemberId: number | null;
   coverImage: string | null;
   coverAlt: string | null;
   videoUrl: string | null;
@@ -37,6 +42,7 @@ export type BlogPostRow = {
   keyTakeaways?: string[];
   faqs?: { q: string; a: string }[];
   tags: string[];
+  relatedServices?: string[];
   seo: { title?: string | null; description?: string | null; keywords?: string[] };
   featured: boolean;
   status: "draft" | "published";
@@ -357,6 +363,10 @@ export const blogPostFormSchema = z
       .array(z.object({ q: safeText("Question", 3, 300), a: safeText("Answer", 3, 2000) }))
       .max(20, "Use at most 20 FAQs"),
     tags: textList("Tags", { sep: /,/, maxItems: 20, maxLen: 40 }),
+    relatedServices: z
+      .array(z.string().regex(SLUG_RE))
+      .max(6, "Pick at most 6 related services"),
+    bylineMemberId: z.string().regex(/^\d*$/),
     seoTitle: safeText("SEO title", 0, 160),
     seoDescription: safeText("SEO description", 0, 320),
     seoKeywords: textList("Keywords", { sep: /,/, maxItems: 30, maxLen: 80 }),
@@ -391,6 +401,8 @@ export function emptyPostForm(): BlogPostFormValues {
     keyTakeaways: "",
     faqs: [],
     tags: "",
+    relatedServices: [],
+    bylineMemberId: "",
     seoTitle: "",
     seoDescription: "",
     seoKeywords: "",
@@ -415,6 +427,8 @@ export function postToForm(post: BlogPostRow): BlogPostFormValues {
     keyTakeaways: (post.keyTakeaways ?? []).join("\n"),
     faqs: post.faqs ?? [],
     tags: post.tags.join(", "),
+    relatedServices: post.relatedServices ?? [],
+    bylineMemberId: post.bylineMemberId ? String(post.bylineMemberId) : "",
     seoTitle: post.seo?.title ?? "",
     seoDescription: post.seo?.description ?? "",
     seoKeywords: (post.seo?.keywords ?? []).join(", "),
@@ -439,6 +453,8 @@ export function formToPayload(values: BlogPostFormValues) {
     keyTakeaways: splitList(values.keyTakeaways, /\n/),
     faqs: values.faqs.map((f) => ({ q: f.q.trim(), a: f.a.trim() })),
     tags: splitList(values.tags, /,/),
+    relatedServices: values.relatedServices,
+    bylineMemberId: values.bylineMemberId ? Number(values.bylineMemberId) : null,
     seo: {
       title: values.seoTitle.trim() || null,
       description: values.seoDescription.trim() || null,

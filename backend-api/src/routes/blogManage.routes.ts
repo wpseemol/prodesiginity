@@ -7,6 +7,7 @@ import {
   deleteBlogPost,
   getManagedPost,
   listBlogCategories,
+  listBylineMembers,
   listManagedPosts,
   updateBlogCategory,
   updateBlogPost,
@@ -40,6 +41,8 @@ router.get("/categories", listBlogCategories);
 router.post("/categories", requireAdmin, createBlogCategory);
 router.put("/categories/:id", requireAdmin, updateBlogCategory);
 router.delete("/categories/:id", requireAdmin, deleteBlogCategory);
+
+router.get("/byline-members", requireAdmin, listBylineMembers);
 
 router.get("/posts", listManagedPosts);
 router.get("/posts/:id", getManagedPost);

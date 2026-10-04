@@ -36,6 +36,7 @@ const postInclude = {
       teamMember: { select: { role: true, photoUrl: true } },
     },
   },
+  bylineMember: { select: { id: true, name: true, role: true, photoUrl: true } },
 } satisfies Prisma.BlogPostInclude;
 
 type PostRow = Prisma.BlogPostGetPayload<{ include: typeof postInclude }>;
@@ -49,7 +50,10 @@ function asArray(value: unknown): unknown[] {
   return Array.isArray(value) ? value : [];
 }
 
-function serializeAuthor(author: PostRow["author"]) {
+function serializeAuthor(author: PostRow["author"], byline: PostRow["bylineMember"]) {
+  if (byline) {
+    return { id: author?.id ?? null, name: byline.name, role: byline.role, photo: byline.photoUrl || null };
+  }
   if (!author) return { id: null, name: "ProDesignity Team", role: "Editorial", photo: null };
   return {
     id: author.id,
@@ -67,8 +71,9 @@ function serializePost(row: PostRow, { withBody = true } = {}) {
     excerpt: row.excerpt,
     categoryId: row.categoryId,
     category: row.category,
-    author: serializeAuthor(row.author),
+    author: serializeAuthor(row.author, row.bylineMember),
     authorId: row.authorId,
+    bylineMemberId: row.bylineMemberId,
     coverImage: row.coverImage,
     coverAlt: row.coverAlt,
     videoUrl: row.videoUrl,
@@ -82,6 +87,7 @@ function serializePost(row: PostRow, { withBody = true } = {}) {
         }
       : {}),
     tags: asArray(row.tags),
+    relatedServices: asArray(row.relatedServices),
     seo: (row.seo ?? {}) as Record<string, unknown>,
     featured: row.featured,
     status: row.status,
@@ -359,6 +365,24 @@ async function categoryExists(id: number) {
   return (await prisma.blogCategory.count({ where: { id } })) > 0;
 }
 
+async function memberExists(id: number) {
+  return (await prisma.teamMember.count({ where: { id } })) > 0;
+}
+
+/** Team members an admin can pick as an article byline. */
+export const listBylineMembers = async (_req: AuthRequest, res: Response) => {
+  try {
+    const members = await prisma.teamMember.findMany({
+      orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+      select: { id: true, name: true, role: true, photoUrl: true },
+    });
+    return res.status(200).json({ members });
+  } catch (error) {
+    console.error("List byline members error:", error);
+    return res.status(500).json({ message: "Failed to load team members" });
+  }
+};
+
 function resolvePublishedAt(
   status: "draft" | "published",
   requested: Date | "" | null | undefined,
@@ -381,6 +405,11 @@ export const createBlogPost = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ message: "Selected category does not exist" });
     }
 
+    const bylineMemberId = isAdmin(req) ? (d.bylineMemberId ?? null) : null;
+    if (bylineMemberId !== null && !(await memberExists(bylineMemberId))) {
+      return res.status(400).json({ message: "Selected byline team member does not exist" });
+    }
+
     const status = d.status ?? "draft";
     const featured = isAdmin(req) ? (d.featured ?? false) : false;
 
@@ -393,6 +422,7 @@ export const createBlogPost = async (req: AuthRequest, res: Response) => {
           excerpt: d.excerpt,
           categoryId: d.categoryId,
           authorId: req.user!.userId,
+          bylineMemberId,
           coverImage: d.coverImage ?? null,
           coverAlt: d.coverAlt ?? null,
           videoUrl: d.videoUrl ?? null,
@@ -402,6 +432,7 @@ export const createBlogPost = async (req: AuthRequest, res: Response) => {
           keyTakeaways: (d.keyTakeaways ?? []) as Prisma.InputJsonValue,
           faqs: (d.faqs ?? []) as Prisma.InputJsonValue,
           tags: (d.tags ?? []) as Prisma.InputJsonValue,
+          relatedServices: (d.relatedServices ?? []) as Prisma.InputJsonValue,
           seo: (d.seo ?? {}) as Prisma.InputJsonValue,
           featured,
           status,
@@ -442,6 +473,15 @@ export const updateBlogPost = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ message: "Selected category does not exist" });
     }
 
+    const bylineMemberId = isAdmin(req) ? d.bylineMemberId : undefined;
+    if (
+      bylineMemberId !== undefined &&
+      bylineMemberId !== null &&
+      !(await memberExists(bylineMemberId))
+    ) {
+      return res.status(400).json({ message: "Selected byline team member does not exist" });
+    }
+
     const status = d.status ?? existing.status;
     const featured = isAdmin(req) ? d.featured : undefined;
     const statusOrDateChanged = d.status !== undefined || d.publishedAt !== undefined;
@@ -473,6 +513,10 @@ export const updateBlogPost = async (req: AuthRequest, res: Response) => {
             : {}),
           ...(d.faqs !== undefined ? { faqs: d.faqs as Prisma.InputJsonValue } : {}),
           ...(d.tags !== undefined ? { tags: d.tags as Prisma.InputJsonValue } : {}),
+          ...(d.relatedServices !== undefined
+            ? { relatedServices: d.relatedServices as Prisma.InputJsonValue }
+            : {}),
+          ...(bylineMemberId !== undefined ? { bylineMemberId } : {}),
           ...(d.seo !== undefined ? { seo: d.seo as Prisma.InputJsonValue } : {}),
           ...(featured !== undefined ? { featured } : {}),
           ...(d.status !== undefined ? { status } : {}),
