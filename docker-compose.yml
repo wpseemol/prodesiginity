@@ -31,7 +31,7 @@ services:
 
     backend:
         build:
-            context: ./backend
+            context: ./backend-api
             dockerfile: Dockerfile
         container_name: prodesignity_api
         ports:

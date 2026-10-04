@@ -7,7 +7,7 @@ node_modules
 frontend/out
 frontend/upload
 frontend/site.zip
-backend/dist
+backend-api/dist
 **/coverage
 **/.turbo
 **/.cache

@@ -8,7 +8,7 @@ importers:
 
   .: {}
 
-  backend:
+  backend-api:
     dependencies:
       '@maxmind/geoip2-node':
         specifier: ^7.1.0

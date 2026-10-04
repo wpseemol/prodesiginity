@@ -124,7 +124,7 @@ Value = the absolute path from step A (example above).
 GitHub → **Actions → Deploy Backend API to Hostinger → Run workflow**  
 (optional: enable “Run prisma db push”).
 
-Later pushes to `backend/**` on `main` deploy automatically.
+Later pushes to `backend-api/**` on `main` deploy automatically.
 
 ### F. Prisma seed (dashboard login users + CMS)
 

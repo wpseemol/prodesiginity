@@ -1,5 +1,5 @@
 /**
- * Client-side mirror of `backend/src/lib/security.ts`. Gives instant feedback
+ * Client-side mirror of `backend-api/src/lib/security.ts`. Gives instant feedback
  * in forms; the API runs the same checks again and is the real gate.
  */
 

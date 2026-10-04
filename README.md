@@ -8,15 +8,14 @@ Full-stack website for [Prodesignity](https://prodesignity.com) — marketing si
 | --- | --- |
 | Frontend | Next.js (static export), React, Tailwind |
 | Dashboard | Vite admin app |
-| Backend | **Standalone** Express API (`backend/`) — npm + ESM + Prisma |
+| Backend | Express API (`backend-api/`) — pnpm workspace package `prodesignity-api`, ESM + Prisma |
 
-Backend is **not** part of the pnpm workspace. Run it separately:
+Run it from the repo root:
 
 ```bash
-cd backend
-npm install
-npm run db:setup
-npm run dev
+pnpm install
+pnpm --filter prodesignity-api db:setup
+pnpm dev:backend
 ```
 
 ## Project structure
@@ -24,7 +23,8 @@ npm run dev
 ```text
 prodesiginity/
 ├── frontend/          # Next.js site (prodesignity)
-├── backend/           # Express API (prodesignity-api)
+├── backend-api/       # Express API (prodesignity-api)
+├── dashboard/         # Vite admin/staff dashboard
 ├── docker-compose.yml # MySQL + phpMyAdmin
 ├── pnpm-workspace.yaml
 └── package.json       # root scripts
@@ -59,10 +59,10 @@ DB settings live in `.env.dev` (used by Docker). Do not commit real production s
 
 ### 3. Configure the API
 
-Create `backend/.env` (see keys below). Then sync Prisma:
+Create `backend-api/.env` (see keys below). Then sync Prisma:
 
 ```bash
-cd backend
+cd backend-api
 pnpm exec prisma generate
 pnpm exec prisma db push
 cd ..
@@ -79,7 +79,7 @@ pnpm dev
 | App | Default URL |
 | --- | --- |
 | Frontend | [http://localhost:3000](http://localhost:3000) |
-| Backend API | [http://localhost:8000](http://localhost:8000) (or `PORT` in `backend/.env`) |
+| Backend API | [http://localhost:4000](http://localhost:4000) (or `PORT` in `backend-api/.env`) |
 
 Run packages alone:
 
@@ -88,7 +88,7 @@ pnpm dev:frontend
 pnpm dev:backend
 ```
 
-Point the frontend at the API with `NEXT_PUBLIC_API_URL` (e.g. `http://localhost:8000/api`).
+Point the frontend at the API with `NEXT_PUBLIC_API_URL` (e.g. `http://localhost:4000/api`).
 
 ## Root scripts
 
@@ -103,12 +103,12 @@ Point the frontend at the API with `NEXT_PUBLIC_API_URL` (e.g. `http://localhost
 
 ## Environment
 
-### Backend (`backend/.env`)
+### Backend (`backend-api/.env`)
 
 Typical keys:
 
 ```env
-PORT=8000
+PORT=4000
 NODE_ENV=development
 ALLOWED_ORIGINS=http://localhost:3000
 DB_HOST=127.0.0.1
@@ -126,7 +126,7 @@ Optional mail: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `TARGET_MAIL`
 
 ```env
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
-NEXT_PUBLIC_API_URL=http://localhost:8000/api
+NEXT_PUBLIC_API_URL=http://localhost:4000/api
 ```
 
 ## Main features
@@ -144,13 +144,13 @@ NEXT_PUBLIC_API_URL=http://localhost:8000/api
 - Prisma + MySQL/MariaDB
 - CORS via `ALLOWED_ORIGINS`
 
-Auth endpoint details: [`backend/API.md`](backend/API.md).
+Auth endpoint details: [`backend-api/API.md`](backend-api/API.md).
 
 ## Docs
 
 - [`deploy/HOSTINGER.md`](deploy/HOSTINGER.md) — Hostinger frontend (FTP) + API (SSH) deploy
-- [`backend/API.md`](backend/API.md) — authentication API
-- [`backend/README.md`](backend/README.md) — Prisma commands
+- [`backend-api/API.md`](backend-api/API.md) — authentication API
+- [`backend-api/README.md`](backend-api/README.md) — Prisma commands
 - [`frontend/DEPLOY.MD`](frontend/DEPLOY.MD) — frontend FTP extract details
 
 ## License

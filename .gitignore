@@ -1,5 +1,5 @@
 # Root monorepo ignores (package-specific rules live in
-# frontend/.gitignore, backend/.gitignore, dashboard/.gitignore)
+# frontend/.gitignore, backend-api/.gitignore, dashboard/.gitignore)
 
 # Dependencies
 node_modules/
@@ -44,7 +44,7 @@ Desktop.ini
 # Build / output / deploy artifacts
 dist/
 build/
-backend/dist/
+backend-api/dist/
 frontend/out/
 frontend/upload/
 dashboard/dist/

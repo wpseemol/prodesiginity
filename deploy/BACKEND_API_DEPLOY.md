@@ -16,8 +16,8 @@ Copy-paste commands only. Paths shown as examples — replace with your real SSH
 
 Source files in this repo:
 
-- `backend/deploy/proxy.php`
-- `backend/deploy/.htaccess`
+- `backend-api/deploy/proxy.php`
+- `backend-api/deploy/.htaccess`
 
 ---
 
@@ -85,7 +85,7 @@ npm i -g pnpm@10.28.0 pm2
 Repo secret: `BACKEND_REMOTE_DIR` = absolute path to `nodejs` folder.
 
 Then: **Actions → Deploy Backend API → Run workflow**  
-(or push to `main` under `backend/**`).
+(or push to `main` under `backend-api/**`).
 
 ### Option B — Manual from local PC
 
@@ -94,7 +94,7 @@ Then: **Actions → Deploy Backend API → Run workflow**
 pnpm --filter prodesignity-api run build
 rsync -avz --delete \
   -e "ssh -p YOUR_SSH_PORT" \
-  backend/dist backend/package.json backend/prisma backend/deploy \
+  backend-api/dist backend-api/package.json backend-api/prisma backend-api/deploy \
   YOUR_USER@YOUR_HOST:~/domains/api.prodesignity.com/nodejs/
 ```
 
@@ -335,5 +335,5 @@ Dashboard login: `https://dashboard.prodesignity.com/login`.
 ## Related
 
 - Repo overview: `deploy/HOSTINGER.md`
-- Proxy source: `backend/deploy/proxy.php`
-- Rewrite rules: `backend/deploy/.htaccess`
+- Proxy source: `backend-api/deploy/proxy.php`
+- Rewrite rules: `backend-api/deploy/.htaccess`
