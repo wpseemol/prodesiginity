@@ -16,6 +16,9 @@ function createAdapter() {
       user,
       password,
       database,
+      // MySQL 8 caching_sha2_password over non-TLS fails after a server restart
+      // (empty auth cache) unless the client may fetch the RSA public key.
+      allowPublicKeyRetrieval: true,
       // Prefer a healthy pool for local + Hostinger deploys.
       connectionLimit: 10,
       // Fail request-level DB errors quickly so the API stays responsive
@@ -38,11 +41,12 @@ function createAdapter() {
   }
 
   // Mariadb driver requires mariadb:// (not mysql://)
-  const url = connectionString.startsWith("mysql://")
-    ? connectionString.replace(/^mysql:\/\//, "mariadb://")
-    : connectionString;
+  const parsed = new URL(connectionString.replace(/^mysql:\/\//, "mariadb://"));
+  if (!parsed.searchParams.has("allowPublicKeyRetrieval")) {
+    parsed.searchParams.set("allowPublicKeyRetrieval", "true");
+  }
 
-  return new PrismaMariaDb(url);
+  return new PrismaMariaDb(parsed.toString());
 }
 
 const globalForPrisma = globalThis as unknown as {

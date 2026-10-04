@@ -9,14 +9,16 @@
  * menus cannot drift apart.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X, ArrowRight, ChevronDown } from "lucide-react";
 
 import ServiceIcon from "@/components/ServiceIcon";
-import { SERVICE_MENU, SERVICES_BASE_PATH } from "@/data/servicesData";
+import { SERVICES_BASE_PATH } from "@/data/servicesData";
+import { buildServiceMenu } from "@/lib/services-catalog";
+import { useServicesCatalog } from "@/lib/useServicesCatalog";
 import { cn } from "@/lib/utils";
 import { siteConfig } from "@/config/site";
 import type { NavLink } from "@/components/home/nav/DesktopNav";
@@ -26,6 +28,8 @@ export default function MobileMenu({ navLinks }: { navLinks: NavLink[] }) {
     const [isOpen, setIsOpen] = useState(false);
     const [openGroup, setOpenGroup] = useState<string | null>(null);
     const [servicesOpen, setServicesOpen] = useState(false);
+    const catalog = useServicesCatalog();
+    const serviceMenu = useMemo(() => buildServiceMenu(catalog), [catalog]);
 
     /**
      * Soft navigation leaves this component mounted, so the drawer has to be
@@ -133,7 +137,7 @@ export default function MobileMenu({ navLinks }: { navLinks: NavLink[] }) {
                                                     }}
                                                     className="overflow-hidden pl-2 border-l border-border-color dark:border-dark-border-color ml-4 space-y-1"
                                                 >
-                                                    {SERVICE_MENU.map(
+                                                    {serviceMenu.map(
                                                         (group) => {
                                                             const expanded =
                                                                 openGroup ===

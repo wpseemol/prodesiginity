@@ -136,12 +136,14 @@ export default function Footer() {
                         >
                             Privacy Policy
                         </Link>
-                        <a
+                        <Link
                             href={adminLoginHref}
+                            target="_blank"
+                            rel="noopener noreferrer"
                             className="hover:text-slate-600 dark:hover:text-slate-300 transition"
                         >
                             Admin Login
-                        </a>
+                        </Link>
                     </div>
                 </div>
             </div>

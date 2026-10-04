@@ -1,11 +1,13 @@
 import { MetadataRoute } from "next";
 import { siteConfig } from "@/config/site";
-import { SERVICES } from "@/data/servicesData";
+import { serviceHref } from "@/data/servicesData";
 import { POSTS, blogHref } from "@/data/blog";
+import { getServicesCatalog } from "@/lib/services-catalog";
 
 export const dynamic = "force-static";
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+    const { services } = await getServicesCatalog();
     const baseUrl = siteConfig.url;
 
     const routes = [
@@ -25,8 +27,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
         priority: route === "" ? 1 : 0.8,
     }));
 
-    const serviceRoutes = SERVICES.map((service) => ({
-        url: `${baseUrl}/services/our-service/${service.slug}`,
+    const serviceRoutes = services.map((service) => ({
+        url: `${baseUrl}${serviceHref(service.slug)}`,
         lastModified: new Date(),
         changeFrequency: "weekly" as const,
         priority: 0.7,

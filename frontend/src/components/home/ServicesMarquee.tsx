@@ -16,12 +16,10 @@ import { ArrowUpRight } from "lucide-react";
 
 import { HeaderPill } from "@/components/HeaderPill";
 import ServiceIcon from "@/components/ServiceIcon";
-import {
-    MARQUEE_BOTTOM_ROW,
-    MARQUEE_TOP_ROW,
-    serviceHref,
-    type Service,
-} from "@/data/servicesData";
+import { serviceHref, type Service } from "@/data/servicesData";
+import { useServicesCatalog } from "@/lib/useServicesCatalog";
+
+const TOP_ROW_SIZE = 7;
 
 function CardItem({ service }: { service: Service }) {
     return (
@@ -63,6 +61,10 @@ function CardItem({ service }: { service: Service }) {
 }
 
 export default function ServicesMarquee() {
+    const { services } = useServicesCatalog();
+    const topRow = services.slice(0, TOP_ROW_SIZE);
+    const bottomRow = services.slice(TOP_ROW_SIZE);
+
     return (
         <section className="relative py-20 lg:py-28 bg-white dark:bg-[#070B14] border-b border-border-color dark:border-dark-border-color overflow-hidden select-none transition-colors duration-300 font-sans px-4 sm:px-6 lg:px-8">
             {/* Background Ambient Glows */}
@@ -109,7 +111,7 @@ export default function ServicesMarquee() {
                             pauseOnClick={true}
                             className="overflow-hidden py-2"
                         >
-                            {MARQUEE_TOP_ROW.map((service) => (
+                            {topRow.map((service) => (
                                 <CardItem
                                     key={`top-${service.slug}`}
                                     service={service}
@@ -129,7 +131,7 @@ export default function ServicesMarquee() {
                             pauseOnClick={true}
                             className="overflow-hidden py-2"
                         >
-                            {MARQUEE_BOTTOM_ROW.map((service) => (
+                            {bottomRow.map((service) => (
                                 <CardItem
                                     key={`bottom-${service.slug}`}
                                     service={service}

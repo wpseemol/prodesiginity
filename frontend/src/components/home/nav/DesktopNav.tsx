@@ -20,18 +20,16 @@
  *    navigation and the component never unmounts.
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDown, ChevronRight, ArrowRight } from "lucide-react";
 
 import ServiceIcon from "@/components/ServiceIcon";
-import {
-    SERVICE_MENU,
-    SERVICES_BASE_PATH,
-    type ServiceGroupSlug,
-} from "@/data/servicesData";
+import { SERVICES_BASE_PATH, type ServiceGroupSlug } from "@/data/servicesData";
+import { buildServiceMenu } from "@/lib/services-catalog";
+import { useServicesCatalog } from "@/lib/useServicesCatalog";
 import { cn } from "@/lib/utils";
 
 export interface NavLink {
@@ -46,8 +44,10 @@ const CLOSE_DELAY = 140;
 export default function DesktopNav({ navLinks }: { navLinks: NavLink[] }) {
     const pathname = usePathname();
     const [open, setOpen] = useState(false);
+    const catalog = useServicesCatalog();
+    const serviceMenu = useMemo(() => buildServiceMenu(catalog), [catalog]);
     const [activeGroup, setActiveGroup] = useState<ServiceGroupSlug>(
-        SERVICE_MENU[0].slug,
+        serviceMenu[0]?.slug ?? "",
     );
 
     const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -188,7 +188,7 @@ export default function DesktopNav({ navLinks }: { navLinks: NavLink[] }) {
                                         className="relative w-64 p-2 rounded-2xl bg-white/95 dark:bg-[#0d1220]/95 backdrop-blur-xl border border-border-color dark:border-dark-border-color shadow-2xl shadow-slate-900/10 dark:shadow-black/50"
                                         role="menu"
                                     >
-                                        {SERVICE_MENU.map((group) => {
+                                        {serviceMenu.map((group) => {
                                             const selected =
                                                 group.slug === activeGroup;
                                             return (
