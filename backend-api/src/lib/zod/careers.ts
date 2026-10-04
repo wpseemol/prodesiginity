@@ -79,6 +79,17 @@ export const updateApplicationSchema = z
   })
   .strict();
 
+export const blockEmailSchema = z
+  .object({
+    email: z
+      .string()
+      .trim()
+      .toLowerCase()
+      .pipe(z.email("Enter a valid email address").max(254)),
+    reason: oneLine(255).optional(),
+  })
+  .strict();
+
 export const replyApplicationSchema = z
   .object({
     subject: z

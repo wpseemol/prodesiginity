@@ -1,6 +1,6 @@
 /**
- * Creates the careers / notifications / mail-settings tables and the
- * users.google_id column. Safe to run more than once.
+ * Creates the careers / blocked-email / notifications / mail-settings tables
+ * and the users.google_id column. Safe to run more than once.
  *
  *   pnpm db:ensure-careers
  */
@@ -109,6 +109,15 @@ const TABLES = [
     UNIQUE INDEX \`mail_settings_key_key\`(\`key\`),
     PRIMARY KEY (\`id\`)
   ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
+
+  `CREATE TABLE IF NOT EXISTS \`blocked_emails\` (
+    \`id\` INTEGER NOT NULL AUTO_INCREMENT,
+    \`email\` VARCHAR(254) NOT NULL,
+    \`reason\` VARCHAR(255) NULL,
+    \`created_at\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    UNIQUE INDEX \`blocked_emails_email_key\`(\`email\`),
+    PRIMARY KEY (\`id\`)
+  ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
 ];
 
 async function main() {
@@ -128,7 +137,7 @@ async function main() {
     await prisma.$executeRawUnsafe(ddl);
   }
 
-  console.log("Careers, notifications and mail settings tables are up to date.");
+  console.log("Careers, blocked emails, notifications and mail settings tables are up to date.");
   await prisma.$disconnect();
 }
 

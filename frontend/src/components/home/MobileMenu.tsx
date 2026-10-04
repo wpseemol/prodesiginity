@@ -13,9 +13,19 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, ArrowRight, ChevronDown } from "lucide-react";
+import {
+    Menu,
+    X,
+    ArrowRight,
+    ChevronDown,
+    LayoutDashboard,
+    LogOut,
+} from "lucide-react";
 
 import ServiceIcon from "@/components/ServiceIcon";
+import { AccountAvatar } from "@/components/home/HeaderAccount";
+import { signOut } from "@/lib/auth";
+import { useCurrentUser } from "@/lib/useCurrentUser";
 import { SERVICES_BASE_PATH } from "@/data/servicesData";
 import { buildIndustryMenu } from "@/lib/industries-catalog";
 import { buildServiceMenu } from "@/lib/services-catalog";
@@ -31,6 +41,7 @@ export default function MobileMenu({ navLinks }: { navLinks: NavLink[] }) {
     const [openGroup, setOpenGroup] = useState<string | null>(null);
     const [servicesOpen, setServicesOpen] = useState(false);
     const [industriesOpen, setIndustriesOpen] = useState(false);
+    const user = useCurrentUser();
     const catalog = useServicesCatalog();
     const serviceMenu = useMemo(() => buildServiceMenu(catalog), [catalog]);
     const industries = useIndustries();
@@ -358,13 +369,53 @@ export default function MobileMenu({ navLinks }: { navLinks: NavLink[] }) {
                         </nav>
 
                         <div className="pt-2 space-y-2">
-                            <Link
-                                href={siteConfig.loginPath}
-                                onClick={close}
-                                className="flex items-center justify-center w-full py-3 rounded-xl font-semibold text-slate-700 dark:text-slate-200 border border-border-color dark:border-dark-border-color hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors"
-                            >
-                                Login
-                            </Link>
+                            {user ? (
+                                <div className="rounded-xl border border-border-color dark:border-dark-border-color p-3">
+                                    <div className="flex items-center gap-3">
+                                        <AccountAvatar
+                                            user={user}
+                                            className="h-10 w-10"
+                                        />
+                                        <div className="min-w-0">
+                                            <p className="truncate text-sm font-bold text-slate-900 dark:text-white">
+                                                {user.name}
+                                            </p>
+                                            <p className="truncate text-xs text-slate-500 dark:text-slate-400">
+                                                {user.email}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="mt-3 grid grid-cols-2 gap-2">
+                                        <Link
+                                            href={siteConfig.dashboardPath}
+                                            onClick={close}
+                                            className="flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800/60 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors"
+                                        >
+                                            <LayoutDashboard className="w-4 h-4" />
+                                            Dashboard
+                                        </Link>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                close();
+                                                void signOut();
+                                            }}
+                                            className="flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+                                        >
+                                            <LogOut className="w-4 h-4" />
+                                            Log out
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <Link
+                                    href={siteConfig.loginPath}
+                                    onClick={close}
+                                    className="flex items-center justify-center w-full py-3 rounded-xl font-semibold text-slate-700 dark:text-slate-200 border border-border-color dark:border-dark-border-color hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors"
+                                >
+                                    Login
+                                </Link>
+                            )}
                             <Link
                                 href={`${siteConfig.contactPath}/#book-a-call`}
                                 onClick={close}

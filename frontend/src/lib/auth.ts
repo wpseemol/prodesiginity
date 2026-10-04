@@ -10,6 +10,7 @@ import { apiBaseUrl } from "@/config/api";
  */
 const SESSION_HINT_KEY = "prodesignity_signed_in";
 const LEGACY_SESSION_KEY = "prodesignity_auth";
+const AUTH_CHANGE_EVENT = "prodesignity:auth-change";
 
 export type AuthUser = {
     email: string;
@@ -48,6 +49,7 @@ function hasSessionHint(): boolean {
 }
 
 function setSessionHint(signedIn: boolean) {
+    const changed = hasSessionHint() !== signedIn;
     try {
         if (signedIn) localStorage.setItem(SESSION_HINT_KEY, "1");
         else localStorage.removeItem(SESSION_HINT_KEY);
@@ -55,6 +57,28 @@ function setSessionHint(signedIn: boolean) {
     } catch {
         // Storage can be blocked (private mode); the cookie session still works.
     }
+    if (changed) notifyAuthChange();
+}
+
+/** Tells mounted UI (header, menus) to re-read the signed-in user. */
+export function notifyAuthChange() {
+    if (typeof window !== "undefined") window.dispatchEvent(new Event(AUTH_CHANGE_EVENT));
+}
+
+/**
+ * Calls `listener` when this tab signs in/out or the profile changes, and when
+ * another tab signs in/out.
+ */
+export function onAuthChange(listener: () => void): () => void {
+    const onStorage = (e: StorageEvent) => {
+        if (e.key === SESSION_HINT_KEY || e.key === null) listener();
+    };
+    window.addEventListener(AUTH_CHANGE_EVENT, listener);
+    window.addEventListener("storage", onStorage);
+    return () => {
+        window.removeEventListener(AUTH_CHANGE_EVENT, listener);
+        window.removeEventListener("storage", onStorage);
+    };
 }
 
 function apiFetch(path: string, init: RequestInit = {}) {

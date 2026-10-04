@@ -1,11 +1,15 @@
 import { Router } from "express";
 import {
+  addBlockedEmail,
   applyForJob,
   careersUploadErrorHandler,
   deleteApplication,
   downloadResume,
   getApplication,
   listApplications,
+  listBlockedEmails,
+  listMyApplications,
+  removeBlockedEmail,
   replyToApplication,
   updateApplication,
 } from "../controllers/careers.controller.js";
@@ -30,7 +34,13 @@ router.post(
   applyForJob,
 );
 
+router.get("/me/applications", requireAuth, listMyApplications);
+
 router.use(requireAuth, requireAdmin);
+
+router.get("/blocked", listBlockedEmails);
+router.post("/blocked", addBlockedEmail);
+router.delete("/blocked", removeBlockedEmail);
 
 router.get("/applications", listApplications);
 router.get("/applications/:id", getApplication);

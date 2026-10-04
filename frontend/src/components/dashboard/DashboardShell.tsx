@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
+    Briefcase,
     LayoutDashboard,
     LogOut,
     FolderKanban,
@@ -13,8 +14,14 @@ import {
 import Logo from "@/components/home/Logo";
 import ThemeToggle from "@/components/ThemeToggle";
 import { staffInitials } from "@/components/team/StaffAvatar";
+import MyApplications from "@/components/dashboard/MyApplications";
 import ProfilePicturePicker from "@/components/dashboard/ProfilePicturePicker";
-import { getCurrentUser, signOut, type AuthUser } from "@/lib/auth";
+import {
+    getCurrentUser,
+    notifyAuthChange,
+    signOut,
+    type AuthUser,
+} from "@/lib/auth";
 import { mediaUrl } from "@/config/api";
 import { siteConfig } from "@/config/site";
 
@@ -28,6 +35,11 @@ const nav = [
         name: "Projects",
         href: `${siteConfig.dashboardPath}#projects`,
         icon: FolderKanban,
+    },
+    {
+        name: "Applications",
+        href: `${siteConfig.dashboardPath}#applications`,
+        icon: Briefcase,
     },
     {
         name: "Settings",
@@ -158,6 +170,13 @@ export default function DashboardShell() {
                     </section>
 
                     <section
+                        id="applications"
+                        className="scroll-mt-24 rounded-3xl border border-border-color bg-white p-6 shadow-sm dark:border-dark-border-color dark:bg-slate-900/50 sm:p-8"
+                    >
+                        <MyApplications />
+                    </section>
+
+                    <section
                         id="settings"
                         className="rounded-3xl border border-border-color bg-white p-6 shadow-sm dark:border-dark-border-color dark:bg-slate-900/50 sm:p-8"
                     >
@@ -167,6 +186,7 @@ export default function DashboardShell() {
                             onChange={(next) => {
                                 setUser(next);
                                 setPictureFailed(false);
+                                notifyAuthChange();
                             }}
                         />
                     </section>

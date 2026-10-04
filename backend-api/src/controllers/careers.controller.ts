@@ -11,6 +11,7 @@ import { ACCESS_SECRET } from "../lib/tokens.js";
 import { CAREERS_STORAGE_ROOT, fileMatchesMime } from "../lib/uploads.js";
 import {
   applySchema,
+  blockEmailSchema,
   listApplicationsQuery,
   replyApplicationSchema,
   updateApplicationSchema,
@@ -39,6 +40,23 @@ function hashIp(req: Request) {
 function parseId(raw: unknown) {
   const id = Number(raw);
   return Number.isInteger(id) && id > 0 ? id : null;
+}
+
+async function isBlocked(email: string) {
+  const row = await prisma.blockedEmail.findUnique({
+    where: { email: email.trim().toLowerCase() },
+    select: { id: true },
+  });
+  return row !== null;
+}
+
+function blockEmail(email: string, reason?: string) {
+  const normalized = email.trim().toLowerCase();
+  return prisma.blockedEmail.upsert({
+    where: { email: normalized },
+    create: { email: normalized, reason: reason || null },
+    update: reason ? { reason } : {},
+  });
 }
 
 /** Original filename made safe for storage and Content-Disposition. */
@@ -152,6 +170,14 @@ export const applyForJob = async (req: Request, res: Response) => {
       return res.status(400).json({
         message: "That file does not look like a real PDF or Word document",
         field: "resume",
+      });
+    }
+
+    if (await isBlocked(data.email)) {
+      removeFile(file.path);
+      return res.status(403).json({
+        message: "We can't accept applications from this email address.",
+        field: "email",
       });
     }
 
@@ -283,7 +309,7 @@ export const listApplications = async (req: AuthRequest, res: Response) => {
 };
 
 async function loadApplication(id: number) {
-  return prisma.jobApplication.findUnique({
+  const application = await prisma.jobApplication.findUnique({
     where: { id },
     select: {
       id: true,
@@ -319,6 +345,8 @@ async function loadApplication(id: number) {
       },
     },
   });
+  if (!application) return null;
+  return { ...application, blocked: await isBlocked(application.email) };
 }
 
 /** GET /api/careers/applications/:id — also marks it as read. */
@@ -450,21 +478,109 @@ export const replyToApplication = async (req: AuthRequest, res: Response) => {
   }
 };
 
-/** DELETE /api/careers/applications/:id — removes the record and the CV file. */
+/**
+ * DELETE /api/careers/applications/:id — removes the record and the CV file.
+ * `?block=1` also blocks the applicant's email from applying again.
+ */
 export const deleteApplication = async (req: AuthRequest, res: Response) => {
   const id = parseId(req.params.id);
   if (!id) return res.status(400).json({ message: "Invalid application id" });
   try {
     const application = await prisma.jobApplication.findUnique({
       where: { id },
-      select: { resumeFile: true },
+      select: { resumeFile: true, email: true, jobTitle: true },
     });
     if (!application) return res.status(404).json({ message: "Application not found" });
+    const block = req.query.block === "1";
+    if (block) await blockEmail(application.email, `Deleted application for ${application.jobTitle}`.slice(0, 255));
     await prisma.jobApplication.delete({ where: { id } });
     removeFile(resumePath(application.resumeFile));
-    return res.status(200).json({ message: "Application deleted" });
+    return res.status(200).json({
+      message: block ? "Application deleted and email blocked" : "Application deleted",
+    });
   } catch (error) {
     console.error("Delete application error:", error);
     return res.status(500).json({ message: "Failed to delete application" });
+  }
+};
+
+/** GET /api/careers/blocked */
+export const listBlockedEmails = async (_req: AuthRequest, res: Response) => {
+  try {
+    const blocked = await prisma.blockedEmail.findMany({ orderBy: { createdAt: "desc" } });
+    return res.status(200).json({ blocked });
+  } catch (error) {
+    console.error("List blocked emails error:", error);
+    return res.status(500).json({ message: "Failed to load blocked emails" });
+  }
+};
+
+/** POST /api/careers/blocked — body `{ email, reason? }`. */
+export const addBlockedEmail = async (req: AuthRequest, res: Response) => {
+  try {
+    const parsed = blockEmailSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ message: parsed.error.issues[0]?.message || "Enter a valid email address" });
+    }
+    const blocked = await blockEmail(parsed.data.email, parsed.data.reason);
+    return res.status(200).json({ message: `${blocked.email} is blocked`, blocked });
+  } catch (error) {
+    console.error("Block email error:", error);
+    return res.status(500).json({ message: "Failed to block the email" });
+  }
+};
+
+/** DELETE /api/careers/blocked?email= — lets that address apply again. */
+export const removeBlockedEmail = async (req: AuthRequest, res: Response) => {
+  try {
+    const email = typeof req.query.email === "string" ? req.query.email.trim().toLowerCase() : "";
+    if (!email) return res.status(400).json({ message: "Email is required" });
+    const { count } = await prisma.blockedEmail.deleteMany({ where: { email } });
+    if (count === 0) return res.status(404).json({ message: "That email is not blocked" });
+    return res.status(200).json({ message: `${email} can apply again` });
+  } catch (error) {
+    console.error("Unblock email error:", error);
+    return res.status(500).json({ message: "Failed to unblock the email" });
+  }
+};
+
+/**
+ * GET /api/careers/me/applications — the signed-in user's applications (by
+ * account email) with the messages the team sent. Notes and ratings stay private.
+ */
+export const listMyApplications = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) return res.status(401).json({ message: "Authentication required." });
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } });
+    if (!user) return res.status(401).json({ message: "Authentication required." });
+
+    const rows = await prisma.jobApplication.findMany({
+      where: { email: user.email.toLowerCase() },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+      select: {
+        id: true,
+        jobTitle: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+        replies: {
+          where: { status: "sent" },
+          orderBy: { createdAt: "desc" },
+          select: { id: true, subject: true, body: true, createdAt: true },
+        },
+      },
+    });
+
+    return res.status(200).json({
+      applications: rows.map((row) => ({
+        ...row,
+        reference: `PD-${String(row.id).padStart(5, "0")}`,
+      })),
+    });
+  } catch (error) {
+    console.error("List my applications error:", error);
+    return res.status(500).json({ message: "Failed to load your applications" });
   }
 };

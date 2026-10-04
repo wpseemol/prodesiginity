@@ -399,6 +399,16 @@ model JobApplication {
   @@map("job_applications")
 }
 
+/// Addresses an admin blocked from applying on /careers (stored lower-case).
+model BlockedEmail {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique @db.VarChar(254)
+  reason    String?  @db.VarChar(255)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("blocked_emails")
+}
+
 /// Email sent to an applicant from the dashboard.
 model ApplicationReply {
   id            Int            @id @default(autoincrement())

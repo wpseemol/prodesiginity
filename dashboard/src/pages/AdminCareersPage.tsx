@@ -8,6 +8,7 @@ import {
 } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
+  BanIcon,
   BriefcaseIcon,
   CalendarIcon,
   ChevronLeftIcon,
@@ -27,6 +28,7 @@ import {
   SaveIcon,
   SearchIcon,
   SendIcon,
+  ShieldCheckIcon,
   StarIcon,
   Trash2Icon,
   TriangleAlertIcon,
@@ -36,6 +38,7 @@ import { apiFetch } from "@/lib/api";
 import { DEFAULT_SITE_SETTINGS } from "@/lib/brand";
 import { cn } from "@/lib/utils";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { BlockedEmailsManager } from "@/components/careers/BlockedEmailsManager";
 import { CareersPageEditor } from "@/components/careers/CareersPageEditor";
 import { JobsManager } from "@/components/careers/JobsManager";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
@@ -61,6 +64,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import type { DashboardUser } from "@/lib/session";
 
@@ -132,6 +136,8 @@ type ApplicationDetail = Omit<ApplicationRow, "replyCount"> & {
   notes: string | null;
   updatedAt: string;
   replies: ApplicationReply[];
+  /** The applicant's email is on the blocked list. */
+  blocked: boolean;
 };
 
 type ListResponse = {
@@ -588,6 +594,8 @@ function ApplicationSheet({
   const [savingNotes, setSavingNotes] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [blockOnDelete, setBlockOnDelete] = useState(false);
+  const [blocking, setBlocking] = useState(false);
 
   const apply = useCallback(
     (next: ApplicationDetail) => {
@@ -655,16 +663,55 @@ function ApplicationSheet({
     if (!application) return;
     setDeleting(true);
     try {
-      const res = await apiFetch(`/careers/applications/${application.id}`, { method: "DELETE" });
+      const block = blockOnDelete && !application.blocked;
+      const res = await apiFetch(
+        `/careers/applications/${application.id}${block ? "?block=1" : ""}`,
+        { method: "DELETE" },
+      );
       if (!res.ok) {
         toast.error(await errorMessage(res, "Delete failed"));
         return;
       }
-      toast.success("Application deleted");
+      toast.success(block ? "Application deleted and email blocked" : "Application deleted");
       setConfirmDelete(false);
+      setBlockOnDelete(false);
       onDeleted(application.id);
+    } catch {
+      toast.error("Could not reach the server.");
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const toggleBlock = async () => {
+    if (!application) return;
+    setBlocking(true);
+    try {
+      const res = application.blocked
+        ? await apiFetch(`/careers/blocked?email=${encodeURIComponent(application.email)}`, {
+            method: "DELETE",
+          })
+        : await apiFetch("/careers/blocked", {
+            method: "POST",
+            body: JSON.stringify({
+              email: application.email,
+              reason: `Blocked from application ${reference(application.id)}`,
+            }),
+          });
+      if (!res.ok) {
+        toast.error(await errorMessage(res, application.blocked ? "Unblock failed" : "Block failed"));
+        return;
+      }
+      setApplication({ ...application, blocked: !application.blocked });
+      toast.success(
+        application.blocked
+          ? `${application.email} can apply again`
+          : `${application.email} can no longer apply`,
+      );
+    } catch {
+      toast.error("Could not reach the server.");
+    } finally {
+      setBlocking(false);
     }
   };
 
@@ -698,7 +745,15 @@ function ApplicationSheet({
                     <span className="font-mono text-xs">{reference(application.id)}</span>
                   </SheetDescription>
                 </div>
-                <StatusBadge status={application.status} />
+                <div className="flex flex-col items-end gap-1.5">
+                  <StatusBadge status={application.status} />
+                  {application.blocked ? (
+                    <Badge variant="outline" className={STATUS_META.rejected.className}>
+                      <BanIcon />
+                      Blocked
+                    </Badge>
+                  ) : null}
+                </div>
               </div>
             </SheetHeader>
 
@@ -859,23 +914,59 @@ function ApplicationSheet({
                 ) : null}
 
                 <Separator />
-                <div className="flex justify-end pb-2">
-                  <Button variant="destructive" size="sm" onClick={() => setConfirmDelete(true)}>
-                    <Trash2Icon />
-                    Delete application
-                  </Button>
+                <div className="flex flex-wrap items-center justify-between gap-3 pb-2">
+                  <p className="max-w-sm text-xs text-muted-foreground">
+                    {application.blocked
+                      ? "This email is blocked: new applications from it are rejected."
+                      : "Block this email to stop it from applying again."}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <Button variant="outline" size="sm" disabled={blocking} onClick={() => void toggleBlock()}>
+                      {blocking ? (
+                        <Loader2Icon className="animate-spin" />
+                      ) : application.blocked ? (
+                        <ShieldCheckIcon />
+                      ) : (
+                        <BanIcon />
+                      )}
+                      {application.blocked ? "Unblock email" : "Block email"}
+                    </Button>
+                    <Button variant="destructive" size="sm" onClick={() => setConfirmDelete(true)}>
+                      <Trash2Icon />
+                      Delete application
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
 
             <ConfirmDialog
               open={confirmDelete}
-              onOpenChange={setConfirmDelete}
+              onOpenChange={(open) => {
+                setConfirmDelete(open);
+                if (!open) setBlockOnDelete(false);
+              }}
               title="Delete this application?"
               description={`${application.name}'s application, CV file and email history will be permanently removed.`}
               loading={deleting}
               onConfirm={remove}
-            />
+            >
+              {application.blocked ? null : (
+                <label className="flex cursor-pointer items-start gap-3 rounded-xl border bg-muted/30 p-3 text-left">
+                  <Switch
+                    checked={blockOnDelete}
+                    onCheckedChange={(checked) => setBlockOnDelete(checked)}
+                    className="mt-0.5"
+                  />
+                  <span className="grid gap-0.5">
+                    <span className="text-sm font-medium">Also block {application.email}</span>
+                    <span className="text-xs text-muted-foreground">
+                      New applications from this email will be rejected.
+                    </span>
+                  </span>
+                </label>
+              )}
+            </ConfirmDialog>
           </>
         )}
       </SheetContent>
@@ -1213,6 +1304,7 @@ const CAREERS_TABS = [
   { id: "applications", label: "Applications", icon: InboxIcon },
   { id: "jobs", label: "Job openings", icon: BriefcaseIcon },
   { id: "page", label: "Page content", icon: LayoutTemplateIcon },
+  { id: "blocked", label: "Blocked emails", icon: BanIcon },
 ] as const;
 type CareersTab = (typeof CAREERS_TABS)[number]["id"];
 
@@ -1245,7 +1337,15 @@ function CareersAdmin({ user }: { user: DashboardUser }) {
         ))}
       </div>
 
-      {tab === "jobs" ? <JobsManager /> : tab === "page" ? <CareersPageEditor /> : <CareersInbox user={user} />}
+      {tab === "jobs" ? (
+        <JobsManager />
+      ) : tab === "page" ? (
+        <CareersPageEditor />
+      ) : tab === "blocked" ? (
+        <BlockedEmailsManager />
+      ) : (
+        <CareersInbox user={user} />
+      )}
     </div>
   );
 }

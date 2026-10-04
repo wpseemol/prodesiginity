@@ -48,7 +48,11 @@ export const API_ROUTES: ApiRoute[] = [
   { method: "PATCH", path: "/api/careers/applications/:id", auth: "admin" },
   { method: "GET", path: "/api/careers/applications/:id/resume", auth: "admin" },
   { method: "POST", path: "/api/careers/applications/:id/reply", auth: "admin" },
-  { method: "DELETE", path: "/api/careers/applications/:id", auth: "admin" },
+  { method: "DELETE", path: "/api/careers/applications/:id", auth: "admin", note: "?block=1 also blocks the email" },
+  { method: "GET", path: "/api/careers/blocked", auth: "admin" },
+  { method: "POST", path: "/api/careers/blocked", auth: "admin", note: "body { email, reason? }" },
+  { method: "DELETE", path: "/api/careers/blocked", auth: "admin", note: "?email=" },
+  { method: "GET", path: "/api/careers/me/applications", auth: "user", note: "own applications + sent replies" },
 
   { method: "GET", path: "/api/notifications", auth: "user", note: "admin + staff" },
   { method: "POST", path: "/api/notifications/read-all", auth: "user" },

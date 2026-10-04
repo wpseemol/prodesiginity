@@ -1,4 +1,5 @@
 import ThemeToggle from "@/components/ThemeToggle";
+import HeaderAccount from "@/components/home/HeaderAccount";
 import MobileMenu from "@/components/home/MobileMenu";
 import DesktopNav, { type NavLink } from "@/components/home/nav/DesktopNav";
 import Logo from "@/components/home/Logo";
@@ -35,12 +36,7 @@ export default function Header() {
                     <div className="flex items-center gap-3 sm:gap-4">
                         <ThemeToggle />
 
-                        <Link
-                            href={siteConfig.loginPath}
-                            className="hidden sm:inline-flex items-center justify-center px-4 py-2.5 text-sm font-semibold text-slate-700 hover:text-primary dark:text-slate-200 dark:hover:text-dark-primary transition-colors"
-                        >
-                            Login
-                        </Link>
+                        <HeaderAccount />
 
                         <Link
                             href={`${siteConfig.contactPath}/#book-a-call`}

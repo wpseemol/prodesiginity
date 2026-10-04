@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Loader2Icon, TriangleAlertIcon } from "lucide-react";
 import {
   AlertDialog,
@@ -20,6 +21,8 @@ type ConfirmDialogProps = {
   cancelLabel?: string;
   loading?: boolean;
   destructive?: boolean;
+  /** Extra options shown between the description and the buttons. */
+  children?: ReactNode;
   onConfirm: () => void | Promise<void>;
 };
 
@@ -32,6 +35,7 @@ export function ConfirmDialog({
   cancelLabel = "Cancel",
   loading = false,
   destructive = true,
+  children,
   onConfirm,
 }: ConfirmDialogProps) {
   return (
@@ -56,6 +60,7 @@ export function ConfirmDialog({
           <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
+        {children}
         <AlertDialogFooter>
           <AlertDialogCancel disabled={loading}>{cancelLabel}</AlertDialogCancel>
           <AlertDialogAction
