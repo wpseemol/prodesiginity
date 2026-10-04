@@ -39,7 +39,7 @@ export default function LoginPage() {
                             Welcome back
                         </h1>
                         <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                            Sign in to open your dashboard.
+                            Use your Google account to open your client dashboard.
                         </p>
                     </div>
 

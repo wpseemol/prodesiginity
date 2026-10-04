@@ -57,3 +57,6 @@ backend-recovered/
 backend-old-api-backup/
 .vercel
 .env*
+
+# Private uploads (careers CVs) - never commit
+backend-api/storage/

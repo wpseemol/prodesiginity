@@ -22,8 +22,8 @@ import {
 import JsonLd from "@/components/home/JsonLd";
 import { HeaderPill } from "@/components/HeaderPill";
 import ServicesByGroupGrid from "@/components/services/ServicesByGroupGrid";
-import { TEAM_MEMBERS } from "@/data/teamData";
 import { getServicesCatalog, visibleGroups } from "@/lib/services-catalog";
+import { getTeamData } from "@/lib/team-api";
 import { breadcrumbSchema, buildMetadata, graph } from "@/lib/seo";
 import { siteConfig } from "@/config/site";
 
@@ -59,7 +59,10 @@ const WORKING_MODEL = [
 ];
 
 export default async function OurServiceAndTeamPage() {
-    const catalog = await getServicesCatalog();
+    const [catalog, team] = await Promise.all([
+        getServicesCatalog(),
+        getTeamData(),
+    ]);
 
     const schema = graph(
         breadcrumbSchema([
@@ -71,7 +74,7 @@ export default async function OurServiceAndTeamPage() {
             "@type": "AboutPage",
             name: "Our Service & Our Team",
             url: `${siteConfig.url}${PATH}`,
-            about: TEAM_MEMBERS.map((member) => ({
+            about: team.map((member) => ({
                 "@type": "Person",
                 name: member.name,
                 jobTitle: member.role,
@@ -127,7 +130,7 @@ export default async function OurServiceAndTeamPage() {
 
                     <p className="mt-6 text-base sm:text-lg text-slate-600 dark:text-slate-400 leading-relaxed max-w-2xl ">
                         {visibleGroups(catalog).length} service groups, one studio, and
-                        a team of {TEAM_MEMBERS.length} who each own a
+                        a team of {team.length} who each own a
                         discipline end to end. Here is how the work runs and who
                         you will actually be talking to.
                     </p>
@@ -202,7 +205,7 @@ export default async function OurServiceAndTeamPage() {
             </section>
 
             {/* --------------------------- The team ------------------------- */}
-            <OurTeamMemberSection />
+            <OurTeamMemberSection initialMembers={team} />
 
             {/* ----------------------------- CTA ---------------------------- */}
             <section className="relative pb-24 px-4 sm:px-6 lg:px-8">

@@ -8,6 +8,10 @@ export const SITE_UPLOAD_ROOT = path.join(UPLOADS_ROOT, "site");
 export const HOMEPAGE_UPLOAD_ROOT = path.join(UPLOADS_ROOT, "homepage");
 export const BLOG_UPLOAD_ROOT = path.join(UPLOADS_ROOT, "blog");
 
+/** Not served by express.static: files here are only streamed to admins. */
+export const PRIVATE_STORAGE_ROOT = path.resolve(process.cwd(), "storage");
+export const CAREERS_STORAGE_ROOT = path.join(PRIVATE_STORAGE_ROOT, "careers");
+
 export function ensureDir(dir: string): string {
   fs.mkdirSync(dir, { recursive: true });
   return dir;
@@ -31,6 +35,10 @@ export function ensureHomepageUploadDir(): string {
 
 export function ensureBlogUploadDir(): string {
   return ensureDir(BLOG_UPLOAD_ROOT);
+}
+
+export function ensureCareersStorageDir(): string {
+  return ensureDir(CAREERS_STORAGE_ROOT);
 }
 
 export function publicBlogUploadPath(filename: string): string {
@@ -84,6 +92,12 @@ export function fileMatchesMime(filePath: string, mimetype: string): boolean {
       return ascii(4, 8) === "ftyp" || ["moov", "mdat", "wide", "free"].includes(ascii(4, 8));
     case "video/webm":
       return header[0] === 0x1a && header[1] === 0x45 && header[2] === 0xdf && header[3] === 0xa3;
+    case "application/pdf":
+      return ascii(0, 5) === "%PDF-";
+    case "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+      return header.subarray(0, 4).equals(Buffer.from([0x50, 0x4b, 0x03, 0x04]));
+    case "application/msword":
+      return header.subarray(0, 8).equals(Buffer.from([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1]));
     default:
       return false;
   }

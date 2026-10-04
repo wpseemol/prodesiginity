@@ -100,3 +100,7 @@ export const deleteAccountSchema = z.object({
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
+
+export const googleLoginSchema = z.object({
+  credential: z.string().min(100).max(4096).regex(/^[A-Za-z0-9._-]+$/),
+});

@@ -11,6 +11,7 @@ export const API_ROUTES: ApiRoute[] = [
 
   { method: "POST", path: "/api/auth/register", auth: "public" },
   { method: "POST", path: "/api/auth/login", auth: "public" },
+  { method: "POST", path: "/api/auth/google", auth: "public", note: "Google ID token, client accounts only" },
   { method: "POST", path: "/api/auth/refresh", auth: "public" },
   { method: "POST", path: "/api/auth/logout", auth: "public" },
   { method: "GET", path: "/api/auth/me", auth: "user" },
@@ -36,6 +37,19 @@ export const API_ROUTES: ApiRoute[] = [
   { method: "POST", path: "/api/track/visit", auth: "public" },
   { method: "GET", path: "/api/blog", auth: "public" },
   { method: "GET", path: "/api/blog/:slug", auth: "public" },
+
+  { method: "POST", path: "/api/careers/apply", auth: "public", note: "multipart, rate limited" },
+  { method: "GET", path: "/api/careers/applications", auth: "admin" },
+  { method: "GET", path: "/api/careers/applications/:id", auth: "admin" },
+  { method: "PATCH", path: "/api/careers/applications/:id", auth: "admin" },
+  { method: "GET", path: "/api/careers/applications/:id/resume", auth: "admin" },
+  { method: "POST", path: "/api/careers/applications/:id/reply", auth: "admin" },
+  { method: "DELETE", path: "/api/careers/applications/:id", auth: "admin" },
+
+  { method: "GET", path: "/api/notifications", auth: "user", note: "admin + staff" },
+  { method: "POST", path: "/api/notifications/read-all", auth: "user" },
+  { method: "POST", path: "/api/notifications/:id/read", auth: "user" },
+  { method: "DELETE", path: "/api/notifications/:id", auth: "user" },
 
   { method: "GET", path: "/api/manage/blog/categories", auth: "user", note: "admin + staff" },
   { method: "POST", path: "/api/manage/blog/categories", auth: "admin" },
@@ -69,6 +83,9 @@ export const API_ROUTES: ApiRoute[] = [
   { method: "DELETE", path: "/api/admin/services/:id", auth: "admin" },
   { method: "GET", path: "/api/admin/settings", auth: "admin" },
   { method: "PUT", path: "/api/admin/settings", auth: "admin" },
+  { method: "GET", path: "/api/admin/settings/mail", auth: "admin" },
+  { method: "PUT", path: "/api/admin/settings/mail", auth: "admin" },
+  { method: "POST", path: "/api/admin/settings/mail/test", auth: "admin" },
   { method: "POST", path: "/api/admin/settings/favicon", auth: "admin", note: "multipart" },
   { method: "POST", path: "/api/admin/settings/login-logo", auth: "admin", note: "multipart" },
   { method: "POST", path: "/api/admin/settings/og-image", auth: "admin", note: "multipart" },
@@ -85,6 +102,8 @@ export const API_ROUTERS = [
   { mount: "/api/track", description: "Page visit tracking" },
   { mount: "/api/blog", description: "Public blog posts + categories" },
   { mount: "/api/manage/blog", description: "Blog management (JWT + admin/staff)" },
+  { mount: "/api/careers", description: "Careers applications (public apply, admin review)" },
+  { mount: "/api/notifications", description: "Dashboard notifications (JWT + admin/staff)" },
   { mount: "/api/admin", description: "Admin CMS (JWT + admin role)" },
   { mount: "/uploads", description: "Static uploaded files" },
 ] as const;

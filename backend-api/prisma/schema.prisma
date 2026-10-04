@@ -12,6 +12,8 @@ model User {
   username      String         @unique
   email         String         @unique
   password      String
+  /// Google account `sub` for clients who sign in with Google.
+  googleId      String?        @unique @map("google_id") @db.VarChar(64)
   role          Role           @default(user)
   photoId       Int?           @map("photo_id")
   photo         Photo?         @relation("UserProfilePhoto", fields: [photoId], references: [id], onDelete: SetNull)
@@ -20,6 +22,8 @@ model User {
   created_at    DateTime       @default(now())
   refreshTokens RefreshToken[]
   blogPosts     BlogPost[]     @relation("BlogPostAuthor")
+  notifications Notification[] @relation("UserNotifications")
+  applicationReplies ApplicationReply[] @relation("ApplicationReplySender")
 
   @@map("users")
 }
@@ -263,4 +267,101 @@ model BlogPost {
   @@index([bylineMemberId])
   @@index([status, publishedAt])
   @@map("blog_posts")
+}
+
+/// Application sent from the /careers form. The CV lives in private storage
+/// (never under /uploads) and is only streamed to admins.
+model JobApplication {
+  id           Int                @id @default(autoincrement())
+  name         String             @db.VarChar(80)
+  email        String             @db.VarChar(254)
+  phone        String             @db.VarChar(20)
+  city         String             @db.VarChar(60)
+  jobTitle     String             @map("job_title") @db.VarChar(120)
+  experience   String             @db.VarChar(20)
+  portfolioUrl String?            @map("portfolio_url") @db.VarChar(300)
+  coverLetter  String?            @map("cover_letter") @db.Text
+  resumeFile   String             @map("resume_file") @db.VarChar(120)
+  resumeName   String             @map("resume_name") @db.VarChar(160)
+  resumeMime   String             @map("resume_mime") @db.VarChar(100)
+  resumeSize   Int                @map("resume_size")
+  /// new | reviewing | shortlisted | interview | offered | hired | rejected
+  status       String             @default("new") @db.VarChar(20)
+  rating       Int?               @db.TinyInt
+  notes        String?            @db.Text
+  ipHash       String?            @map("ip_hash") @db.VarChar(64)
+  userAgent    String?            @map("user_agent") @db.VarChar(255)
+  readAt       DateTime?          @map("read_at")
+  replies      ApplicationReply[]
+  createdAt    DateTime           @default(now()) @map("created_at")
+  updatedAt    DateTime           @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([email])
+  @@map("job_applications")
+}
+
+/// Email sent to an applicant from the dashboard.
+model ApplicationReply {
+  id            Int            @id @default(autoincrement())
+  applicationId Int            @map("application_id")
+  application   JobApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  subject       String         @db.VarChar(200)
+  body          String         @db.Text
+  /// sent | failed
+  status        String         @db.VarChar(16)
+  provider      String?        @db.VarChar(16)
+  error         String?        @db.VarChar(500)
+  sentById      Int?           @map("sent_by_id")
+  sentBy        User?          @relation("ApplicationReplySender", fields: [sentById], references: [id], onDelete: SetNull)
+  createdAt     DateTime       @default(now()) @map("created_at")
+
+  @@index([applicationId])
+  @@map("application_replies")
+}
+
+/// Dashboard notification. `userId = null` is shared by every admin.
+model Notification {
+  id        Int       @id @default(autoincrement())
+  userId    Int?      @map("user_id")
+  user      User?     @relation("UserNotifications", fields: [userId], references: [id], onDelete: Cascade)
+  type      String    @db.VarChar(40)
+  title     String    @db.VarChar(160)
+  body      String?   @db.VarChar(500)
+  link      String?   @db.VarChar(255)
+  readAt    DateTime? @map("read_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@index([userId, readAt])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+/// Singleton outgoing-mail configuration. Secrets are AES-GCM encrypted.
+model MailSetting {
+  id                  Int       @id @default(autoincrement())
+  key                 String    @unique @default("default") @db.VarChar(32)
+  /// none | resend | smtp
+  provider            String    @default("none") @db.VarChar(16)
+  fromName            String?   @map("from_name") @db.VarChar(120)
+  fromEmail           String?   @map("from_email") @db.VarChar(254)
+  replyTo             String?   @map("reply_to") @db.VarChar(254)
+  notifyEmail         String?   @map("notify_email") @db.VarChar(254)
+  resendApiKey        String?   @map("resend_api_key") @db.Text
+  smtpPreset          String?   @map("smtp_preset") @db.VarChar(32)
+  smtpHost            String?   @map("smtp_host") @db.VarChar(255)
+  smtpPort            Int?      @map("smtp_port")
+  smtpSecure          Boolean   @default(false) @map("smtp_secure")
+  smtpUser            String?   @map("smtp_user") @db.VarChar(254)
+  smtpPass            String?   @map("smtp_pass") @db.Text
+  careersAutoReply    Boolean   @default(true) @map("careers_auto_reply")
+  notifyOnApplication Boolean   @default(true) @map("notify_on_application")
+  lastTestAt          DateTime? @map("last_test_at")
+  lastTestOk          Boolean?  @map("last_test_ok")
+  lastError           String?   @map("last_error") @db.VarChar(500)
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  @@map("mail_settings")
 }

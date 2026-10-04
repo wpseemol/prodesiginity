@@ -27,6 +27,7 @@
     "db:seed-homepage": "tsx scripts/ensure-homepage.ts",
     "db:seed-team-settings": "tsx scripts/ensure-team-settings.ts",
     "db:ensure-team-profile": "tsx scripts/ensure-team-profile-fields.ts",
+    "db:ensure-careers": "tsx scripts/ensure-careers-mail.ts",
     "db:ensure-tracking": "tsx scripts/ensure-tracking-settings.ts",
     "db:ensure-services": "tsx scripts/ensure-services.ts",
     "db:ensure-site-config": "tsx scripts/ensure-site-config.ts",

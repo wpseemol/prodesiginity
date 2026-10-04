@@ -25,6 +25,12 @@ import {
 } from "../controllers/settings.controller.js";
 import { getAnalyticsOverview } from "../controllers/tracking.controller.js";
 import {
+  getMailSettings,
+  sendTestMail,
+  updateMailSettings,
+} from "../controllers/mail.controller.js";
+import { mailTestLimiter } from "../middleware/rateLimit.js";
+import {
   createService,
   createServiceGroup,
   deleteService,
@@ -109,6 +115,9 @@ router.delete("/services/:id", deleteService);
 
 router.get("/settings", getAdminSettings);
 router.put("/settings", updateSiteSettings);
+router.get("/settings/mail", getMailSettings);
+router.put("/settings/mail", updateMailSettings);
+router.post("/settings/mail/test", mailTestLimiter, sendTestMail);
 router.post(
   "/settings/favicon",
   (req, res, next) => {

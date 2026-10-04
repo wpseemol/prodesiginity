@@ -1,6 +1,9 @@
+import crypto from "crypto";
+import path from "path";
 import multer from "multer";
 import {
   ensureBlogUploadDir,
+  ensureCareersStorageDir,
   ensureHomepageUploadDir,
   ensureSiteUploadDir,
   ensureTeamUploadDir,
@@ -196,6 +199,42 @@ export const blogMediaUpload = multer({
   fileFilter: homepageMediaFilter,
   limits: { fileSize: 120 * 1024 * 1024, files: 1, fields: 5, fieldSize: 1024 },
 }).single("file");
+
+const RESUME_EXT_BY_MIME: Record<string, string> = {
+  "application/pdf": ".pdf",
+  "application/msword": ".doc",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
+};
+const RESUME_EXT = new Set(Object.values(RESUME_EXT_BY_MIME));
+export const RESUME_MAX_BYTES = 5 * 1024 * 1024;
+
+const careersStorage = multer.diskStorage({
+  destination(_req, _file, cb) {
+    try {
+      cb(null, ensureCareersStorageDir());
+    } catch (err) {
+      cb(err as Error, "");
+    }
+  },
+  filename(_req, file, cb) {
+    const ext = RESUME_EXT_BY_MIME[file.mimetype] ?? ".bin";
+    cb(null, `${Date.now()}-${crypto.randomBytes(12).toString("hex")}${ext}`);
+  },
+});
+
+/** CV from the public careers form: PDF / DOC / DOCX, 5 MB, private storage. */
+export const careerResumeUpload = multer({
+  storage: careersStorage,
+  fileFilter(_req, file, cb) {
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (!RESUME_EXT_BY_MIME[file.mimetype] || !RESUME_EXT.has(ext)) {
+      cb(new Error("Upload your CV as a PDF, DOC or DOCX file"));
+      return;
+    }
+    cb(null, true);
+  },
+  limits: { fileSize: RESUME_MAX_BYTES, files: 1, fields: 15, fieldSize: 8 * 1024, parts: 20 },
+}).single("resume");
 
 /** Homepage CMS media: images up to 5 MB, videos up to 120 MB. */
 export const homepageMediaUpload = multer({

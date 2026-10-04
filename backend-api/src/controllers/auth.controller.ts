@@ -1,8 +1,10 @@
+import crypto from "crypto";
 import { Request, Response } from "express";
 import bcrypt from "bcrypt";
 import prisma from "../lib/prisma.js";
 import {
   deleteAccountSchema,
+  googleLoginSchema,
   loginSchema,
   refreshSchema,
   registerSchema,
@@ -20,6 +22,122 @@ import { publicUserSelect } from "./photo.controller.js";
 function isEmailLogin(value: string) {
   return value.includes("@");
 }
+
+const GOOGLE_ISSUERS = new Set(["accounts.google.com", "https://accounts.google.com"]);
+
+type GoogleIdToken = {
+  aud?: string;
+  iss?: string;
+  sub?: string;
+  exp?: string;
+  email?: string;
+  email_verified?: string | boolean;
+  name?: string;
+  picture?: string;
+};
+
+/** Verifies a Google Identity Services credential with Google's tokeninfo endpoint. */
+async function verifyGoogleCredential(credential: string, clientId: string) {
+  const res = await fetch(
+    `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`,
+    { signal: AbortSignal.timeout(10_000) },
+  );
+  if (!res.ok) return null;
+  const token = (await res.json()) as GoogleIdToken;
+  const verified = token.email_verified === true || token.email_verified === "true";
+  if (
+    token.aud !== clientId ||
+    !GOOGLE_ISSUERS.has(token.iss ?? "") ||
+    !token.sub ||
+    !token.email ||
+    !verified ||
+    Number(token.exp) * 1000 < Date.now()
+  ) {
+    return null;
+  }
+  return { sub: token.sub, email: token.email.toLowerCase(), name: token.name, picture: token.picture };
+}
+
+async function uniqueUsername(email: string) {
+  const base =
+    email
+      .split("@")[0]
+      .toLowerCase()
+      .replace(/[^a-z0-9_]/g, "")
+      .slice(0, 20) || "client";
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    const candidate = attempt === 0 ? base : `${base}${crypto.randomInt(1000, 99999)}`;
+    const taken = await prisma.user.findUnique({ where: { username: candidate }, select: { id: true } });
+    if (!taken) return candidate;
+  }
+  return `${base}${crypto.randomBytes(4).toString("hex")}`;
+}
+
+/** POST /api/auth/google — client sign-in with a Google ID token. */
+export const googleLogin = async (req: Request, res: Response) => {
+  try {
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    if (!clientId) {
+      return res.status(503).json({ message: "Google sign-in is not configured yet." });
+    }
+
+    const parsed = googleLoginSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ message: "Missing Google credential" });
+    }
+
+    const google = await verifyGoogleCredential(parsed.data.credential, clientId);
+    if (!google) {
+      return res.status(401).json({ message: "Google could not verify this sign-in. Please try again." });
+    }
+
+    let user =
+      (await prisma.user.findUnique({ where: { googleId: google.sub } })) ??
+      (await prisma.user.findUnique({ where: { email: google.email } }));
+
+    if (user && user.role !== "user") {
+      return res.status(403).json({
+        message: "This email belongs to a staff account. Staff sign in through the staff portal.",
+      });
+    }
+
+    if (user && !user.googleId) {
+      user = await prisma.user.update({ where: { id: user.id }, data: { googleId: google.sub } });
+    } else if (!user) {
+      user = await prisma.user.create({
+        data: {
+          fullName: (google.name || google.email.split("@")[0]).slice(0, 120),
+          username: await uniqueUsername(google.email),
+          email: google.email,
+          googleId: google.sub,
+          password: await bcrypt.hash(crypto.randomBytes(32).toString("hex"), 10),
+          role: "user",
+        },
+      });
+    }
+
+    const authUser = {
+      id: user.id,
+      fullName: user.fullName,
+      username: user.username,
+      email: user.email,
+      role: user.role,
+    };
+    const tokens = await issueTokenPair(authUser);
+
+    return res.status(200).json({
+      message: "Login successful",
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      expiresIn: tokens.expiresIn,
+      refreshExpiresInDays: tokens.refreshExpiresInDays,
+      user: { ...authUser, picture: google.picture ?? null },
+    });
+  } catch (error) {
+    console.error("Google login error:", error);
+    return res.status(500).json({ message: "Google sign-in failed. Please try again." });
+  }
+};
 
 export const register = async (req: Request, res: Response) => {
   try {

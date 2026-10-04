@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import type { StaffRole } from "@/config";
 import { useDashboardAuth } from "@/hooks/useDashboardAuth";
 import { AppSidebar } from "@/components/layout/AppSidebar";
+import { NotificationBell } from "@/components/layout/NotificationBell";
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
   SidebarInset,
@@ -62,6 +63,7 @@ export function DashboardLayout({
               </p>
             ) : null}
           </div>
+          <NotificationBell />
           <ThemeToggle />
         </header>
         <div className="relative flex flex-1 flex-col gap-6 p-4 md:p-6">

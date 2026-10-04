@@ -23,8 +23,11 @@ import {
   ScaleIcon,
   GlobeIcon,
   MapPinIcon,
+  SendIcon,
 } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
+import { MailSettingsPanel } from "@/components/settings/MailSettingsPanel";
 import { mediaUrl } from "@/config";
 import { apiFetch } from "@/lib/api";
 import { WEBSITE_LOGOS } from "@/lib/brand";
@@ -85,6 +88,7 @@ type SettingsTab =
   | "legal"
   | "login"
   | "favicon"
+  | "mail"
   | "tracking";
 
 const TABS: {
@@ -134,6 +138,12 @@ const TABS: {
     label: "Favicon",
     icon: ImageIcon,
     hint: "Browser tab icon.",
+  },
+  {
+    id: "mail",
+    label: "Mail",
+    icon: SendIcon,
+    hint: "Email provider (Resend or SMTP) for career replies and alerts.",
   },
   {
     id: "tracking",
@@ -187,13 +197,25 @@ function TrackChip({ on, label }: { on: boolean; label: string }) {
   );
 }
 
-function SettingsManager() {
+function isSettingsTab(value: string | null): value is SettingsTab {
+  return TABS.some((t) => t.id === value);
+}
+
+function SettingsManager({ adminEmail }: { adminEmail?: string }) {
+  const [searchParams, setSearchParams] = useSearchParams();
   const faviconRef = useRef<HTMLInputElement>(null);
   const logoRef = useRef<HTMLInputElement>(null);
   const ogImageRef = useRef<HTMLInputElement>(null);
   const brandLogoRef = useRef<HTMLInputElement>(null);
 
-  const [tab, setTab] = useState<SettingsTab>("brand");
+  const requestedTab = searchParams.get("tab");
+  const [tab, setTabState] = useState<SettingsTab>(
+    isSettingsTab(requestedTab) ? requestedTab : "brand",
+  );
+  const setTab = (next: SettingsTab) => {
+    setTabState(next);
+    setSearchParams(next === "brand" ? {} : { tab: next }, { replace: true });
+  };
   const [settings, setSettings] = useState<SiteSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -1276,6 +1298,8 @@ function SettingsManager() {
             </div>
           ) : null}
 
+          {tab === "mail" ? <MailSettingsPanel adminEmail={adminEmail} /> : null}
+
           {/* Tracking — keep compact from before */}
           {tab === "tracking" ? (
             <form className="grid gap-5" onSubmit={handleSaveTracking}>
@@ -1454,9 +1478,9 @@ export default function AdminSettingsPage() {
     <DashboardLayout
       expectedRole="admin"
       title="Settings"
-      description="Site title, SEO description, Open Graph, contact, social, legal, login, favicon, tracking"
+      description="Site title, SEO, contact, social, legal, login, favicon, mail provider, tracking"
     >
-      {() => <SettingsManager />}
+      {({ user }) => <SettingsManager adminEmail={user.email} />}
     </DashboardLayout>
   );
 }

@@ -1,27 +1,56 @@
 "use client";
 
-import { useEffect, useState, useMemo, useCallback } from "react";
-import Image from "next/image";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { Crown, Sparkles, RefreshCw } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { TEAM_MEMBERS, type TeamMember } from "@/data/teamData";
+import SmartImage from "@/components/home/portfolio/SmartImage";
+import type { TeamMember } from "@/data/teamData";
 import { HeaderPill } from "../HeaderPill";
 import { siteConfig } from "@/config/site";
 import { shiftAndShuffle } from "@/lib/utils";
-import { staffHref } from "@/lib/team-api";
+import { fetchTeamFromApi, staffHref } from "@/lib/team-api";
 
 const ROTATE_INTERVAL_SEC = 30;
 
-export default function OurTeamMemberSection() {
-    const lead = useMemo(() => TEAM_MEMBERS.find((member) => member.lead), []);
-    const restMembers = useMemo(
-        () => TEAM_MEMBERS.filter((member) => !member.lead),
-        [],
-    );
+const photoAlt = (member: TeamMember) =>
+    member.photoAlt ?? `${member.name}, ${member.role} at ${siteConfig.name}`;
 
-    const [shuffledList, setShuffledList] = useState<TeamMember[]>(restMembers);
+const initials = (name: string) =>
+    name
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((part) => part[0]?.toUpperCase() ?? "")
+        .join("");
+
+/**
+ * "The People Doing the Work". Renders the roster loaded at build time, then
+ * refreshes from `GET /api/team` so photos and roles uploaded in the
+ * dashboard (Admin → Team) show up without a rebuild.
+ */
+export default function OurTeamMemberSection({
+    initialMembers,
+}: {
+    initialMembers: TeamMember[];
+}) {
+    const [lead, setLead] = useState(() =>
+        initialMembers.find((member) => member.lead),
+    );
+    const [shuffledList, setShuffledList] = useState<TeamMember[]>(() =>
+        initialMembers.filter((member) => !member.lead),
+    );
     const [secondsLeft, setSecondsLeft] = useState<number>(ROTATE_INTERVAL_SEC);
+
+    useEffect(() => {
+        const controller = new AbortController();
+        void fetchTeamFromApi({ signal: controller.signal }).then((live) => {
+            if (!live || controller.signal.aborted) return;
+            setLead(live.find((member) => member.lead));
+            setShuffledList(live.filter((member) => !member.lead));
+        });
+        return () => controller.abort();
+    }, []);
 
     const triggerShuffle = useCallback(() => {
         setShuffledList((prev) => shiftAndShuffle(prev));
@@ -70,9 +99,10 @@ export default function OurTeamMemberSection() {
                     <div className="mt-12 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center p-6 sm:p-9 lg:p-10 rounded-3xl bg-linear-to-br from-card-bg via-slate-50 to-slate-100 dark:from-[#0E1322] dark:via-[#0A0E1A] dark:to-[#070A12] border border-border-color dark:border-dark-border-color shadow-2xl">
                         <div className="lg:col-span-4">
                             <div className="relative aspect-4/5 w-full max-w-xs mx-auto rounded-2xl overflow-hidden ring-2 ring-primary/40 shadow-xl group">
-                                <Image
+                                <SmartImage
                                     src={lead.photo}
-                                    alt={`${lead.name}, ${lead.role} at ${siteConfig.name}`}
+                                    alt={photoAlt(lead)}
+                                    fallbackLabel={initials(lead.name)}
                                     fill
                                     sizes="(max-width: 1024px) 70vw, 22rem"
                                     className="object-cover transition-transform duration-700 group-hover:scale-105"
@@ -193,9 +223,10 @@ export default function OurTeamMemberSection() {
                             >
                                 <div>
                                     <div className="relative aspect-4/5 w-full rounded-xl overflow-hidden mb-3 bg-slate-100 dark:bg-slate-800/80">
-                                        <Image
+                                        <SmartImage
                                             src={member.photo}
-                                            alt={`${member.name}, ${member.role} at ${siteConfig.name}`}
+                                            alt={photoAlt(member)}
+                                            fallbackLabel={initials(member.name)}
                                             fill
                                             sizes="(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 16rem"
                                             className="object-cover transition-transform duration-500 group-hover:scale-105"
