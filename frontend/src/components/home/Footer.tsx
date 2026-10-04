@@ -11,6 +11,7 @@ const serviceLinks = [
 
 const companyLinks = [
     { name: "About ProDesignity", href: "/about" },
+    { name: "Our Team", href: "/team" },
     { name: "Services Portfolio", href: "/services" },
     { name: "Journal", href: "/blog" },
     { name: "Contact & Inquiries", href: siteConfig.contactPath },

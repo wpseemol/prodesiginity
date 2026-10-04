@@ -1,7 +1,9 @@
 import { Controller, useFieldArray, type UseFormReturn } from "react-hook-form";
+import { toast } from "sonner";
 import {
   ArrowDownIcon,
   ArrowUpIcon,
+  CopyIcon,
   FilmIcon,
   HeadingIcon,
   Heading2Icon,
@@ -10,11 +12,18 @@ import {
   ListIcon,
   MinusIcon,
   PilcrowIcon,
+  PlusIcon,
   QuoteIcon,
   Trash2Icon,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -227,17 +236,50 @@ function BlockFields({ form, index, type }: { form: Form; index: number; type: s
   }
 }
 
+function InsertBlockMenu({ onPick }: { onPick: (type: EditableBlockType) => void }) {
+  return (
+    <div className="group/insert relative flex h-6 items-center justify-center">
+      <div className="absolute inset-x-4 top-1/2 h-px bg-primary/40 opacity-0 transition-opacity group-hover/insert:opacity-100" />
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          aria-label="Insert a block here"
+          className="relative flex h-5 items-center gap-1 rounded-full border bg-background px-2 text-[11px] text-muted-foreground opacity-60 transition hover:border-primary/50 hover:text-primary hover:opacity-100 focus-visible:opacity-100 data-popup-open:opacity-100"
+        >
+          <PlusIcon className="size-3" />
+          Insert
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="center" className="w-48">
+          {EDITABLE_BLOCK_TYPES.map((type) => {
+            const Icon = BLOCK_ICONS[type];
+            return (
+              <DropdownMenuItem key={type} onClick={() => onPick(type)}>
+                <Icon />
+                {BLOCK_LABELS[type]}
+              </DropdownMenuItem>
+            );
+          })}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
+}
+
 export function BlockListEditor({ form }: { form: Form }) {
-  const { fields, append, remove, move } = useFieldArray({ control: form.control, name: "body" });
+  const { fields, append, insert, remove, move } = useFieldArray({ control: form.control, name: "body" });
   const rootError = form.formState.errors.body?.root?.message ?? form.formState.errors.body?.message;
 
   return (
-    <div className="grid gap-3">
+    <div className="grid gap-0">
       {fields.map((block, index) => {
         const type = block.type as EditableBlockType;
         const Icon = BLOCK_ICONS[type] ?? InfoIcon;
+        const hasError = Boolean(form.formState.errors.body?.[index]);
         return (
-          <div key={block.id} className="grid gap-3 rounded-xl border bg-card p-3 sm:p-4">
+          <div key={block.id}>
+            {index > 0 ? <InsertBlockMenu onPick={(t) => insert(index, emptyBlock(t))} /> : null}
+          <div
+            className={`grid gap-3 rounded-xl border bg-card p-3 sm:p-4 ${hasError ? "border-destructive/50" : ""}`}
+          >
             <div className="flex items-center gap-2">
               <span className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
                 <Icon className="size-3.5" />
@@ -245,6 +287,16 @@ export function BlockListEditor({ form }: { form: Form }) {
               <span className="text-sm font-medium">{BLOCK_LABELS[type] ?? block.type}</span>
               <span className="text-xs text-muted-foreground">#{index + 1}</span>
               <div className="ml-auto flex items-center gap-0.5">
+                <Button
+                  type="button"
+                  size="icon-sm"
+                  variant="ghost"
+                  aria-label="Duplicate block"
+                  title="Duplicate"
+                  onClick={() => insert(index + 1, { ...form.getValues(`body.${index}`), anchor: "" })}
+                >
+                  <CopyIcon />
+                </Button>
                 <Button
                   type="button"
                   size="icon-sm"
@@ -271,7 +323,13 @@ export function BlockListEditor({ form }: { form: Form }) {
                   variant="ghost"
                   aria-label="Remove block"
                   className="text-destructive hover:text-destructive"
-                  onClick={() => remove(index)}
+                  onClick={() => {
+                    const removed = form.getValues(`body.${index}`);
+                    remove(index);
+                    toast(`${BLOCK_LABELS[type] ?? "Block"} removed`, {
+                      action: { label: "Undo", onClick: () => insert(index, removed) },
+                    });
+                  }}
                 >
                   <Trash2Icon />
                 </Button>
@@ -279,12 +337,13 @@ export function BlockListEditor({ form }: { form: Form }) {
             </div>
             <BlockFields form={form} index={index} type={block.type} />
           </div>
+          </div>
         );
       })}
 
-      {rootError ? <p className="text-sm text-destructive">{rootError}</p> : null}
+      {rootError ? <p className="mt-3 text-sm text-destructive">{rootError}</p> : null}
 
-      <div className="flex flex-wrap gap-1.5 rounded-xl border border-dashed p-2">
+      <div className="mt-3 flex flex-wrap gap-1.5 rounded-xl border border-dashed p-2">
         <span className="px-1.5 py-1 text-xs font-medium text-muted-foreground">Add block:</span>
         {EDITABLE_BLOCK_TYPES.map((type) => {
           const Icon = BLOCK_ICONS[type];

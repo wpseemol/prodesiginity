@@ -1,9 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Controller, useFieldArray, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   ArrowLeftIcon,
+  CheckIcon,
+  CloudOffIcon,
   ExternalLinkIcon,
+  HistoryIcon,
   Loader2Icon,
   PlusIcon,
   SaveIcon,
@@ -13,10 +16,18 @@ import {
 import { toast } from "sonner";
 import { apiBaseUrl } from "@/config";
 import { apiFetch } from "@/lib/api";
+import {
+  blogDraftKey,
+  clearLocalDraft,
+  loadLocalDraft,
+  saveLocalDraft,
+  type LocalDraft,
+} from "@/lib/blogDrafts";
 import { cn } from "@/lib/utils";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { IconPicker } from "@/components/ServiceIcon";
-import { readMessage, slugify } from "@/components/services/serviceTypes";
+import { slugify } from "@/components/services/serviceTypes";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -40,6 +51,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { BlockListEditor } from "./BlockListEditor";
 import { BlogMediaInput } from "./BlogMediaInput";
+import { findThreat, PublishChecklist, SECTION_IDS } from "./PublishChecklist";
 import {
   ACCENT_SWATCH,
   BLOG_ACCENTS,
@@ -57,13 +69,21 @@ import {
 
 const MAX_RELATED_SERVICES = 6;
 
+const AUTOSAVE_DELAY_MS = 1500;
+
 type BlogPostEditorProps = {
   initial: BlogPostRow | null;
   categories: BlogCategoryRow[];
   isAdmin: boolean;
+  userId: number;
   onCancel: () => void;
   onSaved: (post: BlogPostRow) => void;
+  /** Re-open the article from the server (after someone else saved it). */
+  onReload: () => void;
 };
+
+const timeOf = (ms: number) =>
+  new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).format(ms);
 
 function Optional() {
   return <span className="font-normal text-muted-foreground">(optional)</span>;
@@ -78,12 +98,33 @@ function CharCount({ value, max }: { value: string; max: number }) {
   );
 }
 
-export function BlogPostEditor({ initial, categories, isAdmin, onCancel, onSaved }: BlogPostEditorProps) {
+export function BlogPostEditor({
+  initial,
+  categories,
+  isAdmin,
+  userId,
+  onCancel,
+  onSaved,
+  onReload,
+}: BlogPostEditorProps) {
   const isEdit = initial !== null;
+  const draftKey = blogDraftKey(userId, initial?.id ?? null);
   const [slugTouched, setSlugTouched] = useState(isEdit);
   const [confirmLeave, setConfirmLeave] = useState(false);
   const [services, setServices] = useState<ServiceOption[]>([]);
+  const [serviceQuery, setServiceQuery] = useState("");
   const [members, setMembers] = useState<BylineMember[]>([]);
+  const [localSavedAt, setLocalSavedAt] = useState<number | null>(null);
+  const [pendingPublish, setPendingPublish] = useState<BlogPostFormValues | null>(null);
+  const [publishing, setPublishing] = useState(false);
+  const [stale, setStale] = useState(false);
+  const [sessionLost, setSessionLost] = useState(false);
+  const [restorable, setRestorable] = useState<LocalDraft<BlogPostFormValues> | null>(() => {
+    const draft = loadLocalDraft<BlogPostFormValues>(draftKey);
+    if (!draft) return null;
+    const current = initial ? postToForm(initial) : emptyPostForm();
+    return JSON.stringify(draft.values) === JSON.stringify(current) ? null : draft;
+  });
 
   useEffect(() => {
     let active = true;
@@ -123,66 +164,234 @@ export function BlogPostEditor({ initial, categories, isAdmin, onCancel, onSaved
     name: ["status", "icon", "title", "slug", "excerpt", "seoTitle", "seoDescription"],
   });
 
-  const onSubmit = form.handleSubmit(
-    async (values) => {
-      try {
-        const res = await apiFetch(isEdit ? `/manage/blog/posts/${initial.id}` : "/manage/blog/posts", {
-          method: isEdit ? "PUT" : "POST",
-          body: JSON.stringify(formToPayload(values)),
-        });
-        if (!res.ok) {
-          const message = await readMessage(res, "Could not save the article.");
-          if (res.status === 409) form.setError("slug", { message }, { shouldFocus: true });
-          toast.error(message);
+  // Back up edits on this device so a closed tab or expired login loses nothing.
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const unsubscribe = form.subscribe({
+      formState: { values: true, isDirty: true },
+      callback: ({ values, isDirty: dirty }) => {
+        clearTimeout(timer);
+        if (!dirty) return;
+        timer = setTimeout(() => {
+          if (saveLocalDraft(draftKey, values)) setLocalSavedAt(Date.now());
+        }, AUTOSAVE_DELAY_MS);
+      },
+    });
+    return () => {
+      clearTimeout(timer);
+      unsubscribe();
+    };
+  }, [form, draftKey]);
+
+  useEffect(() => {
+    if (!isDirty) return;
+    const warn = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [isDirty]);
+
+  const save = async (values: BlogPostFormValues) => {
+    setSessionLost(false);
+    try {
+      const res = await apiFetch(isEdit ? `/manage/blog/posts/${initial.id}` : "/manage/blog/posts", {
+        method: isEdit ? "PUT" : "POST",
+        body: JSON.stringify({
+          ...formToPayload(values),
+          ...(isEdit ? { expectedUpdatedAt: initial.updatedAt } : {}),
+        }),
+      });
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as { message?: string; code?: string };
+        const message = data.message ?? "Could not save the article.";
+        if (res.status === 401) {
+          saveLocalDraft(draftKey, values);
+          setSessionLost(true);
           return;
         }
-        const data = (await res.json()) as { post: BlogPostRow };
-        toast.success(
-          values.status === "published"
-            ? "Article saved and published. It will appear on the website."
-            : "Draft saved.",
-        );
-        onSaved(data.post);
-      } catch {
-        toast.error("Could not reach the server.");
+        if (res.status === 409 && data.code === "STALE") {
+          saveLocalDraft(draftKey, values);
+          setStale(true);
+          return;
+        }
+        if (res.status === 409) form.setError("slug", { message }, { shouldFocus: true });
+        toast.error(message);
+        return;
       }
+      const data = (await res.json()) as { post: BlogPostRow };
+      clearLocalDraft(draftKey);
+      toast.success(
+        values.status === "published"
+          ? "Article saved and published. It will appear on the website."
+          : "Draft saved. Only the dashboard can see it.",
+      );
+      onSaved(data.post);
+    } catch {
+      saveLocalDraft(draftKey, values);
+      toast.error("Could not reach the server. Your changes are kept on this device.");
+    }
+  };
+
+  const goesLive = (values: BlogPostFormValues) =>
+    values.status === "published" && (!isEdit || initial.status !== "published");
+
+  const onSubmit = form.handleSubmit(
+    async (values) => {
+      const threat = findThreat(values);
+      if (threat) {
+        toast.error(`${threat} contains code or SQL that is not allowed.`);
+        return;
+      }
+      if (goesLive(values)) {
+        setPendingPublish(values);
+        return;
+      }
+      await save(values);
     },
     () => toast.error("Please fix the highlighted fields before saving."),
   );
+
+  const submitRef = useRef(onSubmit);
+  useEffect(() => {
+    submitRef.current = onSubmit;
+  });
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        void submitRef.current();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  const restoreDraft = () => {
+    if (!restorable) return;
+    form.reset(restorable.values, { keepDefaultValues: true });
+    setSlugTouched(true);
+    setRestorable(null);
+    toast.success("Your unsaved changes were restored.");
+  };
+
+  const discardDraft = () => {
+    clearLocalDraft(draftKey);
+    setRestorable(null);
+  };
 
   const back = () => (isDirty ? setConfirmLeave(true) : onCancel());
   const selectedCategory = (id: string) => categories.find((c) => String(c.id) === id)?.name;
 
   return (
     <form onSubmit={onSubmit} noValidate className="grid gap-6">
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="sticky top-14 z-[5] -mx-4 -mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 border-b bg-background/90 px-4 py-2.5 backdrop-blur-md md:-mx-6 md:-mt-6 md:px-6">
         <Button type="button" variant="ghost" size="sm" onClick={back}>
           <ArrowLeftIcon />
-          All articles
+          <span className="hidden sm:inline">All articles</span>
         </Button>
-        <h2 className="text-lg font-semibold">{isEdit ? "Edit article" : "New article"}</h2>
-        {status === "published" ? <Badge>Published</Badge> : <Badge variant="secondary">Draft</Badge>}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <h2 className="truncate text-sm font-semibold sm:text-base">
+              {title.trim() || (isEdit ? "Edit article" : "New article")}
+            </h2>
+            {status === "published" ? <Badge>Published</Badge> : <Badge variant="secondary">Draft</Badge>}
+          </div>
+          <p className="flex items-center gap-1 text-xs text-muted-foreground" aria-live="polite">
+            {isDirty ? (
+              localSavedAt ? (
+                <>
+                  <HistoryIcon className="size-3" />
+                  Unsaved changes · backed up on this device at {timeOf(localSavedAt)}
+                </>
+              ) : (
+                "Unsaved changes"
+              )
+            ) : (
+              <>
+                <CheckIcon className="size-3" />
+                {isEdit ? `All changes saved · ${timeOf(Date.parse(initial.updatedAt))}` : "Nothing written yet"}
+              </>
+            )}
+          </p>
+        </div>
         {isEdit && initial.status === "published" ? (
           <a
             href={blogPostUrl(initial.slug)}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+            className="hidden items-center gap-1 text-xs text-muted-foreground hover:text-foreground sm:inline-flex"
           >
             <ExternalLinkIcon className="size-3.5" />
             View on website
           </a>
         ) : null}
-        <Button type="submit" className="ml-auto" disabled={isSubmitting}>
+        <Button type="submit" disabled={isSubmitting} title="Save (Ctrl+S)">
           {isSubmitting ? <Loader2Icon className="animate-spin" /> : <SaveIcon />}
           {status === "published" ? (isEdit ? "Update article" : "Publish article") : "Save draft"}
+          <kbd className="ml-1 hidden rounded border border-primary-foreground/30 px-1 text-[10px] font-normal opacity-80 lg:inline">
+            Ctrl S
+          </kbd>
         </Button>
       </div>
+
+      {restorable ? (
+        <Alert>
+          <HistoryIcon />
+          <AlertTitle>You have unsaved changes from {timeOf(restorable.savedAt)}</AlertTitle>
+          <AlertDescription className="flex flex-wrap items-center gap-2">
+            <span>They were backed up on this device but never saved to the website.</span>
+            <span className="flex gap-2">
+              <Button type="button" size="sm" onClick={restoreDraft}>
+                Restore them
+              </Button>
+              <Button type="button" size="sm" variant="ghost" onClick={discardDraft}>
+                Discard
+              </Button>
+            </span>
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
+      {stale ? (
+        <Alert variant="destructive">
+          <HistoryIcon />
+          <AlertTitle>Someone else saved this article after you opened it</AlertTitle>
+          <AlertDescription className="flex flex-wrap items-center gap-2">
+            <span>
+              Saving now would overwrite their changes. Your version is backed up on this device — reload to see
+              theirs, then restore yours if you still need it.
+            </span>
+            <Button type="button" size="sm" variant="outline" onClick={onReload}>
+              Reload latest version
+            </Button>
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
+      {sessionLost ? (
+        <Alert variant="destructive">
+          <CloudOffIcon />
+          <AlertTitle>Your sign-in has expired</AlertTitle>
+          <AlertDescription className="flex flex-wrap items-center gap-2">
+            <span>
+              Nothing is lost — your changes are backed up on this device. Sign in again in a new tab, then come back
+              here and press Save.
+            </span>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => window.open("/login", "_blank", "noopener")}
+            >
+              Sign in in a new tab
+            </Button>
+          </AlertDescription>
+        </Alert>
+      ) : null}
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="grid min-w-0 content-start gap-6">
           {/* ------------------------------------------------------- Basics */}
-          <Card>
+          <Card id={SECTION_IDS.basics} className="scroll-mt-32">
             <CardHeader>
               <CardTitle>Basics</CardTitle>
               <CardDescription>The title is the page’s H1 and the excerpt shows on cards.</CardDescription>
@@ -258,7 +467,7 @@ export function BlogPostEditor({ initial, categories, isAdmin, onCancel, onSaved
           </Card>
 
           {/* -------------------------------------------------------- Media */}
-          <Card>
+          <Card id={SECTION_IDS.media} className="scroll-mt-32">
             <CardHeader>
               <CardTitle>Cover image &amp; video</CardTitle>
               <CardDescription>
@@ -329,7 +538,7 @@ export function BlogPostEditor({ initial, categories, isAdmin, onCancel, onSaved
           </Card>
 
           {/* ------------------------------------------------------ Content */}
-          <Card>
+          <Card id={SECTION_IDS.content} className="scroll-mt-32">
             <CardHeader>
               <CardTitle>Article content</CardTitle>
               <CardDescription>
@@ -343,7 +552,7 @@ export function BlogPostEditor({ initial, categories, isAdmin, onCancel, onSaved
           </Card>
 
           {/* ---------------------------------------------- Takeaways + FAQ */}
-          <Card>
+          <Card id={SECTION_IDS.summary} className="scroll-mt-32">
             <CardHeader>
               <CardTitle>Summary &amp; FAQ</CardTitle>
               <CardDescription>
@@ -495,7 +704,9 @@ export function BlogPostEditor({ initial, categories, isAdmin, onCancel, onSaved
         </div>
 
         {/* ---------------------------------------------------------- Sidebar */}
-        <div className="grid content-start gap-6 lg:sticky lg:top-20">
+        <div className="grid content-start gap-6">
+          <PublishChecklist control={form.control} />
+
           <Card>
             <CardHeader>
               <CardTitle>Publish</CardTitle>
@@ -587,7 +798,7 @@ export function BlogPostEditor({ initial, categories, isAdmin, onCancel, onSaved
             </CardContent>
           </Card>
 
-          <Card>
+          <Card id={SECTION_IDS.category} className="scroll-mt-32">
             <CardHeader>
               <CardTitle>Category &amp; tags</CardTitle>
             </CardHeader>
@@ -649,8 +860,27 @@ export function BlogPostEditor({ initial, categories, isAdmin, onCancel, onSaved
                     {services.length === 0 ? (
                       <p className="text-sm text-muted-foreground">Loading services…</p>
                     ) : (
-                      <div className="flex max-h-64 flex-wrap gap-1.5 overflow-y-auto">
-                        {services.map((s) => {
+                      <>
+                      <div className="relative">
+                        <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          value={serviceQuery}
+                          onChange={(e) => setServiceQuery(e.target.value)}
+                          placeholder="Find a service…"
+                          aria-label="Find a service"
+                          maxLength={60}
+                          className="h-8 pl-8"
+                        />
+                      </div>
+                      <div className="flex max-h-56 flex-wrap content-start gap-1.5 overflow-y-auto">
+                        {[...services]
+                          .filter(
+                            (s) =>
+                              field.value.includes(s.slug) ||
+                              s.title.toLowerCase().includes(serviceQuery.trim().toLowerCase()),
+                          )
+                          .sort((a, b) => Number(field.value.includes(b.slug)) - Number(field.value.includes(a.slug)))
+                          .map((s) => {
                           const selected = field.value.includes(s.slug);
                           const full = !selected && field.value.length >= MAX_RELATED_SERVICES;
                           return (
@@ -673,11 +903,16 @@ export function BlogPostEditor({ initial, categories, isAdmin, onCancel, onSaved
                                   : "hover:border-primary/40",
                               )}
                             >
+                              {selected ? <CheckIcon className="-ml-0.5 mr-0.5 inline size-3" /> : null}
                               {s.title}
                             </button>
                           );
                         })}
                       </div>
+                      <p className="text-xs text-muted-foreground">
+                        {field.value.length}/{MAX_RELATED_SERVICES} selected
+                      </p>
+                      </>
                     )}
                     {fieldState.invalid ? <FieldError errors={[fieldState.error]} /> : null}
                   </Field>
@@ -686,7 +921,7 @@ export function BlogPostEditor({ initial, categories, isAdmin, onCancel, onSaved
             </CardContent>
           </Card>
 
-          <Card>
+          <Card id={SECTION_IDS.seo} className="scroll-mt-32">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <SearchIcon className="size-4" />
@@ -758,7 +993,31 @@ export function BlogPostEditor({ initial, categories, isAdmin, onCancel, onSaved
         confirmLabel="Discard changes"
         onConfirm={() => {
           setConfirmLeave(false);
+          clearLocalDraft(draftKey);
           onCancel();
+        }}
+      />
+
+      <ConfirmDialog
+        open={pendingPublish !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingPublish(null);
+        }}
+        title="Publish to the website?"
+        description="Everyone visiting prodesignity.com will be able to read this article and search engines will index it. You can move it back to draft at any time."
+        confirmLabel="Publish now"
+        destructive={false}
+        loading={publishing}
+        onConfirm={async () => {
+          const values = pendingPublish;
+          if (!values) return;
+          setPublishing(true);
+          try {
+            await save(values);
+          } finally {
+            setPublishing(false);
+            setPendingPublish(null);
+          }
         }}
       />
     </form>

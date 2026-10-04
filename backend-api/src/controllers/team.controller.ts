@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import bcrypt from "bcrypt";
 import fs from "fs";
 import path from "path";
@@ -7,6 +7,7 @@ import prisma from "../lib/prisma.js";
 import { revokeAllUserRefreshTokens } from "../lib/tokens.js";
 import {
   createTeamMemberSchema,
+  SOCIAL_KEYS,
   updateMyTeamProfileSchema,
   updateTeamMemberSchema,
 } from "../lib/zod/team.js";
@@ -28,6 +29,11 @@ const teamSelect = {
   photoUrl: true,
   photoAlt: true,
   photoTitle: true,
+  avatarUrl: true,
+  avatarShape: true,
+  profileStyle: true,
+  socials: true,
+  skills: true,
   isLead: true,
   sortOrder: true,
   userId: true,
@@ -42,26 +48,38 @@ const teamSelect = {
   },
 } as const;
 
-function mapAdminMember(
-  row: {
-    id: number;
-    slug: string;
-    name: string;
-    role: string;
-    tagline: string | null;
-    description: string | null;
-    email: string | null;
-    photoUrl: string;
-    photoAlt: string | null;
-    photoTitle: string | null;
-    isLead: boolean;
-    sortOrder: number;
-    userId: number | null;
-    createdAt: Date;
-    updatedAt: Date;
-    user: { id: number; username: string; email: string } | null;
-  },
-) {
+type TeamRow = Prisma.TeamMemberGetPayload<{ select: typeof teamSelect }>;
+
+type SocialKey = (typeof SOCIAL_KEYS)[number];
+
+/** Only known networks with a non-empty URL survive. */
+function readSocials(value: Prisma.JsonValue | null): Partial<Record<SocialKey, string>> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  const out: Partial<Record<SocialKey, string>> = {};
+  for (const key of SOCIAL_KEYS) {
+    const url = (value as Record<string, unknown>)[key];
+    if (typeof url === "string" && url.trim()) out[key] = url.trim();
+  }
+  return out;
+}
+
+function readSkills(value: Prisma.JsonValue | null): string[] {
+  return Array.isArray(value)
+    ? value.filter((v): v is string => typeof v === "string" && v.trim() !== "")
+    : [];
+}
+
+function profileShape(row: TeamRow) {
+  return {
+    avatarUrl: row.avatarUrl,
+    avatarShape: row.avatarShape,
+    profileStyle: row.profileStyle,
+    socials: readSocials(row.socials),
+    skills: readSkills(row.skills),
+  };
+}
+
+function mapAdminMember(row: TeamRow) {
   return {
     id: row.id,
     slug: row.slug,
@@ -74,12 +92,61 @@ function mapAdminMember(
     photoUrl: row.photoUrl,
     photoAlt: row.photoAlt,
     photoTitle: row.photoTitle,
+    ...profileShape(row),
     isLead: row.isLead,
     sortOrder: row.sortOrder,
     userId: row.userId,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
+}
+
+type ProfileExtrasInput = {
+  profileStyle?: string;
+  avatarShape?: string;
+  socials?: Partial<Record<SocialKey, string | undefined>>;
+  skills?: string[];
+  removeAvatar?: boolean;
+};
+
+/** Prisma update fragment for the public-profile extras. */
+function profileExtrasData(d: ProfileExtrasInput, nextAvatarUrl?: string) {
+  let socials: Prisma.InputJsonValue | typeof Prisma.DbNull | undefined;
+  if (d.socials !== undefined) {
+    const cleaned = Object.fromEntries(
+      Object.entries(d.socials).filter(([, url]) => typeof url === "string" && url.trim()),
+    );
+    socials = Object.keys(cleaned).length > 0 ? cleaned : Prisma.DbNull;
+  }
+
+  return {
+    ...(d.profileStyle !== undefined ? { profileStyle: d.profileStyle } : {}),
+    ...(d.avatarShape !== undefined ? { avatarShape: d.avatarShape } : {}),
+    ...(socials !== undefined ? { socials } : {}),
+    ...(d.skills !== undefined
+      ? { skills: d.skills.length > 0 ? d.skills : Prisma.DbNull }
+      : {}),
+    ...(nextAvatarUrl
+      ? { avatarUrl: nextAvatarUrl }
+      : d.removeAvatar
+        ? { avatarUrl: null }
+        : {}),
+  };
+}
+
+function uploadedFile(req: Request, field: "photo" | "avatar") {
+  const files = req.files;
+  if (!files || Array.isArray(files)) return undefined;
+  return files[field]?.[0];
+}
+
+/** Best-effort delete of a file we stored under /uploads/team/. */
+function removeTeamUpload(url: string | null | undefined) {
+  if (!url?.startsWith("/uploads/team/")) return;
+  const full = path.join(TEAM_UPLOAD_ROOT, path.basename(url));
+  if (full.startsWith(UPLOADS_ROOT)) {
+    fs.promises.unlink(full).catch(() => undefined);
+  }
 }
 
 function staffEmailFromUsername(username: string) {
@@ -150,22 +217,11 @@ async function uniqueUsername(base: string) {
   return `u${Date.now().toString(36)}`.slice(0, 30);
 }
 
-/** Shape used by the marketing site (homepage + our-service). */
-function toPublicMember(row: {
-  id: number;
-  slug: string;
-  name: string;
-  role: string;
-  tagline: string | null;
-  description: string | null;
-  photoUrl: string;
-  photoAlt: string | null;
-  photoTitle: string | null;
-  isLead: boolean;
-  sortOrder: number;
-}) {
+/** Shape used by the marketing site (homepage, our-service, /team). */
+function toPublicMember(row: TeamRow) {
   return {
     id: row.slug,
+    slug: row.slug,
     dbId: row.id,
     name: row.name,
     role: row.role,
@@ -174,6 +230,11 @@ function toPublicMember(row: {
     photo: row.photoUrl,
     photoAlt: row.photoAlt || defaultPhotoAlt(row.name, row.role),
     photoTitle: row.photoTitle || defaultPhotoTitle(row.name),
+    avatar: row.avatarUrl ?? undefined,
+    avatarShape: row.avatarShape,
+    profileStyle: row.profileStyle,
+    socials: readSocials(row.socials),
+    skills: readSkills(row.skills),
     lead: row.isLead,
     sortOrder: row.sortOrder,
   };
@@ -195,6 +256,30 @@ export const listPublicTeam = async (_req: Request, res: Response) => {
   } catch (error) {
     console.error("List public team error:", error);
     return res.status(500).json({ message: "Failed to load team members" });
+  }
+};
+
+/**
+ * GET /api/team/:slug
+ * One public staff profile. Slug matching is case-insensitive (column collation).
+ */
+export const getPublicTeamMember = async (req: Request, res: Response) => {
+  try {
+    const slug = String(req.params.slug ?? "").trim();
+    if (!/^[a-zA-Z0-9._-]{1,80}$/.test(slug)) {
+      return res.status(400).json({ message: "Invalid profile slug" });
+    }
+    const row = await prisma.teamMember.findFirst({
+      where: { slug },
+      select: teamSelect,
+    });
+    if (!row) {
+      return res.status(404).json({ message: "Team member not found" });
+    }
+    return res.status(200).json({ member: toPublicMember(row) });
+  } catch (error) {
+    console.error("Get public team member error:", error);
+    return res.status(500).json({ message: "Failed to load team member" });
   }
 };
 
@@ -221,7 +306,8 @@ export const createTeamMember = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    const file = req.file;
+    const file = uploadedFile(req, "photo");
+    const avatarFile = uploadedFile(req, "avatar");
     const photoUrl = file
       ? publicTeamUploadPath(file.filename)
       : parsed.data.photoUrl?.trim();
@@ -297,6 +383,10 @@ export const createTeamMember = async (req: AuthRequest, res: Response) => {
           photoUrl,
           photoAlt,
           photoTitle,
+          ...profileExtrasData(
+            parsed.data,
+            avatarFile ? publicTeamUploadPath(avatarFile.filename) : undefined,
+          ),
           isLead,
           sortOrder:
             parsed.data.sortOrder ?? (maxSort._max.sortOrder ?? 0) + 1,
@@ -337,10 +427,14 @@ export const updateTeamMember = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    const file = req.file;
+    const file = uploadedFile(req, "photo");
+    const avatarFile = uploadedFile(req, "avatar");
     const nextPhotoUrl = file
       ? publicTeamUploadPath(file.filename)
       : parsed.data.photoUrl?.trim();
+    const nextAvatarUrl = avatarFile
+      ? publicTeamUploadPath(avatarFile.filename)
+      : undefined;
 
     const nextIsLead =
       parsed.data.isLead !== undefined ? parsed.data.isLead : existing.isLead;
@@ -461,6 +555,7 @@ export const updateTeamMember = async (req: AuthRequest, res: Response) => {
           ...(parsed.data.photoTitle !== undefined
             ? { photoTitle: parsed.data.photoTitle || null }
             : {}),
+          ...profileExtrasData(parsed.data, nextAvatarUrl),
           ...(parsed.data.isLead !== undefined
             ? { isLead: parsed.data.isLead }
             : {}),
@@ -478,16 +573,11 @@ export const updateTeamMember = async (req: AuthRequest, res: Response) => {
       await revokeAllUserRefreshTokens(existing.userId);
     }
 
-    if (
-      file &&
-      existing.photoUrl.startsWith("/uploads/team/") &&
-      existing.photoUrl !== member.photoUrl
-    ) {
-      const filename = path.basename(existing.photoUrl);
-      const full = path.join(TEAM_UPLOAD_ROOT, filename);
-      if (full.startsWith(UPLOADS_ROOT)) {
-        fs.promises.unlink(full).catch(() => undefined);
-      }
+    if (file && existing.photoUrl !== member.photoUrl) {
+      removeTeamUpload(existing.photoUrl);
+    }
+    if (existing.avatarUrl && existing.avatarUrl !== member.avatarUrl) {
+      removeTeamUpload(existing.avatarUrl);
     }
 
     return res.status(200).json({
@@ -525,13 +615,8 @@ export const deleteTeamMember = async (req: AuthRequest, res: Response) => {
       }
     });
 
-    if (existing.photoUrl.startsWith("/uploads/team/")) {
-      const filename = path.basename(existing.photoUrl);
-      const full = path.join(TEAM_UPLOAD_ROOT, filename);
-      if (full.startsWith(UPLOADS_ROOT)) {
-        fs.promises.unlink(full).catch(() => undefined);
-      }
-    }
+    removeTeamUpload(existing.photoUrl);
+    removeTeamUpload(existing.avatarUrl);
 
     return res.status(200).json({ message: "Team member deleted" });
   } catch (error) {
@@ -567,7 +652,10 @@ export const getMyTeamProfile = async (req: AuthRequest, res: Response) => {
   }
 };
 
-/** Staff: update own public profile (name, description, photo). Designation is admin-only. */
+/**
+ * Staff: update own public profile (name, bio, photo, avatar, profile style,
+ * socials, skills). Designation is admin-only.
+ */
 export const updateMyTeamProfile = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
@@ -602,9 +690,13 @@ export const updateMyTeamProfile = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    const file = req.file;
+    const file = uploadedFile(req, "photo");
+    const avatarFile = uploadedFile(req, "avatar");
     const nextPhotoUrl = file
       ? publicTeamUploadPath(file.filename)
+      : undefined;
+    const nextAvatarUrl = avatarFile
+      ? publicTeamUploadPath(avatarFile.filename)
       : undefined;
 
     const memberRow = await prisma.$transaction(async (tx) => {
@@ -632,21 +724,17 @@ export const updateMyTeamProfile = async (req: AuthRequest, res: Response) => {
           ...(parsed.data.photoTitle !== undefined
             ? { photoTitle: parsed.data.photoTitle || null }
             : {}),
+          ...profileExtrasData(parsed.data, nextAvatarUrl),
         },
         select: teamSelect,
       });
     });
 
-    if (
-      file &&
-      existing.photoUrl.startsWith("/uploads/team/") &&
-      existing.photoUrl !== memberRow.photoUrl
-    ) {
-      const filename = path.basename(existing.photoUrl);
-      const full = path.join(TEAM_UPLOAD_ROOT, filename);
-      if (full.startsWith(UPLOADS_ROOT)) {
-        fs.promises.unlink(full).catch(() => undefined);
-      }
+    if (file && existing.photoUrl !== memberRow.photoUrl) {
+      removeTeamUpload(existing.photoUrl);
+    }
+    if (existing.avatarUrl && existing.avatarUrl !== memberRow.avatarUrl) {
+      removeTeamUpload(existing.avatarUrl);
     }
 
     return res.status(200).json({

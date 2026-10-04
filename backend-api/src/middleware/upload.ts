@@ -134,11 +134,15 @@ export const profilePhotoUpload = multer({
   limits: { fileSize: 5 * 1024 * 1024, files: 1 },
 }).single("photo");
 
+/** Team portrait (`photo`) and optional avatar image (`avatar`). */
 export const teamPhotoUpload = multer({
   storage: teamStorage,
   fileFilter: imageFileFilter,
-  limits: { fileSize: 5 * 1024 * 1024, files: 1 },
-}).single("photo");
+  limits: { fileSize: 5 * 1024 * 1024, files: 2 },
+}).fields([
+  { name: "photo", maxCount: 1 },
+  { name: "avatar", maxCount: 1 },
+]);
 
 export const siteFaviconUpload = multer({
   storage: siteStorage,

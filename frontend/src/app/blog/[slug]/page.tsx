@@ -23,6 +23,7 @@ import { resolveTokens } from "@/lib/blog";
 import { findPost, getBlogData, relatedPostsFor } from "@/lib/blog-api";
 import { buildMetadata } from "@/lib/seo";
 import { findService, getServicesCatalog } from "@/lib/services-catalog";
+import { findStaffByName, getTeamData, staffSlug } from "@/lib/team-api";
 
 import type { Metadata } from "next";
 
@@ -78,10 +79,20 @@ export default async function BlogPostPage({
     params: Promise<Params>;
 }) {
     const { slug } = await params;
-    const [{ posts }, catalog] = await Promise.all([getBlogData(), getServicesCatalog()]);
-    const post = findPost(posts, slug);
+    const [{ posts }, catalog, team] = await Promise.all([
+        getBlogData(),
+        getServicesCatalog(),
+        getTeamData(),
+    ]);
+    const found = findPost(posts, slug);
 
-    if (!post) notFound();
+    if (!found) notFound();
+
+    // Hand-written posts only carry a name; match it to a profile for the byline link.
+    const authorMember = found.author.slug ? undefined : findStaffByName(team, found.author.name);
+    const post = authorMember
+        ? { ...found, author: { ...found.author, slug: staffSlug(authorMember) } }
+        : found;
 
     // Unknown service slugs are dropped rather than rendered as dead links.
     const services = (post.relatedServices ?? [])

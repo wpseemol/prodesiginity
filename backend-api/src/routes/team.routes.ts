@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   getMyTeamProfile,
+  getPublicTeamMember,
   listPublicTeam,
   teamUploadErrorHandler,
   updateMyTeamProfile,
@@ -24,5 +25,8 @@ router.put(
   },
   updateMyTeamProfile,
 );
+
+// After /me so "me" is never read as a slug.
+router.get("/:slug", getPublicTeamMember);
 
 export default router;

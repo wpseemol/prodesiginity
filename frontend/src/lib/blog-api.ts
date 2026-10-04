@@ -127,6 +127,7 @@ function toPost(raw: Json): BlogPost | null {
             name: str(author.name) || "ProDesignity Team",
             role: str(author.role) || "Editorial",
             photo: optStr(author.photo),
+            slug: optStr(author.slug),
         },
         tags,
         keyTakeaways: strList(raw.keyTakeaways),

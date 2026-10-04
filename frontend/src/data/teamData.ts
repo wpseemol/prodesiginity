@@ -13,7 +13,22 @@
 
 import { shiftAndShuffle } from "@/lib/utils";
 
+export type SocialNetwork =
+    | "facebook"
+    | "instagram"
+    | "linkedin"
+    | "behance"
+    | "dribbble"
+    | "artstation"
+    | "x"
+    | "github"
+    | "youtube"
+    | "website";
+
+export type AvatarShape = "circle" | "squircle" | "hexagon" | "blob";
+
 export interface TeamMember {
+    /** Also the profile URL segment, lower-cased: /team/<id>. */
     id: string;
     name: string;
     /** Job title, shown under the name. */
@@ -23,6 +38,14 @@ export interface TeamMember {
     /** Longer bio from staff public profile. */
     description?: string;
     photo: string;
+    photoAlt?: string;
+    /** Separate avatar (illustration / 3D). Falls back to `photo`. */
+    avatar?: string;
+    avatarShape?: AvatarShape;
+    /** Key into STAFF_STYLES, or "auto" to infer from `role`. */
+    profileStyle?: string;
+    socials?: Partial<Record<SocialNetwork, string>>;
+    skills?: string[];
     lead?: boolean;
 }
 

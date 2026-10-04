@@ -19,6 +19,15 @@ import { mediaUrl } from "@/config";
 import { apiFetch } from "@/lib/api";
 import { formatImageHint, IMAGE_SPECS } from "@/lib/imageSpecs";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import {
+    appendExtras,
+    EMPTY_EXTRAS,
+    extrasFromMember,
+    invalidSocial,
+    StaffProfileExtras,
+    type ProfileExtras,
+    type SocialKey,
+} from "@/components/team/StaffProfileExtras";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -44,6 +53,11 @@ type TeamMemberRow = {
     photoUrl: string;
     photoAlt: string | null;
     photoTitle: string | null;
+    avatarUrl: string | null;
+    avatarShape: string;
+    profileStyle: string;
+    socials: Partial<Record<SocialKey, string>>;
+    skills: string[];
     isLead: boolean;
     sortOrder: number;
 };
@@ -104,6 +118,7 @@ function TeamManager() {
     const [showPassword, setShowPassword] = useState(false);
     const [photoFile, setPhotoFile] = useState<File | null>(null);
     const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+    const [extras, setExtras] = useState<ProfileExtras>(EMPTY_EXTRAS);
 
     const isEditMode = editing !== null;
 
@@ -129,6 +144,7 @@ function TeamManager() {
         setCurrentPassword("");
         setPassword("");
         setShowPassword(false);
+        setExtras(EMPTY_EXTRAS);
         clearPhotoSelection();
     };
 
@@ -142,6 +158,7 @@ function TeamManager() {
         setCurrentPassword("");
         setPassword("");
         setShowPassword(false);
+        setExtras(extrasFromMember(member));
     };
 
     const onPickPhoto = (file: File | undefined) => {
@@ -227,6 +244,13 @@ function TeamManager() {
             toast.message("Designation is required.");
             return;
         }
+        const badSocial = invalidSocial(extras);
+        if (badSocial) {
+            toast.error(
+                `${badSocial} link must be a full URL starting with https://`,
+            );
+            return;
+        }
 
         setSaving(true);
         try {
@@ -235,6 +259,7 @@ function TeamManager() {
             body.append("role", designation.trim());
             body.append("isLead", isLead ? "true" : "false");
             body.append("username", username.trim());
+            appendExtras(body, extras);
             if (password) {
                 body.append("password", password);
                 if (isEditMode && editing.username) {
@@ -517,6 +542,26 @@ function TeamManager() {
                             ) : null}
                         </div>
 
+                        <details className="group rounded-xl border border-border/70 bg-muted/20">
+                            <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5 text-sm font-medium [&::-webkit-details-marker]:hidden">
+                                <span className="inline-flex items-center gap-1.5">
+                                    <SparklesIcon className="size-3.5 text-primary" />
+                                    Profile style, skills & socials
+                                </span>
+                                <span className="text-xs text-muted-foreground group-open:hidden">
+                                    Optional
+                                </span>
+                            </summary>
+                            <div className="border-t border-border/60 p-3">
+                                <StaffProfileExtras
+                                    value={extras}
+                                    onChange={setExtras}
+                                    compact
+                                    idPrefix="admin"
+                                />
+                            </div>
+                        </details>
+
                         <div className="flex flex-wrap gap-2 pt-1">
                             <Button
                                 type="submit"
@@ -631,6 +676,15 @@ function TeamManager() {
                                                 <p className="mt-0.5 line-clamp-2 text-sm text-muted-foreground">
                                                     {member.role}
                                                 </p>
+                                                {member.profileStyle &&
+                                                member.profileStyle !== "auto" ? (
+                                                    <Badge
+                                                        variant="secondary"
+                                                        className="mt-1 text-[10px] capitalize"
+                                                    >
+                                                        {member.profileStyle} style
+                                                    </Badge>
+                                                ) : null}
                                                 {member.username ? (
                                                     <p className="mt-1 flex items-center gap-1 truncate text-xs text-muted-foreground">
                                                         <AtSignIcon className="size-3 shrink-0" />

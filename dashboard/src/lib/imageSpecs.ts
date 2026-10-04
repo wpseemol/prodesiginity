@@ -62,6 +62,14 @@ export const IMAGE_SPECS = {
     formats: "JPEG / PNG / WebP",
     note: "portrait 4:5",
   },
+  teamAvatar: {
+    label: "Avatar",
+    width: 512,
+    height: 512,
+    maxMb: 5,
+    formats: "PNG / WebP / JPEG",
+    note: "square — illustration or 3D avatar",
+  },
   projectThumb: {
     label: "Project thumbnail",
     width: 1280,

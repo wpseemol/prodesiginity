@@ -33,10 +33,10 @@ const postInclude = {
       fullName: true,
       role: true,
       photo: { select: { url: true } },
-      teamMember: { select: { role: true, photoUrl: true } },
+      teamMember: { select: { slug: true, role: true, photoUrl: true } },
     },
   },
-  bylineMember: { select: { id: true, name: true, role: true, photoUrl: true } },
+  bylineMember: { select: { id: true, slug: true, name: true, role: true, photoUrl: true } },
 } satisfies Prisma.BlogPostInclude;
 
 type PostRow = Prisma.BlogPostGetPayload<{ include: typeof postInclude }>;
@@ -52,11 +52,18 @@ function asArray(value: unknown): unknown[] {
 
 function serializeAuthor(author: PostRow["author"], byline: PostRow["bylineMember"]) {
   if (byline) {
-    return { id: author?.id ?? null, name: byline.name, role: byline.role, photo: byline.photoUrl || null };
+    return {
+      id: author?.id ?? null,
+      slug: byline.slug,
+      name: byline.name,
+      role: byline.role,
+      photo: byline.photoUrl || null,
+    };
   }
-  if (!author) return { id: null, name: "ProDesignity Team", role: "Editorial", photo: null };
+  if (!author) return { id: null, slug: null, name: "ProDesignity Team", role: "Editorial", photo: null };
   return {
     id: author.id,
+    slug: author.teamMember?.slug ?? null,
     name: author.fullName,
     role: author.teamMember?.role ?? (author.role === "admin" ? "Editor" : "Team member"),
     photo: author.teamMember?.photoUrl || author.photo?.url || null,
@@ -469,6 +476,16 @@ export const updateBlogPost = async (req: AuthRequest, res: Response) => {
     }
 
     const d = parsed.data;
+    if (
+      d.expectedUpdatedAt &&
+      existing.updatedAt.getTime() !== new Date(d.expectedUpdatedAt).getTime()
+    ) {
+      return res.status(409).json({
+        code: "STALE",
+        message:
+          "Someone else saved this article after you opened it. Reload it to get the latest version before saving.",
+      });
+    }
     if (d.categoryId !== undefined && !(await categoryExists(d.categoryId))) {
       return res.status(400).json({ message: "Selected category does not exist" });
     }

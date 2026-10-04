@@ -228,7 +228,10 @@ export const createBlogPostSchema = z.object({
   status: blogPostFields.status.optional(),
 });
 
-export const updateBlogPostSchema = z.object(blogPostFields).partial();
+export const updateBlogPostSchema = z.object(blogPostFields).partial().extend({
+  /** `updatedAt` the editor loaded; a mismatch means someone else saved since. */
+  expectedUpdatedAt: z.iso.datetime().optional(),
+});
 
 export const listBlogPostsQuerySchema = z.object({
   status: z.enum(["draft", "published"]).optional(),

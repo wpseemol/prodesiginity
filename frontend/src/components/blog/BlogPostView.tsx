@@ -108,7 +108,9 @@ export default function BlogPostView({ post, related, services = [] }: BlogPostV
     const minutes = readingTime(post);
 
     return (
-        <div className="relative overflow-hidden bg-white font-sans text-slate-900 transition-colors duration-300 dark:bg-[#070B14] dark:text-slate-100">
+        <div className="relative overflow-x-clip bg-white font-sans text-slate-900 transition-colors duration-300 dark:bg-[#070B14] dark:text-slate-100">
+            {/* overflow-x-clip, not overflow-hidden: `hidden` makes this a scroll
+                container and silently disables the sticky Contents rail. */}
             <JsonLd data={blogPostSchema(post)} />
 
             <article>
@@ -227,11 +229,11 @@ export default function BlogPostView({ post, related, services = [] }: BlogPostV
                     <div className="container mx-auto grid grid-cols-1 gap-10 px-4 sm:px-6 lg:grid-cols-12 lg:gap-12 lg:px-8">
                         <aside className="lg:col-span-3">
                             <div className="lg:sticky lg:top-28">
-                                <PostToc items={toc} />
+                                <PostToc items={toc} minutes={minutes} />
                             </div>
                         </aside>
 
-                        <div className="lg:col-span-9 lg:max-w-3xl">
+                        <div id="article-body" className="lg:col-span-9 lg:max-w-3xl">
                             {/* Key takeaways — the answer-first summary, and the
                                 block an AI assistant is most likely to quote. */}
                             {post.keyTakeaways.length > 0 && (

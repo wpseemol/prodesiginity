@@ -493,6 +493,43 @@ export function blogSchema(
     };
 }
 
+/**
+ * A staff profile page: ProfilePage whose mainEntity is the Person. `sameAs`
+ * carries their social profiles, which is how a crawler ties the page to the
+ * same person elsewhere on the web.
+ */
+export function staffProfileSchema(person: {
+    name: string;
+    role: string;
+    path: string;
+    image?: string;
+    description?: string;
+    sameAs: string[];
+    knowsAbout: string[];
+}) {
+    const url = absoluteUrl(person.path);
+
+    return {
+        "@type": "ProfilePage",
+        "@id": `${url}#profile`,
+        url,
+        name: `${person.name} — ${person.role}`,
+        isPartOf: { "@id": SITE_ID },
+        mainEntity: {
+            "@type": "Person",
+            "@id": `${url}#person`,
+            name: person.name,
+            jobTitle: person.role,
+            url,
+            ...(person.image ? { image: absoluteMediaUrl(person.image) } : {}),
+            ...(person.description ? { description: person.description } : {}),
+            ...(person.sameAs.length ? { sameAs: person.sameAs } : {}),
+            ...(person.knowsAbout.length ? { knowsAbout: person.knowsAbout } : {}),
+            worksFor: { "@id": ORG_ID },
+        },
+    };
+}
+
 /** Wraps any set of entities in the @graph envelope the site already uses. */
 export function graph(...entities: object[]) {
     return {

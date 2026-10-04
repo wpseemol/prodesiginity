@@ -2,12 +2,14 @@
 
 import { useEffect, useState, useMemo, useCallback } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { Crown, Sparkles, RefreshCw } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { TEAM_MEMBERS, type TeamMember } from "@/data/teamData";
 import { HeaderPill } from "../HeaderPill";
 import { siteConfig } from "@/config/site";
 import { shiftAndShuffle } from "@/lib/utils";
+import { staffHref } from "@/lib/team-api";
 
 const ROTATE_INTERVAL_SEC = 30;
 
@@ -90,7 +92,12 @@ export default function OurTeamMemberSection() {
                             </span>
 
                             <h3 className="text-2xl sm:text-3xl lg:text-4xl font-black text-slate-900 dark:text-white">
-                                {lead.name}
+                                <Link
+                                    href={staffHref(lead)}
+                                    className="hover:text-primary transition-colors"
+                                >
+                                    {lead.name}
+                                </Link>
                             </h3>
 
                             <p className="text-sm sm:text-base font-bold text-primary dark:text-dark-primary">
@@ -182,7 +189,7 @@ export default function OurTeamMemberSection() {
                                     mass: 0.8,
                                     delay: index * 0.03,
                                 }}
-                                className="group p-3.5 sm:p-4 rounded-2xl bg-card-bg dark:bg-dark-card-bg border border-border-color dark:border-dark-border-color shadow-md hover:border-primary/50 hover:shadow-xl transition-all duration-300 flex flex-col justify-between"
+                                className="group relative p-3.5 sm:p-4 rounded-2xl bg-card-bg dark:bg-dark-card-bg border border-border-color dark:border-dark-border-color shadow-md hover:border-primary/50 hover:shadow-xl transition-all duration-300 flex flex-col justify-between"
                             >
                                 <div>
                                     <div className="relative aspect-4/5 w-full rounded-xl overflow-hidden mb-3 bg-slate-100 dark:bg-slate-800/80">
@@ -197,7 +204,12 @@ export default function OurTeamMemberSection() {
                                     </div>
 
                                     <h3 className="text-xs sm:text-sm font-black text-slate-900 dark:text-white leading-snug group-hover:text-primary transition-colors">
-                                        {member.name}
+                                        <Link
+                                            href={staffHref(member)}
+                                            className="after:absolute after:inset-0 after:content-['']"
+                                        >
+                                            {member.name}
+                                        </Link>
                                     </h3>
                                 </div>
 

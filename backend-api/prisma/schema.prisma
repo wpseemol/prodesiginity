@@ -86,6 +86,16 @@ model TeamMember {
   photoAlt   String?  @map("photo_alt") @db.VarChar(255)
   /** SEO: HTML img title */
   photoTitle String?  @map("photo_title") @db.VarChar(160)
+  /** Separate avatar image (illustrated / 3D avatar). Falls back to the photo. */
+  avatarUrl    String? @map("avatar_url") @db.VarChar(512)
+  /** auto (style default) | circle | squircle | hexagon | blob */
+  avatarShape  String  @default("auto") @map("avatar_shape") @db.VarChar(16)
+  /** Public profile theme: auto | lead | designer | graphic | developer | animator | marketing | people */
+  profileStyle String  @default("auto") @map("profile_style") @db.VarChar(24)
+  /** { facebook, instagram, linkedin, behance, dribbble, artstation, x, github, youtube, website } → URL */
+  socials      Json?
+  /** Up to 12 short skill labels. */
+  skills       Json?
   isLead     Boolean  @default(false) @map("is_lead")
   sortOrder  Int      @default(0) @map("sort_order")
   userId     Int?     @unique @map("user_id")

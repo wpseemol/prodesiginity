@@ -1,3 +1,4 @@
+import { clearAllBlogDrafts } from "./blogDrafts";
 import { decryptValue, encryptValue } from "./crypto";
 
 const ACCESS_COOKIE = "dashboard_access_token";
@@ -138,6 +139,7 @@ export async function setDashboardSession(
     refreshMaxAgeSeconds(user.role, refreshExpiresInDays),
   );
   clearLegacyStorage();
+  clearAllBlogDrafts(user.id);
 }
 
 export async function updateDashboardUser(user: DashboardUser): Promise<void> {

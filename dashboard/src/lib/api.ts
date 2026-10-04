@@ -1,4 +1,5 @@
 import { apiBaseUrl } from "@/config";
+import { clearAllBlogDrafts } from "@/lib/blogDrafts";
 import {
   clearDashboardSession,
   getAccessToken,
@@ -115,4 +116,5 @@ export async function logoutRequest() {
     }
   }
   clearDashboardSession();
+  clearAllBlogDrafts();
 }

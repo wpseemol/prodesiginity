@@ -103,6 +103,8 @@ export interface BlogAuthor {
     role: string;
     /** Path under /public. Falls back to initials when missing or broken. */
     photo?: string;
+    /** Team profile slug → the byline links to /team/<slug>. */
+    slug?: string;
 }
 
 export interface BlogFaq {

@@ -4,11 +4,16 @@ import { serviceHref } from "@/data/servicesData";
 import { blogCanonicalPath } from "@/data/blog";
 import { getBlogData } from "@/lib/blog-api";
 import { getServicesCatalog } from "@/lib/services-catalog";
+import { getTeamData, staffHref } from "@/lib/team-api";
 
 export const dynamic = "force-static";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-    const [{ services }, { posts }] = await Promise.all([getServicesCatalog(), getBlogData()]);
+    const [{ services }, { posts }, team] = await Promise.all([
+        getServicesCatalog(),
+        getBlogData(),
+        getTeamData(),
+    ]);
     const baseUrl = siteConfig.url;
 
     const routes = [
@@ -20,6 +25,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         "/privacy-policy",
         "/services",
         "/services/our-service",
+        "/team",
         "/terms",
     ].map((route) => ({
         url: `${baseUrl}${route}`,
@@ -44,5 +50,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         priority: 0.7,
     }));
 
-    return [...routes, ...serviceRoutes, ...blogRoutes];
+    const teamRoutes = team.map((member) => ({
+        url: `${baseUrl}${staffHref(member)}`,
+        lastModified: new Date(),
+        changeFrequency: "monthly" as const,
+        priority: 0.6,
+    }));
+
+    return [...routes, ...serviceRoutes, ...blogRoutes, ...teamRoutes];
 }

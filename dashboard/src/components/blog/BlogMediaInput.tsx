@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, type DragEvent } from "react";
 import { FilmIcon, ImageIcon, Loader2Icon, UploadIcon, XIcon } from "lucide-react";
 import { toast } from "sonner";
 import { mediaUrl } from "@/config";
@@ -41,6 +41,7 @@ export function BlogMediaInput({
 }: BlogMediaInputProps) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [dragging, setDragging] = useState(false);
 
   const upload = async (file: File | undefined) => {
     if (!file) return;
@@ -75,24 +76,35 @@ export function BlogMediaInput({
 
   const preview = mediaUrl(value);
   const ytId = kind === "video" ? youTubeId(value) : null;
-  const size = compact ? "h-20 w-32" : "aspect-video w-full";
+  const Icon = kind === "video" ? FilmIcon : ImageIcon;
+  const dropProps = {
+    onDragOver: (e: DragEvent) => {
+      e.preventDefault();
+      setDragging(true);
+    },
+    onDragLeave: () => setDragging(false),
+    onDrop: (e: DragEvent) => {
+      e.preventDefault();
+      setDragging(false);
+      void upload(e.dataTransfer.files?.[0]);
+    },
+  };
 
   return (
     <div className="grid gap-2">
-      <div className={`relative overflow-hidden rounded-lg border bg-muted ${size}`}>
-        {preview && kind === "image" ? (
-          <img src={preview} alt="" className="size-full object-cover" />
-        ) : ytId ? (
-          <img src={`https://i.ytimg.com/vi/${ytId}/hqdefault.jpg`} alt="" className="size-full object-cover" />
-        ) : preview && kind === "video" && /\.(mp4|webm|mov)(\?|$)/i.test(value) ? (
-          <video src={preview} className="size-full object-cover" muted playsInline controls={!compact} />
-        ) : (
-          <div className="flex size-full flex-col items-center justify-center gap-1 text-muted-foreground">
-            {kind === "video" ? <FilmIcon className="size-6" /> : <ImageIcon className="size-6" />}
-            {!compact ? <span className="text-xs">No {kind} yet</span> : null}
-          </div>
-        )}
-        {value ? (
+      {value ? (
+        <div className={`relative overflow-hidden rounded-lg border bg-muted ${compact ? "h-20 w-32" : "aspect-video w-full"}`}>
+          {preview && kind === "image" ? (
+            <img src={preview} alt="" className="size-full object-cover" />
+          ) : ytId ? (
+            <img src={`https://i.ytimg.com/vi/${ytId}/hqdefault.jpg`} alt="" className="size-full object-cover" />
+          ) : preview && kind === "video" && /\.(mp4|webm|mov)(\?|$)/i.test(value) ? (
+            <video src={preview} className="size-full object-cover" muted playsInline controls={!compact} />
+          ) : (
+            <div className="flex size-full items-center justify-center text-muted-foreground">
+              <Icon className="size-6" />
+            </div>
+          )}
           <button
             type="button"
             onClick={() => onChange("")}
@@ -101,8 +113,30 @@ export function BlogMediaInput({
           >
             <XIcon className="size-3.5" />
           </button>
-        ) : null}
-      </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          disabled={uploading}
+          onClick={() => fileRef.current?.click()}
+          {...dropProps}
+          className={`flex w-full items-center gap-3 rounded-lg border border-dashed px-3 text-left transition-colors hover:border-primary/50 hover:bg-primary/5 ${
+            compact ? "py-2.5" : "py-5"
+          } ${dragging ? "border-primary bg-primary/10" : "bg-muted/30"}`}
+        >
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-background text-muted-foreground shadow-sm">
+            {uploading ? <Loader2Icon className="size-4 animate-spin" /> : <Icon className="size-4" />}
+          </span>
+          <span className="min-w-0">
+            <span className="block text-sm font-medium">
+              {uploading ? "Uploading…" : dragging ? "Drop to upload" : `Drag & drop or click to upload`}
+            </span>
+            <span className="block text-xs text-muted-foreground">
+              {kind === "image" ? "JPEG, PNG, WebP or GIF · up to 5 MB" : "MP4, WebM or MOV · up to 120 MB"}
+            </span>
+          </span>
+        </button>
+      )}
 
       <div className="flex gap-2">
         <Input
