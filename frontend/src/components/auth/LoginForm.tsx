@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Loader2, ShieldCheck } from "lucide-react";
+import { ArrowUpRight, Loader2, ShieldCheck, UsersRound } from "lucide-react";
 import { getAuthUser, signInWithGoogle } from "@/lib/auth";
 import { siteConfig, staffLoginUrl } from "@/config/site";
 import GoogleIcon from "@/components/auth/GoogleIcon";
@@ -148,32 +148,55 @@ export default function LoginForm() {
                 </p>
             ) : null}
 
-            <p className="flex items-start gap-2 rounded-xl bg-slate-50 px-3.5 py-3 text-xs leading-relaxed text-slate-500 dark:bg-slate-900/60 dark:text-slate-400">
+            <p className="flex items-start gap-2.5 rounded-2xl border border-emerald-500/15 bg-emerald-500/5 px-4 py-3 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
                 <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" aria-hidden="true" />
                 We only receive your name, email and profile photo from Google. No password is
                 stored with us.
             </p>
 
-            <div className="space-y-1.5 text-center text-sm text-slate-500 dark:text-slate-400">
-                <p>
-                    Team member?{" "}
-                    <a
-                        href={staffLoginUrl()}
-                        className="font-semibold text-primary hover:underline dark:text-dark-primary"
-                    >
-                        Staff portal login
-                    </a>
-                </p>
-                <p>
-                    Back to{" "}
-                    <Link
-                        href="/"
-                        className="font-semibold text-primary hover:underline dark:text-dark-primary"
-                    >
-                        homepage
-                    </Link>
-                </p>
+            <div className="flex items-center gap-3 text-[11px] font-bold tracking-widest text-slate-400 uppercase dark:text-slate-500">
+                <span className="h-px flex-1 bg-border-color dark:bg-dark-border-color" />
+                Staff access
+                <span className="h-px flex-1 bg-border-color dark:bg-dark-border-color" />
             </div>
+
+            <a
+                href={staffLoginUrl()}
+                className="group flex items-center justify-between gap-3 rounded-2xl border border-border-color px-4 py-3 transition-colors hover:border-primary/40 hover:bg-primary/5 dark:border-dark-border-color"
+            >
+                <span className="flex items-center gap-3">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary dark:text-dark-primary">
+                        <UsersRound className="h-4 w-4" aria-hidden="true" />
+                    </span>
+                    <span>
+                        <span className="block text-sm font-semibold text-slate-800 dark:text-slate-100">
+                            Team member?
+                        </span>
+                        <span className="block text-xs text-slate-500 dark:text-slate-400">
+                            Sign in to the staff portal
+                        </span>
+                    </span>
+                </span>
+                <ArrowUpRight
+                    className="h-4 w-4 shrink-0 text-slate-400 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-primary"
+                    aria-hidden="true"
+                />
+            </a>
+
+            <p className="text-center text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+                By continuing you agree to our{" "}
+                <Link href="/terms" className="font-semibold text-slate-700 hover:text-primary dark:text-slate-300 dark:hover:text-dark-primary">
+                    Terms
+                </Link>{" "}
+                and{" "}
+                <Link
+                    href="/privacy-policy"
+                    className="font-semibold text-slate-700 hover:text-primary dark:text-slate-300 dark:hover:text-dark-primary"
+                >
+                    Privacy Policy
+                </Link>
+                .
+            </p>
         </div>
     );
 }

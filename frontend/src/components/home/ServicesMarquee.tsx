@@ -34,7 +34,7 @@ function CardItem({ service }: { service: Service }) {
         <Link
             href={serviceHref(service.slug)}
             tabIndex={-1}
-            className={`group relative w-55 md:w-60 h-55 sm:h-60 p-6 sm:p-7 rounded-3xl bg-card-bg dark:bg-dark-card-bg border border-border-color dark:border-dark-border-color ${service.accent.hoverBorder} shadow-lg hover:shadow-2xl transition-all duration-300 flex flex-col justify-between mx-3 select-none`}
+            className={`group relative w-60 md:w-64 h-55 sm:h-60 p-6 sm:p-7 rounded-3xl bg-card-bg dark:bg-dark-card-bg border border-border-color dark:border-dark-border-color ${service.accent.hoverBorder} shadow-lg hover:shadow-2xl transition-all duration-300 flex flex-col justify-between mx-3 select-none`}
         >
             <div>
                 <div
@@ -43,7 +43,10 @@ function CardItem({ service }: { service: Service }) {
                     <ServiceIcon name={service.icon} className="w-6 h-6" />
                 </div>
 
-                <p className="text-lg font-black text-slate-900 dark:text-white leading-tight mb-2 pr-5">
+                <p
+                    title={service.title}
+                    className="text-base font-black text-slate-900 dark:text-white leading-tight mb-2 truncate"
+                >
                     {service.title}
                 </p>
 
