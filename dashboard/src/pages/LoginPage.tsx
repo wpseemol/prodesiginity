@@ -6,9 +6,10 @@ import {
   UsersIcon,
 } from "lucide-react";
 import LoginForm from "@/components/LoginForm";
-import { BrandLogo } from "@/components/BrandLogo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { apiBaseUrl, mediaUrl } from "@/config";
+import logoDark from "@/assets/logo/prodesignity-logo-dark.svg";
+import logoLight from "@/assets/logo/prodesignity-logo-light.svg";
 
 type PublicSettings = {
   siteName: string | null;
@@ -39,7 +40,6 @@ const HIGHLIGHTS = [
 
 export default function LoginPage() {
   const [settings, setSettings] = useState<PublicSettings | null>(null);
-  const [panelLogoFailed, setPanelLogoFailed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -61,7 +61,6 @@ export default function LoginPage() {
 
   const siteName = settings?.siteName ?? "ProDesignity";
   const loginLogo = mediaUrl(settings?.loginLogoUrl);
-  const panelLogo = mediaUrl("/uploads/assets/logo/prodesignity-logo-dark.png");
 
   return (
     <div className="grid min-h-svh bg-background lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
@@ -80,16 +79,13 @@ export default function LoginPage() {
         />
 
         <div className="relative">
-          {panelLogo && !panelLogoFailed ? (
-            <img
-              src={panelLogo}
-              alt={siteName}
-              className="h-9 w-auto object-contain object-left"
-              onError={() => setPanelLogoFailed(true)}
-            />
-          ) : (
-            <span className="text-xl font-bold">{siteName}</span>
-          )}
+          <img
+            src={logoDark}
+            alt={siteName}
+            width={250}
+            height={80}
+            className="-ml-1 h-20 w-auto"
+          />
         </div>
 
         <div className="relative max-w-md">
@@ -138,10 +134,26 @@ export default function LoginPage() {
               <img
                 src={loginLogo}
                 alt={siteName}
-                className="max-h-9 max-w-[160px] object-contain object-left"
+                className="max-h-10 max-w-[160px] object-contain object-left"
               />
             ) : (
-              <BrandLogo />
+              <>
+                <img
+                  src={logoLight}
+                  alt={siteName}
+                  width={175}
+                  height={56}
+                  className="h-14 w-auto dark:hidden"
+                />
+                <img
+                  src={logoDark}
+                  alt=""
+                  aria-hidden
+                  width={175}
+                  height={56}
+                  className="hidden h-14 w-auto dark:block"
+                />
+              </>
             )}
           </div>
           <ThemeToggle />
