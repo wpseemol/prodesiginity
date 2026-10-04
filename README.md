@@ -4,11 +4,11 @@ Full-stack website for [Prodesignity](https://prodesignity.com) — marketing si
 
 ## Stack
 
-| Layer | Tech |
-| --- | --- |
-| Frontend | Next.js (static export), React, Tailwind |
-| Dashboard | Vite admin app |
-| Backend | Express API (`backend-api/`) — pnpm workspace package `prodesignity-api`, ESM + Prisma |
+| Layer     | Tech                                                                                   |
+| --------- | -------------------------------------------------------------------------------------- |
+| Frontend  | Next.js (static export), React, Tailwind                                               |
+| Dashboard | Vite admin app                                                                         |
+| Backend   | Express API (`backend-api/`) — pnpm workspace package `prodesignity-api`, ESM + Prisma |
 
 Run it from the repo root:
 
@@ -76,9 +76,9 @@ From the repo root:
 pnpm dev
 ```
 
-| App | Default URL |
-| --- | --- |
-| Frontend | [http://localhost:3000](http://localhost:3000) |
+| App         | Default URL                                                                      |
+| ----------- | -------------------------------------------------------------------------------- |
+| Frontend    | [http://localhost:3000](http://localhost:3000)                                   |
 | Backend API | [http://localhost:4000](http://localhost:4000) (or `PORT` in `backend-api/.env`) |
 
 Run packages alone:
@@ -92,14 +92,14 @@ Point the frontend at the API with `NEXT_PUBLIC_API_URL` (e.g. `http://localhost
 
 ## Root scripts
 
-| Command | Description |
-| --- | --- |
-| `pnpm install` | Install all workspace packages |
-| `pnpm dev` | Frontend + backend in parallel |
-| `pnpm dev:frontend` | Next.js only |
-| `pnpm dev:backend` | API only |
-| `pnpm build` | Build frontend and backend |
-| `pnpm lint` | Lint frontend |
+| Command             | Description                    |
+| ------------------- | ------------------------------ |
+| `pnpm install`      | Install all workspace packages |
+| `pnpm dev`          | Frontend + backend in parallel |
+| `pnpm dev:frontend` | Next.js only                   |
+| `pnpm dev:backend`  | API only                       |
+| `pnpm build`        | Build frontend and backend     |
+| `pnpm lint`         | Lint frontend                  |
 
 ## Environment
 
@@ -158,3 +158,5 @@ Auth endpoint details: [`backend-api/API.md`](backend-api/API.md).
 ## License
 
 Private project — all rights reserved.
+
+frontend need deploy
