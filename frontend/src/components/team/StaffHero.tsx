@@ -152,9 +152,19 @@ function Portrait({
     );
 }
 
-function Section({ children, className }: { children: ReactNode; className?: string }) {
+function Section({
+    children,
+    className,
+    backdrop,
+}: {
+    children: ReactNode;
+    className?: string;
+    /** Full-bleed decoration rendered behind the container. */
+    backdrop?: ReactNode;
+}) {
     return (
         <header className={cn("relative px-4 sm:px-6 lg:px-8", className)}>
+            {backdrop}
             <div className="container relative mx-auto px-4 sm:px-6 lg:px-8">{children}</div>
         </header>
     );
@@ -475,8 +485,12 @@ function TerminalHero({ member, style, skills }: HeroProps) {
 
 function MotionHero({ member, style, skills }: HeroProps) {
     return (
-        <Section className="overflow-hidden pb-20 pt-10 sm:pt-14">
-            <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-[32rem] bg-linear-to-b from-orange-500/10 via-amber-500/5 to-transparent" />
+        <Section
+            className="overflow-hidden pb-20 pt-10 sm:pt-14"
+            backdrop={
+                <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-[32rem] bg-linear-to-b from-orange-500/10 via-amber-500/5 to-transparent" />
+            }
+        >
             <Crumbs member={member} />
             <div className="relative grid items-center gap-16 lg:grid-cols-2">
                 <div className="relative mx-auto w-full max-w-sm">
@@ -557,11 +571,11 @@ function ClassicHero({ member, style }: HeroProps) {
                 )}
             </div>
 
-            <div className="relative -mt-16 flex flex-col items-center gap-6 px-2 text-center sm:-mt-20 sm:px-8 lg:flex-row lg:items-end lg:text-left">
-                <span className="rounded-full bg-white p-1.5 shadow-xl dark:bg-[#070B14]">
+            <div className="relative -mt-16 flex flex-col items-center gap-6 px-2 text-center sm:-mt-20 sm:px-8 lg:flex-row lg:items-start lg:text-left">
+                <span className="shrink-0 rounded-full bg-white p-1.5 shadow-xl dark:bg-[#070B14]">
                     <StaffAvatar member={member} style={style} className="h-32 w-32 sm:h-40 sm:w-40" sizes="160px" priority />
                 </span>
-                <div className="min-w-0 flex-1 pb-2">
+                <div className="min-w-0 flex-1 pb-2 lg:pt-24">
                     <Kicker style={style} />
                     <h1 className="mt-3 text-3xl font-black tracking-tight text-slate-900 sm:text-4xl lg:text-5xl dark:text-white">
                         {member.name}
@@ -573,7 +587,7 @@ function ClassicHero({ member, style }: HeroProps) {
                         </p>
                     ) : null}
                 </div>
-                <div className="pb-2">
+                <div className="pb-2 lg:pt-24">
                     <SocialLinks socials={member.socials} ownerName={member.name} variant="pills" className="justify-center lg:justify-end" />
                 </div>
             </div>
