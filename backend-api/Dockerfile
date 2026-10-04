@@ -1,8 +1,8 @@
 # Prodesignity API (pnpm + ESM)
-# Build from backend/:
+# Build from backend-api/:
 #   docker build -t prodesignity-api .
 # Or from repo root:
-#   docker build -f backend/Dockerfile -t prodesignity-api ./backend
+#   docker build -f backend-api/Dockerfile -t prodesignity-api ./backend-api
 
 FROM node:22-bookworm-slim AS build
 WORKDIR /app

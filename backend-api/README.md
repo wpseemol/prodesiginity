@@ -12,7 +12,7 @@ pnpm --filter prodesignity-api db:setup   # generate + db push + seed
 pnpm --filter prodesignity-api dev        # http://localhost:4000
 ```
 
-Or inside `backend/`:
+Or inside `backend-api/`:
 
 ```bash
 cp .env.example .env   # edit DB + JWT
@@ -86,7 +86,7 @@ Start MySQL (Docker from repo root):
 docker compose up -d mysql
 ```
 
-Then `pnpm run db:setup` inside `backend/` (or via `--filter prodesignity-api`).
+Then `pnpm run db:setup` inside `backend-api/` (or via `--filter prodesignity-api`).
 
 ## Env
 

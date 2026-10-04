@@ -1,6 +1,6 @@
 /**
  * Rewrite relative imports to ESM .js extensions (NodeNext).
- * Run from backend/: node scripts/add-js-extensions.mjs
+ * Run from backend-api/: node scripts/add-js-extensions.mjs
  */
 import fs from "node:fs";
 import path from "node:path";

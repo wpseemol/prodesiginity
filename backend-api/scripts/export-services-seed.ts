@@ -1,6 +1,6 @@
 /**
  * One-shot: export frontend servicesData → prisma/servicesSeedData.json
- * Run from backend: npx tsx scripts/export-services-seed.ts
+ * Run from backend-api: npx tsx scripts/export-services-seed.ts
  */
 import fs from "fs";
 import path from "path";

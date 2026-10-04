@@ -3,7 +3,7 @@
  *
  * 1. Create a free account: https://www.maxmind.com/en/geolite2/signup
  * 2. Generate a license key under Account → Manage License Keys
- * 3. Put in backend/.env:
+ * 3. Put in backend-api/.env:
  *      MAXMIND_ACCOUNT_ID=123456
  *      MAXMIND_LICENSE_KEY=your_key_here
  * 4. Run: npm run geoip:download
