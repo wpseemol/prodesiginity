@@ -97,7 +97,9 @@ export const getAnalyticsOverview = async (req: AuthRequest, res: Response) => {
     const days = Number.isFinite(daysRaw)
       ? Math.min(Math.max(Math.floor(daysRaw), 1), 90)
       : 30;
-    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+    const dayMs = 24 * 60 * 60 * 1000;
+    const since = new Date(Date.now() - days * dayMs);
+    const previousSince = new Date(since.getTime() - days * dayMs);
 
     const [
       totalVisits,
@@ -108,6 +110,8 @@ export const getAnalyticsOverview = async (req: AuthRequest, res: Response) => {
       byPath,
       recent,
       settings,
+      dailyRows,
+      previousRows,
     ] = await Promise.all([
       prisma.pageVisit.count({ where: { createdAt: { gte: since } } }),
       prisma.pageVisit.groupBy({
@@ -116,11 +120,11 @@ export const getAnalyticsOverview = async (req: AuthRequest, res: Response) => {
         _count: { _all: true },
       }),
       prisma.pageVisit.groupBy({
-        by: ["country"],
+        by: ["country", "countryCode"],
         where: { createdAt: { gte: since } },
         _count: { _all: true },
         orderBy: { _count: { country: "desc" } },
-        take: 12,
+        take: 60,
       }),
       prisma.pageVisit.groupBy({
         by: ["deviceType"],
@@ -169,14 +173,45 @@ export const getAnalyticsOverview = async (req: AuthRequest, res: Response) => {
           googleAdsConversionLabel: true,
         },
       }),
+      prisma.$queryRaw<{ day: string; visits: bigint; visitors: bigint }[]>`
+        SELECT DATE_FORMAT(created_at, '%Y-%m-%d') AS day,
+               COUNT(*) AS visits,
+               COUNT(DISTINCT session_id) AS visitors
+        FROM page_visits
+        WHERE created_at >= ${since}
+        GROUP BY day
+        ORDER BY day`,
+      prisma.$queryRaw<{ visits: bigint; visitors: bigint }[]>`
+        SELECT COUNT(*) AS visits, COUNT(DISTINCT session_id) AS visitors
+        FROM page_visits
+        WHERE created_at >= ${previousSince} AND created_at < ${since}`,
     ]);
+
+    const byDay = new Map(
+      dailyRows.map((row) => [
+        row.day,
+        { visits: Number(row.visits), visitors: Number(row.visitors) },
+      ]),
+    );
+    const daily = Array.from({ length: days }, (_, index) => {
+      const date = new Date(since.getTime() + (index + 1) * dayMs)
+        .toISOString()
+        .slice(0, 10);
+      return { date, ...(byDay.get(date) ?? { visits: 0, visitors: 0 }) };
+    });
 
     return res.status(200).json({
       days,
       totalVisits,
       uniqueSessions: sessions.length,
+      previous: {
+        visits: Number(previousRows[0]?.visits ?? 0),
+        visitors: Number(previousRows[0]?.visitors ?? 0),
+      },
+      daily,
       byCountry: byCountry.map((row) => ({
         country: row.country ?? "Unknown",
+        countryCode: row.countryCode?.toUpperCase() ?? null,
         count: row._count._all,
       })),
       byDevice: groupCount(
