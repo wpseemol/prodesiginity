@@ -240,7 +240,7 @@ export default function CareerForm({ content, jobs, selectedRole, onRoleChange }
                     ) : (
                         <Form {...form}>
                             <form
-                                onSubmit={form.handleSubmit(onSubmit)}
+                                onSubmit={(event) => form.handleSubmit(onSubmit)(event)}
                                 noValidate
                                 className="relative space-y-5"
                                 aria-busy={isSubmitting}

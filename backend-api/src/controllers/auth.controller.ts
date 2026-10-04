@@ -1,7 +1,10 @@
 import crypto from "crypto";
+import fs from "fs";
+import path from "path";
 import { Request, Response } from "express";
 import bcrypt from "bcrypt";
 import prisma from "../lib/prisma.js";
+import { USERS_UPLOAD_ROOT } from "../lib/uploads.js";
 import {
   deleteAccountSchema,
   googleLoginSchema,
@@ -498,6 +501,10 @@ export const deleteAccount = async (req: AuthRequest, res: Response) => {
     }
 
     await prisma.user.delete({ where: { id: user.id } });
+    await fs.promises
+      .rm(path.join(USERS_UPLOAD_ROOT, String(user.id)), { recursive: true, force: true })
+      .catch(() => undefined);
+    clearAuthCookies(res);
 
     return res.status(200).json({
       message: "Account deleted successfully",

@@ -6,17 +6,19 @@ import {
   teamUploadErrorHandler,
   updateMyTeamProfile,
 } from "../controllers/team.controller.js";
-import { requireAuth } from "../middleware/auth.js";
+import { requireAuth, requireStaff } from "../middleware/auth.js";
 import { teamPhotoUpload } from "../middleware/upload.js";
 
 const router = Router();
 
 router.get("/", listPublicTeam);
 
-router.get("/me", requireAuth, getMyTeamProfile);
+// Team profiles belong to staff logins; clients must not reach the upload.
+router.get("/me", requireAuth, requireStaff, getMyTeamProfile);
 router.put(
   "/me",
   requireAuth,
+  requireStaff,
   (req, res, next) => {
     teamPhotoUpload(req, res, (err) => {
       if (err) return teamUploadErrorHandler(err, req, res, next);

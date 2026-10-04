@@ -32,7 +32,9 @@ rootRouter.get("/health", async (_req, res) => {
       database: "disconnected",
       uptime: process.uptime(),
       message:
-        error instanceof Error ? error.message : "Database connection failed",
+        process.env.NODE_ENV !== "production" && error instanceof Error
+          ? error.message
+          : "Database connection failed",
     });
   }
 });

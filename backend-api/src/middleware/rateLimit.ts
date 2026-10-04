@@ -41,6 +41,33 @@ export const mailTestLimiter = limiter(
   "Too many test emails. Please wait a few minutes.",
 );
 
+/** Password sign-in. Only failed attempts count, so real users are never locked out. */
+export const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  skipSuccessfulRequests: true,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  message: { message: "Too many failed sign-in attempts. Please wait 15 minutes and try again." },
+});
+
+/** New account sign-ups. */
+export const registerLimiter = limiter(
+  60 * 60 * 1000,
+  10,
+  "Too many accounts created from this network. Please try again later.",
+);
+
+/** Session refresh / logout. Normal use is a few calls per hour. */
+export const sessionLimiter = limiter(
+  15 * 60 * 1000,
+  120,
+  "Too many session requests. Please wait a few minutes.",
+);
+
+/** Public page-visit beacon from the marketing site. */
+export const trackingLimiter = limiter(60 * 1000, 60, "Too many requests. Please slow down.");
+
 /** Google sign-in token exchange. */
 export const googleAuthLimiter = limiter(
   15 * 60 * 1000,

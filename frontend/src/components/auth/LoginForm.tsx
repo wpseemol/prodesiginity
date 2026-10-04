@@ -88,13 +88,12 @@ export default function LoginForm() {
                     itp_support: true,
                     use_fedcm_for_prompt: true,
                 });
-                const dark = document.documentElement.classList.contains("dark");
                 gsi.renderButton(container, {
                     type: "standard",
-                    theme: dark ? "filled_black" : "outline",
+                    theme: "outline",
                     size: "large",
                     text: "continue_with",
-                    shape: "pill",
+                    shape: "rectangular",
                     logo_alignment: "center",
                     width: Math.min(Math.max(container.offsetWidth, 240), 400),
                 });
@@ -113,32 +112,43 @@ export default function LoginForm() {
 
     return (
         <div className="space-y-6">
-            <div className="relative min-h-11">
+            <div
+                className={`group relative h-12 overflow-hidden rounded-xl ${
+                    status === "ready" ? "cursor-pointer" : "cursor-not-allowed"
+                }`}
+            >
+                {/* Our styled face; the real Google button sits invisibly on top and takes the click. */}
                 <div
-                    ref={buttonRef}
-                    className={
-                        status === "ready" ? "flex justify-center" : "pointer-events-none absolute inset-0 opacity-0"
-                    }
-                    aria-hidden={status !== "ready"}
-                />
-                {status !== "ready" ? (
-                    <button
-                        type="button"
-                        disabled
-                        className="inline-flex w-full items-center justify-center gap-3 rounded-full border border-border-color bg-white px-5 py-3 text-sm font-semibold text-slate-800 shadow-sm disabled:cursor-not-allowed disabled:opacity-80 dark:border-dark-border-color dark:bg-slate-900 dark:text-slate-100"
-                    >
-                        {status === "unavailable" ? (
-                            <GoogleIcon className="h-5 w-5 shrink-0" />
-                        ) : (
-                            <Loader2 className="h-5 w-5 shrink-0 animate-spin" aria-hidden="true" />
-                        )}
+                    className={`flex h-full w-full items-center justify-center gap-3 rounded-xl border border-slate-200 bg-white px-5 text-[15px] font-semibold text-slate-800 shadow-sm transition-all duration-200 dark:border-white/10 dark:bg-white/[0.04] dark:text-white ${
+                        status === "ready"
+                            ? "group-hover:border-primary/40 group-hover:shadow-md group-hover:shadow-primary/10 group-focus-within:border-primary group-focus-within:ring-2 group-focus-within:ring-primary/30 dark:group-hover:border-white/25 dark:group-hover:bg-white/[0.08]"
+                            : status === "unavailable"
+                              ? "opacity-60"
+                              : ""
+                    }`}
+                >
+                    {status === "loading" || status === "signing-in" ? (
+                        <Loader2
+                            className="h-5 w-5 shrink-0 animate-spin text-slate-400"
+                            aria-hidden="true"
+                        />
+                    ) : (
+                        <GoogleIcon className="h-5 w-5 shrink-0" />
+                    )}
+                    <span role="status">
                         {status === "signing-in"
                             ? "Signing you in…"
                             : status === "loading"
                               ? "Loading Google sign-in…"
                               : "Continue with Google"}
-                    </button>
-                ) : null}
+                    </span>
+                </div>
+                <div
+                    ref={buttonRef}
+                    className={`absolute inset-0 flex items-center justify-center opacity-[0.01] [&>div]:scale-[1.3] ${
+                        status === "ready" ? "" : "pointer-events-none"
+                    }`}
+                />
             </div>
 
             {status === "unavailable" && !error ? (

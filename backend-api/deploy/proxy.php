@@ -62,6 +62,13 @@ $skipHeaders = [
     'trailers' => true,
     'upgrade' => true,
     'expect' => true,
+    // Client-supplied IP headers are dropped and rebuilt below, otherwise anyone
+    // could fake their IP and dodge the API's rate limits.
+    'x-forwarded-for' => true,
+    'x-forwarded-host' => true,
+    'x-forwarded-proto' => true,
+    'x-real-ip' => true,
+    'forwarded' => true,
 ];
 
 $headers = [];
@@ -95,6 +102,12 @@ if (function_exists('getallheaders')) {
     if (!empty($contentType) && !($isMultipart && $method === 'POST')) {
         $headers[] = 'Content-Type: ' . $contentType;
     }
+}
+
+$headers[] = 'X-Forwarded-For: ' . ($_SERVER['REMOTE_ADDR'] ?? '');
+$headers[] = 'X-Forwarded-Proto: ' . ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http');
+if (!empty($_SERVER['HTTP_HOST'])) {
+    $headers[] = 'X-Forwarded-Host: ' . $_SERVER['HTTP_HOST'];
 }
 
 // ---- Body ----
@@ -151,16 +164,15 @@ if (!empty($headers)) {
 
 $response = curl_exec($ch);
 if ($response === false) {
-    $err = curl_error($ch);
+    // Details go to the server log only; visitors don't need the internal address.
+    error_log('[proxy] Node API unreachable at ' . $BACKEND_ORIGIN . ': ' . curl_error($ch)
+        . ' (check: pm2 status && curl http://127.0.0.1:4000/api/health)');
     curl_close($ch);
     http_response_code(502);
     header('Content-Type: application/json');
     echo json_encode([
         'error' => 'Bad Gateway',
-        'message' => 'Node API is not reachable via proxy',
-        'detail' => $err,
-        'backend' => $BACKEND_ORIGIN,
-        'hint' => 'Check: pm2 status && curl http://127.0.0.1:4000/api/health',
+        'message' => 'The API is temporarily unavailable. Please try again shortly.',
     ]);
     exit;
 }

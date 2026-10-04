@@ -13,6 +13,10 @@
     "lint": "pnpm --filter prodesignity lint"
   },
   "pnpm": {
+    "overrides": {
+      "@prisma/adapter-mariadb>mariadb": "^3.4.7",
+      "prisma>mysql2": "^3.24.4"
+    },
     "onlyBuiltDependencies": [
       "bcrypt",
       "esbuild",

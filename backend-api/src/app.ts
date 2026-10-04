@@ -26,10 +26,15 @@ fs.mkdirSync(HOMEPAGE_UPLOAD_ROOT, { recursive: true });
 fs.mkdirSync(ASSETS_UPLOAD_ROOT, { recursive: true });
 fs.mkdirSync(BLOG_UPLOAD_ROOT, { recursive: true });
 
-// Behind a reverse proxy set TRUST_PROXY (e.g. "1") so rate limits see the real client IP.
-if (process.env.TRUST_PROXY) {
-  const hops = Number(process.env.TRUST_PROXY);
-  app.set("trust proxy", Number.isFinite(hops) ? hops : process.env.TRUST_PROXY);
+// Rate limits key on req.ip. By default only a proxy on this machine (deploy/proxy.php
+// → 127.0.0.1) may set X-Forwarded-For; direct callers can never spoof it.
+// Override with TRUST_PROXY (hop count, or an Express "trust proxy" value).
+const trustProxy = process.env.TRUST_PROXY?.trim();
+if (trustProxy) {
+  const hops = Number(trustProxy);
+  app.set("trust proxy", Number.isFinite(hops) ? hops : trustProxy);
+} else {
+  app.set("trust proxy", "loopback");
 }
 
 // Security headers. Uploads are embedded by the website and dashboard on other origins.
@@ -49,6 +54,12 @@ app.use(
     dotfiles: "deny",
     setHeaders(res) {
       res.setHeader("X-Content-Type-Options", "nosniff");
+      // Uploads are media, never pages: if a file is ever opened directly it
+      // runs sandboxed with no scripts (embedding as <img>/<video> is unaffected).
+      res.setHeader(
+        "Content-Security-Policy",
+        "default-src 'none'; img-src 'self' data:; media-src 'self'; style-src 'unsafe-inline'; sandbox",
+      );
     },
   }),
 );

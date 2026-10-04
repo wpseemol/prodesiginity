@@ -9,7 +9,12 @@ import {
   deleteAccount,
   googleLogin,
 } from "../controllers/auth.controller.js";
-import { googleAuthLimiter } from "../middleware/rateLimit.js";
+import {
+  googleAuthLimiter,
+  loginLimiter,
+  registerLimiter,
+  sessionLimiter,
+} from "../middleware/rateLimit.js";
 import {
   clearProfilePhoto,
   deleteMyPhoto,
@@ -27,11 +32,11 @@ import { profilePhotoUpload } from "../middleware/upload.js";
 
 const router = Router();
 
-router.post("/register", register);
-router.post("/login", login);
+router.post("/register", registerLimiter, register);
+router.post("/login", loginLimiter, login);
 router.post("/google", googleAuthLimiter, googleLogin);
-router.post("/refresh", refresh);
-router.post("/logout", logout);
+router.post("/refresh", sessionLimiter, refresh);
+router.post("/logout", sessionLimiter, logout);
 
 router.get("/me", requireAuth, me);
 router.patch("/me", requireAuth, updateProfile);

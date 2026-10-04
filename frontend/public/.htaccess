@@ -1,3 +1,32 @@
+Options -Indexes
+
+# ---------------------------------------------------------------------------
+# Security headers. next.config `headers()` is ignored by `output: export`,
+# so the browser protections for the static site live here.
+# The CSP only restricts framing, <base> and plugins — it does not limit
+# scripts, so GSAP, Google sign-in and analytics keep working.
+# ---------------------------------------------------------------------------
+<IfModule mod_headers.c>
+  Header always set Strict-Transport-Security "max-age=31536000"
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "SAMEORIGIN"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+  Header always set Content-Security-Policy "frame-ancestors 'self'; base-uri 'self'; object-src 'none'"
+  Header always unset X-Powered-By
+</IfModule>
+
+# Never serve dotfiles (.env, .git, deploy state), logs, or backups.
+<FilesMatch "^\.|\.(log|env|ini|sql|bak|zip|tar|gz|sh|md)$">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+  </IfModule>
+</FilesMatch>
+
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /

@@ -118,6 +118,7 @@ DB_PASSWORD=
 DB_NAME=pro_designity_db
 DATABASE_URL=mysql://admin:password@127.0.0.1:3306/pro_designity_db
 JWT_SECRET=change-me
+JWT_REFRESH_SECRET=change-me-too
 ```
 
 Optional mail: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `TARGET_MAIL`.
@@ -148,6 +149,7 @@ Auth endpoint details: [`backend-api/API.md`](backend-api/API.md).
 
 ## Docs
 
+- [`SECURITY.md`](SECURITY.md) — how the site is protected, audit log, rules for new code
 - [`deploy/HOSTINGER.md`](deploy/HOSTINGER.md) — Hostinger frontend (FTP) + API (SSH) deploy
 - [`backend-api/API.md`](backend-api/API.md) — authentication API
 - [`backend-api/README.md`](backend-api/README.md) — Prisma commands

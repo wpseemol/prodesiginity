@@ -159,16 +159,12 @@ export async function rotateRefreshToken(refreshToken: string) {
   let decoded: RefreshTokenPayload;
   try {
     decoded = jwt.verify(refreshToken, REFRESH_SECRET, {
+      algorithms: ["HS256"],
       audience: "prodesignity-refresh",
       issuer: "prodesignity-auth",
     }) as RefreshTokenPayload;
   } catch {
-    // Backward-compat: tokens issued before iss/aud hardening
-    try {
-      decoded = jwt.verify(refreshToken, REFRESH_SECRET) as RefreshTokenPayload;
-    } catch {
-      return null;
-    }
+    return null;
   }
 
   if (decoded.type !== "refresh" || !decoded.userId || !decoded.jti) {
@@ -268,19 +264,13 @@ export async function revokeAllUserRefreshTokens(userId: number) {
 export function verifyAccessToken(token: string): AccessTokenPayload | null {
   try {
     const decoded = jwt.verify(token, ACCESS_SECRET, {
+      algorithms: ["HS256"],
       audience: "prodesignity-api",
       issuer: "prodesignity-auth",
     }) as AccessTokenPayload;
     if (decoded.type !== "access") return null;
     return decoded;
   } catch {
-    // Accept pre-hardening tokens during rollout
-    try {
-      const decoded = jwt.verify(token, ACCESS_SECRET) as AccessTokenPayload;
-      if (decoded.type !== "access") return null;
-      return decoded;
-    } catch {
-      return null;
-    }
+    return null;
   }
 }

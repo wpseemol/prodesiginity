@@ -1,7 +1,9 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, type ComponentProps, type FormEvent } from "react";
 import {
   CheckCircle2Icon,
   ExternalLinkIcon,
+  EyeIcon,
+  EyeOffIcon,
   Loader2Icon,
   SaveIcon,
   TriangleAlertIcon,
@@ -28,6 +30,35 @@ type GoogleSettings = {
 };
 
 const CREDENTIALS_URL = "https://console.cloud.google.com/apis/credentials";
+
+/** Masked input with a show/hide toggle. Password managers are told to leave it alone. */
+function HiddenInput({ label, ...props }: Omit<ComponentProps<typeof Input>, "type"> & { label: string }) {
+  const [visible, setVisible] = useState(false);
+  return (
+    <div className="relative">
+      <Input
+        {...props}
+        type={visible ? "text" : "password"}
+        spellCheck={false}
+        data-1p-ignore
+        data-lpignore="true"
+        className={cn("pr-10 font-mono text-sm", props.className)}
+      />
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-sm"
+        className="absolute top-1/2 right-1 -translate-y-1/2"
+        onClick={() => setVisible((v) => !v)}
+        disabled={props.disabled}
+        aria-label={visible ? `Hide ${label}` : `Show ${label}`}
+        aria-pressed={visible}
+      >
+        {visible ? <EyeOffIcon /> : <EyeIcon />}
+      </Button>
+    </div>
+  );
+}
 
 export function GoogleSignInPanel() {
   const [settings, setSettings] = useState<GoogleSettings | null>(null);
@@ -184,13 +215,13 @@ export function GoogleSignInPanel() {
         <Label htmlFor="google-client-id" className="text-sm font-medium">
           Client ID
         </Label>
-        <Input
+        <HiddenInput
           id="google-client-id"
+          label="client ID"
           value={clientId}
           onChange={(e) => setClientId(e.target.value)}
           placeholder="1234567890-abc123.apps.googleusercontent.com"
           autoComplete="off"
-          spellCheck={false}
         />
         <p className="text-xs text-muted-foreground">
           Public value used by the sign-in button. Leave empty to turn Google sign-in off.
@@ -201,9 +232,9 @@ export function GoogleSignInPanel() {
         <Label htmlFor="google-client-secret" className="text-sm font-medium">
           Client secret
         </Label>
-        <Input
+        <HiddenInput
           id="google-client-secret"
-          type="password"
+          label="client secret"
           value={clientSecret}
           onChange={(e) => setClientSecret(e.target.value)}
           placeholder={

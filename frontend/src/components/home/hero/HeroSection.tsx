@@ -27,6 +27,19 @@ const DEFAULT_PILL_HTML = "Rated <b>4.8</b> by 300+ store owners";
 const DEFAULT_LEDE =
     "Listings, creative, ads and SEO across Amazon, Shopify, Meta, Google and TikTok — handled by one team on a single monthly retainer, so you can stay on the product.";
 
+/**
+ * The pill comes from the CMS as HTML. Everything is escaped, then only bare
+ * formatting tags (no attributes) are restored, so it can never carry a script.
+ */
+function safePillHtml(html: string) {
+    return html
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/&lt;(\/?)(b|strong|em|i|u|br)\s*\/?&gt;/gi, "<$1$2>");
+}
+
 function Star() {
     return (
         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -49,7 +62,7 @@ export default function HeroSection({ content }: HeroSectionProps) {
             : HERO_HEADLINE_LINES;
     const stats =
         content?.stats?.length ? content.stats : HERO_STATS;
-    const pillHtml = content?.pillHtml?.trim() || DEFAULT_PILL_HTML;
+    const pillHtml = safePillHtml(content?.pillHtml?.trim() || DEFAULT_PILL_HTML);
     const lede = content?.lede?.trim() || DEFAULT_LEDE;
     const primaryCta = {
         label: content?.primaryCta?.label?.trim() || "Get Started",

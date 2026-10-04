@@ -84,14 +84,14 @@ function headerSafe(string $value): string
     return trim(str_replace(["\r", "\n", "%0a", "%0d"], ' ', $value));
 }
 
+/**
+ * REMOTE_ADDR only: forwarding headers are written by the client, so trusting
+ * them would let a script fake a new IP per request and skip the rate limit.
+ * (Hostinger's CDN / Cloudflare restore the real visitor IP into REMOTE_ADDR.)
+ */
 function clientIp(): string
 {
-    foreach (['HTTP_CF_CONNECTING_IP', 'HTTP_X_FORWARDED_FOR', 'REMOTE_ADDR'] as $key) {
-        if (!empty($_SERVER[$key])) {
-            return explode(',', (string) $_SERVER[$key])[0];
-        }
-    }
-    return 'unknown';
+    return (string) ($_SERVER['REMOTE_ADDR'] ?? 'unknown');
 }
 
 /* -------------------------------------------------------------------------

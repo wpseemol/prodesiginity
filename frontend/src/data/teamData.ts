@@ -11,8 +11,6 @@
  * 800x1000 look best in the 4:5 frame.
  */
 
-import { shiftAndShuffle } from "@/lib/utils";
-
 export type SocialNetwork =
     | "facebook"
     | "instagram"

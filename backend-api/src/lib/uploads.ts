@@ -59,6 +59,9 @@ const MIME_EXTENSIONS: Record<string, string> = {
   "image/png": ".png",
   "image/webp": ".webp",
   "image/gif": ".gif",
+  "image/svg+xml": ".svg",
+  "image/x-icon": ".ico",
+  "image/vnd.microsoft.icon": ".ico",
   "video/mp4": ".mp4",
   "video/webm": ".webm",
   "video/quicktime": ".mov",
@@ -75,6 +78,8 @@ export function uniqueUploadNameForMime(mimetype: string) {
  * renamed to `photo.png` is rejected.
  */
 export function fileMatchesMime(filePath: string, mimetype: string): boolean {
+  if (mimetype === "image/svg+xml") return isSafeSvg(filePath);
+
   let header: Buffer;
   try {
     const fd = fs.openSync(filePath, "r");
@@ -96,6 +101,9 @@ export function fileMatchesMime(filePath: string, mimetype: string): boolean {
       return ascii(0, 6) === "GIF87a" || ascii(0, 6) === "GIF89a";
     case "image/webp":
       return ascii(0, 4) === "RIFF" && ascii(8, 12) === "WEBP";
+    case "image/x-icon":
+    case "image/vnd.microsoft.icon":
+      return header.subarray(0, 4).equals(Buffer.from([0x00, 0x00, 0x01, 0x00]));
     case "video/mp4":
     case "video/quicktime":
       return ascii(4, 8) === "ftyp" || ["moov", "mdat", "wide", "free"].includes(ascii(4, 8));
@@ -110,6 +118,18 @@ export function fileMatchesMime(filePath: string, mimetype: string): boolean {
     default:
       return false;
   }
+}
+
+/** SVG is XML that browsers execute, so anything scriptable is refused. */
+function isSafeSvg(filePath: string): boolean {
+  let text: string;
+  try {
+    text = fs.readFileSync(filePath, "utf8");
+  } catch {
+    return false;
+  }
+  if (!/<svg[\s>]/i.test(text)) return false;
+  return !/<script|<foreignObject|<iframe|<embed|<object|\bon[a-z]+\s*=|javascript:|data:text\/html/i.test(text);
 }
 
 /** Public URL path stored in DB, e.g. `/uploads/users/12/abc.jpg` */
@@ -137,9 +157,4 @@ export function ensureAssetsUploadDir(...parts: string[]): string {
 
 export function publicAssetPath(...parts: string[]): string {
   return `/uploads/assets/${parts.join("/")}`.replace(/\/{2,}/g, "/");
-}
-
-export function uniqueUploadName(originalName: string, fallbackExt = ".jpg") {
-  const ext = path.extname(originalName).toLowerCase() || fallbackExt;
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}${ext}`;
 }

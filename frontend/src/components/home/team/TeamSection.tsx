@@ -77,10 +77,12 @@ export default function TeamSection({ members }: TeamSectionProps) {
 
     const dragStart = useRef<number | null>(null);
 
-    useEffect(() => {
-        if (!members?.length) return;
-        setActive(Math.max(members.findIndex((m) => m.lead), 0));
-    }, [members]);
+    // New roster from the API: jump to its lead (adjusting state during render, not in an effect).
+    const [prevMembers, setPrevMembers] = useState(members);
+    if (members !== prevMembers) {
+        setPrevMembers(members);
+        if (members?.length) setActive(initialIndex);
+    }
 
     const go = useCallback(
         (delta: number) => {

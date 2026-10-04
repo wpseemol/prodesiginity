@@ -31,8 +31,8 @@ export const API_ROUTES: ApiRoute[] = [
   { method: "GET", path: "/api/homepage/:key", auth: "public" },
 
   { method: "GET", path: "/api/team", auth: "public" },
-  { method: "GET", path: "/api/team/me", auth: "user" },
-  { method: "PUT", path: "/api/team/me", auth: "user", note: "multipart" },
+  { method: "GET", path: "/api/team/me", auth: "user", note: "staff only" },
+  { method: "PUT", path: "/api/team/me", auth: "user", note: "staff only, multipart" },
   { method: "GET", path: "/api/team/:slug", auth: "public" },
   { method: "GET", path: "/api/settings", auth: "public" },
   { method: "GET", path: "/api/services", auth: "public" },
