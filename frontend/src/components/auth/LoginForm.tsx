@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Loader2, ShieldCheck } from "lucide-react";
-import { getAuthUser, signInWithGoogle } from "@/lib/auth";
+import { getCurrentUser, signInWithGoogle } from "@/lib/auth";
 import { getGoogleClientId } from "@/lib/site-settings";
 import { siteConfig } from "@/config/site";
 import GoogleIcon from "@/components/auth/GoogleIcon";
@@ -40,7 +40,13 @@ export default function LoginForm() {
     );
 
     useEffect(() => {
-        if (getAuthUser()) router.replace(siteConfig.dashboardPath);
+        let cancelled = false;
+        getCurrentUser().then((user) => {
+            if (user && !cancelled) router.replace(siteConfig.dashboardPath);
+        });
+        return () => {
+            cancelled = true;
+        };
     }, [router]);
 
     const handleCredential = useCallback(

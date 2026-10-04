@@ -19,6 +19,13 @@ import {
 import type { AuthRequest } from "../middleware/auth.js";
 import { getGoogleClientId } from "../lib/googleAuthConfig.js";
 import {
+  REFRESH_COOKIE,
+  clearAuthCookies,
+  readCookie,
+  setAuthCookies,
+} from "../lib/authCookies.js";
+import { isTrustedOrigin } from "../config/cors.js";
+import {
   accountAvatarSelect,
   accountTeamImageSelect,
   publicUserSelect,
@@ -141,11 +148,11 @@ export const googleLogin = async (req: Request, res: Response) => {
       role: account.role,
     };
     const tokens = await issueTokenPair(authUser);
+    setAuthCookies(res, tokens);
 
+    // Tokens live only in HttpOnly cookies; the website never handles them.
     return res.status(200).json({
       message: "Login successful",
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
       expiresIn: tokens.expiresIn,
       refreshExpiresInDays: tokens.refreshExpiresInDays,
       user: {
@@ -296,18 +303,36 @@ export const login = async (req: Request, res: Response) => {
 
 export const refresh = async (req: Request, res: Response) => {
   try {
+    // The dashboard sends the token in the body; the website relies on its cookie.
     const validation = refreshSchema.safeParse(req.body);
-    if (!validation.success) {
+    const cookieToken = validation.success ? null : readCookie(req, REFRESH_COOKIE);
+    if (!validation.success && !cookieToken) {
       return res.status(400).json({
         message:
           validation.error.issues[0]?.message || "Refresh token is required",
       });
     }
+    if (cookieToken && !isTrustedOrigin(req.headers.origin)) {
+      return res.status(403).json({ message: "Request origin not allowed." });
+    }
 
-    const rotated = await rotateRefreshToken(validation.data.refreshToken);
+    const rotated = await rotateRefreshToken(
+      validation.success ? validation.data.refreshToken : cookieToken!,
+    );
     if (!rotated) {
+      if (cookieToken) clearAuthCookies(res);
       return res.status(401).json({
         message: "Invalid or expired refresh token",
+      });
+    }
+
+    if (cookieToken) {
+      setAuthCookies(res, rotated);
+      return res.status(200).json({
+        message: "Token refreshed",
+        expiresIn: rotated.expiresIn,
+        refreshExpiresInDays: rotated.refreshExpiresInDays,
+        user: rotated.user,
       });
     }
 
@@ -333,6 +358,11 @@ export const logout = async (req: Request, res: Response) => {
     if (validation.success) {
       await revokeRefreshToken(validation.data.refreshToken);
     }
+    const cookieToken = readCookie(req, REFRESH_COOKIE);
+    if (cookieToken) {
+      await revokeRefreshToken(cookieToken);
+    }
+    clearAuthCookies(res);
     return res.status(200).json({ message: "Logged out successfully" });
   } catch (error) {
     console.error("Logout Error:", error);

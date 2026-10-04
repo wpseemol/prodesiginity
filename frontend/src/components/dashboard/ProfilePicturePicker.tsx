@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Check, Loader2 } from "lucide-react";
-import { authFetch, getAuthUser, setAuthUser, type AuthUser } from "@/lib/auth";
+import { authFetch, toAuthUser, type ApiAccount, type AuthUser } from "@/lib/auth";
 import { mediaUrl } from "@/config/api";
 import { siteConfig } from "@/config/site";
 
@@ -11,10 +11,7 @@ type AvatarPreset = { id: number; url: string; label: string | null };
 
 type ChooseAvatarResponse = {
     message?: string;
-    user?: {
-        avatarPreset?: { id: number; url: string } | null;
-        googlePictureUrl?: string | null;
-    };
+    user?: ApiAccount;
 };
 
 type Props = {
@@ -29,9 +26,7 @@ export default function ProfilePicturePicker({ user, onChange }: Props) {
     const [error, setError] = useState<string | null>(null);
     const [sessionExpired, setSessionExpired] = useState(false);
 
-    // Sessions saved before avatars existed only stored the Google photo as `picture`.
-    const googlePicture =
-        user.googlePicture ?? (user.avatarPresetId ? null : (user.picture ?? null));
+    const googlePicture = user.googlePicture;
     const selected = user.avatarPresetId ?? "google";
 
     useEffect(() => {
@@ -78,17 +73,7 @@ export default function ProfilePicturePicker({ user, onChange }: Props) {
                 setError(data.message || "Could not update your profile picture.");
                 return;
             }
-            const preset = data.user.avatarPreset ?? null;
-            const google = data.user.googlePictureUrl ?? googlePicture;
-            // authFetch may have rotated the tokens, so merge into the latest session.
-            const next: AuthUser = {
-                ...(getAuthUser() ?? user),
-                avatarPresetId: preset?.id ?? null,
-                googlePicture: google,
-                picture: preset?.url ?? google,
-            };
-            setAuthUser(next);
-            onChange(next);
+            onChange(toAuthUser(data.user));
         } catch {
             setError("Could not update your profile picture.");
         } finally {

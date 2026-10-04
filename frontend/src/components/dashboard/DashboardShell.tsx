@@ -14,7 +14,7 @@ import Logo from "@/components/home/Logo";
 import ThemeToggle from "@/components/ThemeToggle";
 import { staffInitials } from "@/components/team/StaffAvatar";
 import ProfilePicturePicker from "@/components/dashboard/ProfilePicturePicker";
-import { getAuthUser, signOut, type AuthUser } from "@/lib/auth";
+import { getCurrentUser, signOut, type AuthUser } from "@/lib/auth";
 import { mediaUrl } from "@/config/api";
 import { siteConfig } from "@/config/site";
 
@@ -43,13 +43,19 @@ export default function DashboardShell() {
     const [pictureFailed, setPictureFailed] = useState(false);
 
     useEffect(() => {
-        const current = getAuthUser();
-        if (!current) {
-            router.replace(siteConfig.loginPath);
-            return;
-        }
-        setUser(current);
-        setReady(true);
+        let cancelled = false;
+        getCurrentUser().then((current) => {
+            if (cancelled) return;
+            if (!current) {
+                router.replace(siteConfig.loginPath);
+                return;
+            }
+            setUser(current);
+            setReady(true);
+        });
+        return () => {
+            cancelled = true;
+        };
     }, [router]);
 
     const handleLogout = async () => {
@@ -127,10 +133,7 @@ export default function DashboardShell() {
                                     Hi, {user.name}
                                 </h1>
                                 <p className="text-sm text-slate-500 dark:text-slate-400">
-                                    {user.email}
-                                    {user.provider === "google"
-                                        ? " · Google"
-                                        : null}
+                                    {user.email} · Google
                                 </p>
                             </div>
                         </div>

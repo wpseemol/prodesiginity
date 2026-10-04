@@ -8,10 +8,16 @@ const isDev = process.env.NODE_ENV !== "production";
  * Set in .env as a comma-separated list:
  *   ALLOWED_ORIGINS=https://prodesignity.com,https://www.prodesignity.com
  */
-const allowedOrigins = (process.env.ALLOWED_ORIGINS ?? "")
+export const allowedOrigins = (process.env.ALLOWED_ORIGINS ?? "")
     .split(",")
     .map((origin) => origin.trim())
     .filter(Boolean);
+
+/** Whether a browser request comes from our own site (always true in development). */
+export function isTrustedOrigin(origin: string | undefined): boolean {
+    if (isDev) return true;
+    return Boolean(origin && allowedOrigins.includes(origin));
+}
 
 /** Methods that only read. Safe to expose to any origin. */
 const READ_ONLY_METHODS = ["GET", "HEAD", "OPTIONS"];
