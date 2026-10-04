@@ -19,15 +19,15 @@ import {
   TabletIcon,
   TrendingDownIcon,
   TrendingUpIcon,
-  UserPlusIcon,
   UsersIcon,
 } from "lucide-react";
-import { mediaUrl, siteOrigin } from "@/config";
+import { siteOrigin } from "@/config";
 import { apiFetch } from "@/lib/api";
+import type { DashboardTeamImages } from "@/lib/session";
 import { cn } from "@/lib/utils";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { UserAvatar } from "@/components/UserAvatar";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -83,16 +83,8 @@ type StaffUser = {
   role: "admin" | "employer";
   created_at: string;
   photo?: StaffPhoto | null;
+  teamMember?: DashboardTeamImages | null;
 };
-
-function staffInitials(name: string) {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? "")
-    .join("");
-}
 
 function greeting() {
   const hour = new Date().getHours();
@@ -716,17 +708,7 @@ function AdminOverview({ userName }: { userName: string }) {
               <ul className="grid gap-3">
                 {staff.slice(0, 4).map((member) => (
                   <li key={member.id} className="flex items-center gap-3">
-                    <Avatar className="size-8">
-                      {mediaUrl(member.photo?.url) ? (
-                        <AvatarImage
-                          src={mediaUrl(member.photo?.url)}
-                          alt={member.fullName}
-                        />
-                      ) : null}
-                      <AvatarFallback className="text-xs">
-                        {staffInitials(member.fullName)}
-                      </AvatarFallback>
-                    </Avatar>
+                    <UserAvatar account={member} />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium">{member.fullName}</p>
                       <p className="truncate text-xs text-muted-foreground">
@@ -771,143 +753,6 @@ function AdminOverview({ userName }: { userName: string }) {
   );
 }
 
-function StaffTable({
-  staff,
-  emptyLabel,
-}: {
-  staff: StaffUser[];
-  emptyLabel: string;
-}) {
-  if (staff.length === 0) {
-    return (
-      <p className="py-8 text-center text-sm text-muted-foreground">
-        {emptyLabel}
-      </p>
-    );
-  }
-
-  return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Name</TableHead>
-          <TableHead>Username</TableHead>
-          <TableHead>Email</TableHead>
-          <TableHead>Role</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {staff.map((member) => (
-          <TableRow key={member.id}>
-            <TableCell>
-              <div className="flex items-center gap-2.5">
-                <Avatar className="size-8">
-                  {mediaUrl(member.photo?.url) ? (
-                    <AvatarImage
-                      src={mediaUrl(member.photo?.url)}
-                      alt={member.fullName}
-                    />
-                  ) : null}
-                  <AvatarFallback className="text-xs">
-                    {staffInitials(member.fullName)}
-                  </AvatarFallback>
-                </Avatar>
-                <span className="font-medium">{member.fullName}</span>
-              </div>
-            </TableCell>
-            <TableCell className="text-muted-foreground">
-              @{member.username}
-            </TableCell>
-            <TableCell className="text-muted-foreground">
-              {member.email}
-            </TableCell>
-            <TableCell>
-              <Badge variant={member.role === "admin" ? "default" : "secondary"}>
-                {member.role === "admin" ? "Admin" : "Employee"}
-              </Badge>
-            </TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
-  );
-}
-
-function AdminStaffManager() {
-  const [staff, setStaff] = useState<StaffUser[]>([]);
-  const [listError, setListError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  const loadStaff = async () => {
-    setLoading(true);
-    try {
-      const res = await apiFetch("/admin/users");
-      const data = await res.json();
-      if (!res.ok) {
-        setListError(
-          typeof data.message === "string"
-            ? data.message
-            : "Could not load staff accounts.",
-        );
-        return;
-      }
-      setListError(null);
-      setStaff(data.users ?? []);
-    } catch {
-      setListError("Could not reach the server.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    void loadStaff();
-  }, []);
-
-  return (
-    <div className="grid gap-6">
-      <Card>
-        <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3 space-y-0">
-          <div className="space-y-1">
-            <CardTitle>Staff accounts</CardTitle>
-            <CardDescription>
-              Real logins in the system. Adding someone on{" "}
-              <Link
-                to="/admin/team"
-                className="font-medium text-primary underline-offset-4 hover:underline"
-              >
-                Team members
-              </Link>{" "}
-              automatically creates their staff account (username &amp;
-              password).
-            </CardDescription>
-          </div>
-          <Button render={<Link to="/admin/team" />} size="sm">
-            <UserPlusIcon />
-            Add on Team
-          </Button>
-        </CardHeader>
-        <CardContent>
-          {listError ? (
-            <Alert variant="destructive" className="mb-4">
-              <AlertTitle>Error</AlertTitle>
-              <AlertDescription>{listError}</AlertDescription>
-            </Alert>
-          ) : null}
-          {loading ? (
-            <div className="flex items-center gap-2 py-10 text-sm text-muted-foreground">
-              <Loader2Icon className="size-4 animate-spin" />
-              Loading staff…
-            </div>
-          ) : (
-            <StaffTable staff={staff} emptyLabel="No staff accounts yet." />
-          )}
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
 export default function AdminDashboardPage() {
   return (
     <DashboardLayout
@@ -916,18 +761,6 @@ export default function AdminDashboardPage() {
       description="Website performance at a glance"
     >
       {({ user }) => <AdminOverview userName={user.fullName} />}
-    </DashboardLayout>
-  );
-}
-
-export function AdminStaffPage() {
-  return (
-    <DashboardLayout
-      expectedRole="admin"
-      title="Staff"
-      description="Live accounts — auto-created when you add Team members"
-    >
-      {() => <AdminStaffManager />}
     </DashboardLayout>
   );
 }

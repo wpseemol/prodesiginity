@@ -19,6 +19,8 @@ model User {
   photo         Photo?         @relation("UserProfilePhoto", fields: [photoId], references: [id], onDelete: SetNull)
   photos        Photo[]        @relation("UserPhotos")
   teamMember    TeamMember?
+  /// Set by an admin to block sign-in and token refresh.
+  disabledAt    DateTime?      @map("disabled_at")
   created_at    DateTime       @default(now())
   refreshTokens RefreshToken[]
   blogPosts     BlogPost[]     @relation("BlogPostAuthor")
@@ -85,7 +87,8 @@ model TeamMember {
   description String? @db.Text
   /** Login email shown in admin; linked staff user when set. */
   email      String?  @unique @db.VarChar(254)
-  photoUrl   String   @map("photo_url") @db.VarChar(512)
+  /** Optional portrait; without one the avatar (then initials) is shown. */
+  photoUrl   String?  @map("photo_url") @db.VarChar(512)
   /** SEO: HTML img alt / description */
   photoAlt   String?  @map("photo_alt") @db.VarChar(255)
   /** SEO: HTML img title */

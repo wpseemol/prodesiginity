@@ -12,7 +12,7 @@ import JsonLd from "@/components/home/JsonLd";
 import SocialLinks from "@/components/team/SocialLinks";
 import StaffAvatar from "@/components/team/StaffAvatar";
 import StaffCard from "@/components/team/StaffCard";
-import SmartImage from "@/components/home/portfolio/SmartImage";
+import StaffPortrait from "@/components/team/StaffPortrait";
 import { siteConfig } from "@/config/site";
 import { resolveStaffStyle, STAFF_STYLES, type StaffStyleKey } from "@/data/staffStyles";
 import { breadcrumbSchema, buildMetadata, graph } from "@/lib/seo";
@@ -99,18 +99,18 @@ export default async function TeamPage() {
                             <div className="relative grid items-center gap-8 overflow-hidden rounded-[calc(2rem-2px)] bg-white p-6 sm:p-8 md:grid-cols-12 dark:bg-[#0A0E1A]">
                                 <div aria-hidden="true" className={cn("pointer-events-none absolute -right-16 -top-16 h-72 w-72 rounded-full blur-3xl", leadStyle.classes.glow)} />
                                 <div className="relative mx-auto aspect-4/5 w-full max-w-[15rem] overflow-hidden rounded-3xl shadow-xl md:col-span-4">
-                                    <SmartImage
-                                        src={lead.photo}
-                                        alt={lead.photoAlt ?? `${lead.name}, ${lead.role}`}
-                                        fallbackLabel={lead.name}
-                                        fill
+                                    <StaffPortrait
+                                        member={lead}
                                         sizes="15rem"
                                         priority
                                         className="object-cover transition-transform duration-700 group-hover:scale-105"
+                                        initialsClassName="text-6xl"
                                     />
-                                    <span className="absolute bottom-3 right-3">
-                                        <StaffAvatar member={lead} style={leadStyle} className="h-16 w-16" sizes="64px" />
-                                    </span>
+                                    {lead.photo ? (
+                                        <span className="absolute bottom-3 right-3">
+                                            <StaffAvatar member={lead} style={leadStyle} className="h-16 w-16" sizes="64px" />
+                                        </span>
+                                    ) : null}
                                 </div>
                                 <div className="relative md:col-span-8">
                                     <span className={cn("inline-flex items-center gap-1.5 rounded-full bg-linear-to-r px-3 py-1 text-[10px] font-black uppercase tracking-widest text-white", leadStyle.classes.gradient)}>

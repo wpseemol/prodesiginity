@@ -22,7 +22,7 @@ import { siteConfig } from "@/config/site";
 import type { BlogPost } from "@/data/blog/types";
 import { resolveStaffStyle } from "@/data/staffStyles";
 import type { TeamMember } from "@/data/teamData";
-import { firstName, staffHref, staffSlug, TEAM_BASE_PATH } from "@/lib/team-api";
+import { firstName, staffHref, staffImage, staffSlug, TEAM_BASE_PATH } from "@/lib/team-api";
 import { breadcrumbSchema, graph, staffProfileSchema } from "@/lib/seo";
 import { cn } from "@/lib/utils";
 
@@ -49,7 +49,7 @@ export function staffSchema(member: TeamMember, skills: string[]) {
             name: member.name,
             role: member.role,
             path,
-            image: member.photo,
+            image: staffImage(member),
             description: member.description ?? member.tagline,
             sameAs: socialEntries(member.socials).map((entry) => entry.url),
             knowsAbout: skills,
@@ -68,7 +68,9 @@ export default function StaffProfileView({ member, team, posts = [] }: StaffProf
     const first = firstName(member);
     const others = team.filter((m) => staffSlug(m) !== staffSlug(member)).slice(0, 4);
     const hasSocials = socialEntries(member.socials).length > 0;
-    const hasSeparateAvatar = Boolean(member.avatar && member.avatar !== member.photo);
+    const hasSeparateAvatar = Boolean(
+        member.photo && member.avatar && member.avatar !== member.photo,
+    );
 
     return (
         <div className="relative overflow-x-clip bg-white font-sans text-slate-900 transition-colors duration-300 dark:bg-[#070B14] dark:text-slate-100">

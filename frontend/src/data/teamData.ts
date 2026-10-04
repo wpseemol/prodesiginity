@@ -37,7 +37,8 @@ export interface TeamMember {
     tagline?: string;
     /** Longer bio from staff public profile. */
     description?: string;
-    photo: string;
+    /** Portrait. Optional: without one the avatar, then initials, are shown. */
+    photo?: string;
     photoAlt?: string;
     /** Separate avatar (illustration / 3D). Falls back to `photo`. */
     avatar?: string;

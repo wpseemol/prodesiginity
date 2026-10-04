@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { Crown, Sparkles, RefreshCw } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import SmartImage from "@/components/home/portfolio/SmartImage";
+import StaffPortrait from "@/components/team/StaffPortrait";
 import type { TeamMember } from "@/data/teamData";
 import { HeaderPill } from "../HeaderPill";
 import { siteConfig } from "@/config/site";
@@ -15,14 +15,6 @@ const ROTATE_INTERVAL_SEC = 30;
 
 const photoAlt = (member: TeamMember) =>
     member.photoAlt ?? `${member.name}, ${member.role} at ${siteConfig.name}`;
-
-const initials = (name: string) =>
-    name
-        .split(/\s+/)
-        .filter(Boolean)
-        .slice(0, 2)
-        .map((part) => part[0]?.toUpperCase() ?? "")
-        .join("");
 
 /**
  * "The People Doing the Work". Renders the roster loaded at build time, then
@@ -99,13 +91,12 @@ export default function OurTeamMemberSection({
                     <div className="mt-12 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center p-6 sm:p-9 lg:p-10 rounded-3xl bg-linear-to-br from-card-bg via-slate-50 to-slate-100 dark:from-[#0E1322] dark:via-[#0A0E1A] dark:to-[#070A12] border border-border-color dark:border-dark-border-color shadow-2xl">
                         <div className="lg:col-span-4">
                             <div className="relative aspect-4/5 w-full max-w-xs mx-auto rounded-2xl overflow-hidden ring-2 ring-primary/40 shadow-xl group">
-                                <SmartImage
-                                    src={lead.photo}
+                                <StaffPortrait
+                                    member={lead}
                                     alt={photoAlt(lead)}
-                                    fallbackLabel={initials(lead.name)}
-                                    fill
                                     sizes="(max-width: 1024px) 70vw, 22rem"
                                     className="object-cover transition-transform duration-700 group-hover:scale-105"
+                                    initialsClassName="text-7xl"
                                     priority
                                 />
                                 <div className="absolute inset-0 bg-linear-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -223,13 +214,12 @@ export default function OurTeamMemberSection({
                             >
                                 <div>
                                     <div className="relative aspect-4/5 w-full rounded-xl overflow-hidden mb-3 bg-slate-100 dark:bg-slate-800/80">
-                                        <SmartImage
-                                            src={member.photo}
+                                        <StaffPortrait
+                                            member={member}
                                             alt={photoAlt(member)}
-                                            fallbackLabel={initials(member.name)}
-                                            fill
                                             sizes="(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 16rem"
                                             className="object-cover transition-transform duration-500 group-hover:scale-105"
+                                            initialsClassName="text-4xl"
                                         />
                                         <div className="absolute inset-0 bg-linear-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                                     </div>

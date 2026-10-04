@@ -25,6 +25,7 @@ import {
     getTeamData,
     postsByMember,
     staffHref,
+    staffImage,
     staffSlug,
 } from "@/lib/team-api";
 
@@ -61,7 +62,7 @@ export async function generateMetadata({
         title: `${member.name} — ${member.role}`,
         description,
         path: staffHref(member),
-        image: member.photo,
+        image: staffImage(member),
         imageAlt: member.photoAlt ?? `${member.name}, ${member.role}`,
     });
 }

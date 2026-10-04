@@ -1,18 +1,17 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import {
-  CameraIcon,
   ExternalLinkIcon,
   Loader2Icon,
   SaveIcon,
-  SmileIcon,
-  Trash2Icon,
   UserRoundIcon,
 } from "lucide-react";
 import { toast } from "sonner";
-import { mediaUrl, siteOrigin } from "@/config";
+import { siteOrigin } from "@/config";
+import { useImagePick } from "@/hooks/useImagePick";
 import { apiFetch } from "@/lib/api";
-import { formatImageHint, IMAGE_SPECS } from "@/lib/imageSpecs";
+import { updateDashboardUser, type DashboardUser } from "@/lib/session";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { TeamImageFields } from "@/components/team/TeamImageFields";
 import {
   appendExtras,
   EMPTY_EXTRAS,
@@ -42,7 +41,7 @@ type MyTeamProfile = {
   role: string;
   tagline: string | null;
   description: string | null;
-  photoUrl: string;
+  photoUrl: string | null;
   photoAlt: string | null;
   photoTitle: string | null;
   avatarUrl: string | null;
@@ -53,38 +52,15 @@ type MyTeamProfile = {
   username: string | null;
 };
 
-/** Local image pick with a blob preview that is revoked when replaced. */
-function useImagePick() {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [file, setFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
+type StaffPublicProfileManagerProps = {
+  currentUser: DashboardUser;
+  onUserUpdated: (user: DashboardUser) => void;
+};
 
-  useEffect(() => {
-    return () => {
-      if (preview?.startsWith("blob:")) URL.revokeObjectURL(preview);
-    };
-  }, [preview]);
-
-  const pick = (next: File | undefined) => {
-    if (!next) return;
-    if (!next.type.startsWith("image/")) {
-      toast.error("Please choose an image file.");
-      return;
-    }
-    setFile(next);
-    setPreview(URL.createObjectURL(next));
-  };
-
-  const clear = () => {
-    setFile(null);
-    setPreview(null);
-    if (inputRef.current) inputRef.current.value = "";
-  };
-
-  return { inputRef, file, preview, pick, clear };
-}
-
-function StaffPublicProfileManager() {
+function StaffPublicProfileManager({
+  currentUser,
+  onUserUpdated,
+}: StaffPublicProfileManagerProps) {
   const photo = useImagePick();
   const avatar = useImagePick();
   const [loading, setLoading] = useState(true);
@@ -97,13 +73,8 @@ function StaffPublicProfileManager() {
   const [tagline, setTagline] = useState("");
   const [description, setDescription] = useState("");
   const [extras, setExtras] = useState<ProfileExtras>(EMPTY_EXTRAS);
+  const [removePhoto, setRemovePhoto] = useState(false);
   const [removeAvatar, setRemoveAvatar] = useState(false);
-
-  const currentPhotoSrc =
-    photo.preview || (member?.photoUrl ? mediaUrl(member.photoUrl) : undefined);
-  const currentAvatarSrc =
-    avatar.preview ||
-    (!removeAvatar && member?.avatarUrl ? mediaUrl(member.avatarUrl) : undefined);
 
   const applyMember = (row: MyTeamProfile) => {
     setMember(row);
@@ -112,6 +83,7 @@ function StaffPublicProfileManager() {
     setTagline(row.tagline ?? "");
     setDescription(row.description ?? "");
     setExtras(extrasFromMember(row));
+    setRemovePhoto(false);
     setRemoveAvatar(false);
   };
 
@@ -163,6 +135,7 @@ function StaffPublicProfileManager() {
       body.append("description", description.trim());
       appendExtras(body, extras);
       if (photo.file) body.append("photo", photo.file);
+      else if (removePhoto) body.append("removePhoto", "true");
       if (avatar.file) body.append("avatar", avatar.file);
       else if (removeAvatar) body.append("removeAvatar", "true");
 
@@ -180,9 +153,17 @@ function StaffPublicProfileManager() {
         return;
       }
 
-      applyMember(data.member as MyTeamProfile);
+      const saved = data.member as MyTeamProfile;
+      applyMember(saved);
       photo.clear();
       avatar.clear();
+      const nextUser: DashboardUser = {
+        ...currentUser,
+        fullName: saved.name,
+        teamMember: { photoUrl: saved.photoUrl, avatarUrl: saved.avatarUrl },
+      };
+      await updateDashboardUser(nextUser);
+      onUserUpdated(nextUser);
       toast.success("Your public team profile was updated.");
     } catch {
       toast.error("Could not reach the server.");
@@ -240,135 +221,17 @@ function StaffPublicProfileManager() {
           </a>
         </CardHeader>
         <CardContent className="grid gap-5 pt-6">
-          <div className="grid gap-5 sm:grid-cols-2">
-            {/* Portrait photo */}
-            <div className="flex items-start gap-3">
-              <button
-                type="button"
-                onClick={() => photo.inputRef.current?.click()}
-                className="group relative h-32 w-26 shrink-0 overflow-hidden rounded-2xl border border-dashed border-primary/30 bg-primary/5 shadow-inner transition hover:border-primary/50"
-              >
-                {currentPhotoSrc ? (
-                  <img
-                    src={currentPhotoSrc}
-                    alt={name || "Profile"}
-                    className="size-full object-cover transition duration-300 group-hover:scale-105"
-                  />
-                ) : (
-                  <div className="flex size-full flex-col items-center justify-center gap-1 text-muted-foreground">
-                    <CameraIcon className="size-5 opacity-70" />
-                    <span className="text-[10px] font-medium uppercase">Photo</span>
-                  </div>
-                )}
-              </button>
-              <div className="min-w-0 space-y-2">
-                <p className="text-sm font-medium">Portrait photo</p>
-                <p className="text-xs text-muted-foreground">
-                  {photo.file
-                    ? `New file: ${photo.file.name}`
-                    : formatImageHint(IMAGE_SPECS.teamPhoto)}
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => photo.inputRef.current?.click()}
-                  >
-                    <CameraIcon />
-                    Change
-                  </Button>
-                  {photo.file ? (
-                    <Button type="button" variant="ghost" size="sm" onClick={photo.clear}>
-                      Undo
-                    </Button>
-                  ) : null}
-                </div>
-              </div>
-              <input
-                ref={photo.inputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp,image/gif"
-                className="sr-only"
-                onChange={(e) => photo.pick(e.target.files?.[0])}
-              />
-            </div>
-
-            {/* Avatar image */}
-            <div className="flex items-start gap-3">
-              <button
-                type="button"
-                onClick={() => avatar.inputRef.current?.click()}
-                className="group relative size-26 shrink-0 overflow-hidden rounded-full border border-dashed border-primary/30 bg-primary/5 shadow-inner transition hover:border-primary/50"
-              >
-                {currentAvatarSrc ? (
-                  <img
-                    src={currentAvatarSrc}
-                    alt={`${name || "Profile"} avatar`}
-                    className="size-full object-cover transition duration-300 group-hover:scale-105"
-                  />
-                ) : (
-                  <div className="flex size-full flex-col items-center justify-center gap-1 text-muted-foreground">
-                    <SmileIcon className="size-5 opacity-70" />
-                    <span className="text-[10px] font-medium uppercase">Avatar</span>
-                  </div>
-                )}
-              </button>
-              <div className="min-w-0 space-y-2">
-                <p className="text-sm font-medium">Avatar (optional)</p>
-                <p className="text-xs text-muted-foreground">
-                  {avatar.file
-                    ? `New file: ${avatar.file.name}`
-                    : `${formatImageHint(IMAGE_SPECS.teamAvatar)}. Without one, your photo is used.`}
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setRemoveAvatar(false);
-                      avatar.inputRef.current?.click();
-                    }}
-                  >
-                    <SmileIcon />
-                    {member.avatarUrl || avatar.file ? "Change" : "Upload"}
-                  </Button>
-                  {avatar.file ? (
-                    <Button type="button" variant="ghost" size="sm" onClick={avatar.clear}>
-                      Undo
-                    </Button>
-                  ) : member.avatarUrl && !removeAvatar ? (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setRemoveAvatar(true)}
-                    >
-                      <Trash2Icon />
-                      Remove
-                    </Button>
-                  ) : removeAvatar ? (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setRemoveAvatar(false)}
-                    >
-                      Keep avatar
-                    </Button>
-                  ) : null}
-                </div>
-              </div>
-              <input
-                ref={avatar.inputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp,image/gif"
-                className="sr-only"
-                onChange={(e) => avatar.pick(e.target.files?.[0])}
-              />
-            </div>
-          </div>
+          <TeamImageFields
+            name={name}
+            photo={photo}
+            avatar={avatar}
+            savedPhotoUrl={member.photoUrl}
+            savedAvatarUrl={member.avatarUrl}
+            removePhoto={removePhoto}
+            onRemovePhotoChange={setRemovePhoto}
+            removeAvatar={removeAvatar}
+            onRemoveAvatarChange={setRemoveAvatar}
+          />
 
           <div className="grid gap-5 sm:grid-cols-2">
             <div className="grid gap-2">
@@ -462,7 +325,9 @@ export default function StaffPublicProfilePage() {
       title="My public profile"
       description="Edit how you appear on the ProDesignity website"
     >
-      {() => <StaffPublicProfileManager />}
+      {({ user, setUser }) => (
+        <StaffPublicProfileManager currentUser={user} onUserUpdated={setUser} />
+      )}
     </DashboardLayout>
   );
 }

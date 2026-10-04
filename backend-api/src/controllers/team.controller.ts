@@ -134,6 +134,12 @@ function profileExtrasData(d: ProfileExtrasInput, nextAvatarUrl?: string) {
   };
 }
 
+/** Prisma update fragment for the portrait: a new upload wins over removal. */
+function photoData(nextPhotoUrl: string | undefined, removePhoto?: boolean) {
+  if (nextPhotoUrl) return { photoUrl: nextPhotoUrl };
+  return removePhoto ? { photoUrl: null } : {};
+}
+
 function uploadedFile(req: Request, field: "photo" | "avatar") {
   const files = req.files;
   if (!files || Array.isArray(files)) return undefined;
@@ -227,7 +233,7 @@ function toPublicMember(row: TeamRow) {
     role: row.role,
     tagline: row.tagline ?? undefined,
     description: row.description ?? undefined,
-    photo: row.photoUrl,
+    photo: row.photoUrl ?? undefined,
     photoAlt: row.photoAlt || defaultPhotoAlt(row.name, row.role),
     photoTitle: row.photoTitle || defaultPhotoTitle(row.name),
     avatar: row.avatarUrl ?? undefined,
@@ -310,13 +316,7 @@ export const createTeamMember = async (req: AuthRequest, res: Response) => {
     const avatarFile = uploadedFile(req, "avatar");
     const photoUrl = file
       ? publicTeamUploadPath(file.filename)
-      : parsed.data.photoUrl?.trim();
-
-    if (!photoUrl) {
-      return res.status(400).json({
-        message: "Photo is required",
-      });
-    }
+      : parsed.data.photoUrl?.trim() || null;
 
     const username = await uniqueUsername(parsed.data.username);
     const email = staffEmailFromUsername(username);
@@ -548,7 +548,7 @@ export const updateTeamMember = async (req: AuthRequest, res: Response) => {
           ...(linkedUserId !== existing.userId
             ? { userId: linkedUserId }
             : {}),
-          ...(nextPhotoUrl ? { photoUrl: nextPhotoUrl } : {}),
+          ...photoData(nextPhotoUrl, parsed.data.removePhoto),
           ...(parsed.data.photoAlt !== undefined
             ? { photoAlt: parsed.data.photoAlt || null }
             : {}),
@@ -573,7 +573,7 @@ export const updateTeamMember = async (req: AuthRequest, res: Response) => {
       await revokeAllUserRefreshTokens(existing.userId);
     }
 
-    if (file && existing.photoUrl !== member.photoUrl) {
+    if (existing.photoUrl && existing.photoUrl !== member.photoUrl) {
       removeTeamUpload(existing.photoUrl);
     }
     if (existing.avatarUrl && existing.avatarUrl !== member.avatarUrl) {
@@ -717,7 +717,7 @@ export const updateMyTeamProfile = async (req: AuthRequest, res: Response) => {
           ...(parsed.data.description !== undefined
             ? { description: parsed.data.description || null }
             : {}),
-          ...(nextPhotoUrl ? { photoUrl: nextPhotoUrl } : {}),
+          ...photoData(nextPhotoUrl, parsed.data.removePhoto),
           ...(parsed.data.photoAlt !== undefined
             ? { photoAlt: parsed.data.photoAlt || null }
             : {}),
@@ -730,7 +730,7 @@ export const updateMyTeamProfile = async (req: AuthRequest, res: Response) => {
       });
     });
 
-    if (file && existing.photoUrl !== memberRow.photoUrl) {
+    if (existing.photoUrl && existing.photoUrl !== memberRow.photoUrl) {
       removeTeamUpload(existing.photoUrl);
     }
     if (existing.avatarUrl && existing.avatarUrl !== memberRow.avatarUrl) {

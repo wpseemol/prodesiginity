@@ -1,11 +1,13 @@
 import "dotenv/config";
 import { prisma } from "../src/lib/prisma.js";
 
-async function columnExists(table: string, column: string) {
-  const rows = await prisma.$queryRawUnsafe<{ Field: string }[]>(
+type ColumnInfo = { Field: string; Null: "YES" | "NO" };
+
+async function columnInfo(table: string, column: string) {
+  const rows = await prisma.$queryRawUnsafe<ColumnInfo[]>(
     `SHOW COLUMNS FROM \`${table}\` LIKE '${column}'`,
   );
-  return rows.length > 0;
+  return rows[0] ?? null;
 }
 
 const columns: [name: string, ddl: string][] = [
@@ -18,13 +20,22 @@ const columns: [name: string, ddl: string][] = [
 
 async function main() {
   for (const [name, ddl] of columns) {
-    if (!(await columnExists("team_members", name))) {
+    if (!(await columnInfo("team_members", name))) {
       await prisma.$executeRawUnsafe(
         `ALTER TABLE \`team_members\` ADD COLUMN \`${name}\` ${ddl}`,
       );
       console.log(`Added team_members.${name}`);
     }
   }
+
+  const photo = await columnInfo("team_members", "photo_url");
+  if (photo?.Null === "NO") {
+    await prisma.$executeRawUnsafe(
+      "ALTER TABLE `team_members` MODIFY COLUMN `photo_url` VARCHAR(512) NULL",
+    );
+    console.log("team_members.photo_url is now optional");
+  }
+
   console.log("Team profile columns are up to date.");
   await prisma.$disconnect();
 }

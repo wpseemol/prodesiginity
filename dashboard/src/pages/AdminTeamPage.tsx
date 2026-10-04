@@ -1,7 +1,6 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import {
     AtSignIcon,
-    CameraIcon,
     DicesIcon,
     EyeIcon,
     EyeOffIcon,
@@ -16,9 +15,12 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { mediaUrl } from "@/config";
+import { useImagePick } from "@/hooks/useImagePick";
 import { apiFetch } from "@/lib/api";
-import { formatImageHint, IMAGE_SPECS } from "@/lib/imageSpecs";
+import { updateDashboardUser, type DashboardUser } from "@/lib/session";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { TeamImageFields } from "@/components/team/TeamImageFields";
+import { initials } from "@/lib/accountImage";
 import {
     appendExtras,
     EMPTY_EXTRAS,
@@ -50,7 +52,8 @@ type TeamMemberRow = {
     role: string;
     tagline: string | null;
     username: string | null;
-    photoUrl: string;
+    userId: number | null;
+    photoUrl: string | null;
     photoAlt: string | null;
     photoTitle: string | null;
     avatarUrl: string | null;
@@ -61,15 +64,6 @@ type TeamMemberRow = {
     isLead: boolean;
     sortOrder: number;
 };
-
-function initials(name: string) {
-    return name
-        .split(/\s+/)
-        .filter(Boolean)
-        .slice(0, 2)
-        .map((p) => p[0]?.toUpperCase() ?? "")
-        .join("");
-}
 
 function generateStaffPassword(length = 12): string {
     const upper = "ABCDEFGHJKLMNPQRSTUVWXYZ";
@@ -97,8 +91,14 @@ function usernameFromName(fullName: string) {
         .slice(0, 24);
 }
 
-function TeamManager() {
-    const fileRef = useRef<HTMLInputElement>(null);
+type TeamManagerProps = {
+    currentUser: DashboardUser;
+    onUserUpdated: (user: DashboardUser) => void;
+};
+
+function TeamManager({ currentUser, onUserUpdated }: TeamManagerProps) {
+    const photo = useImagePick();
+    const avatar = useImagePick();
     const [members, setMembers] = useState<TeamMemberRow[]>([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -116,23 +116,31 @@ function TeamManager() {
     const [currentPassword, setCurrentPassword] = useState("");
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
-    const [photoFile, setPhotoFile] = useState<File | null>(null);
-    const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+    const [removePhoto, setRemovePhoto] = useState(false);
+    const [removeAvatar, setRemoveAvatar] = useState(false);
     const [extras, setExtras] = useState<ProfileExtras>(EMPTY_EXTRAS);
 
     const isEditMode = editing !== null;
 
-    const currentPhotoSrc =
-        photoPreview ||
-        (editing?.photoUrl ? mediaUrl(editing.photoUrl) : undefined);
+    const clearImageSelection = () => {
+        photo.clear();
+        avatar.clear();
+        setRemovePhoto(false);
+        setRemoveAvatar(false);
+    };
 
-    const clearPhotoSelection = () => {
-        setPhotoFile(null);
-        if (photoPreview?.startsWith("blob:")) {
-            URL.revokeObjectURL(photoPreview);
-        }
-        setPhotoPreview(null);
-        if (fileRef.current) fileRef.current.value = "";
+    /** Keep the sidebar picture in sync when admins edit their own profile. */
+    const syncOwnImages = async (saved: TeamMemberRow) => {
+        if (saved.userId !== currentUser.id) return;
+        const next: DashboardUser = {
+            ...currentUser,
+            teamMember: {
+                photoUrl: saved.photoUrl,
+                avatarUrl: saved.avatarUrl,
+            },
+        };
+        await updateDashboardUser(next);
+        onUserUpdated(next);
     };
 
     const resetForm = () => {
@@ -145,11 +153,11 @@ function TeamManager() {
         setPassword("");
         setShowPassword(false);
         setExtras(EMPTY_EXTRAS);
-        clearPhotoSelection();
+        clearImageSelection();
     };
 
     const startEdit = (member: TeamMemberRow) => {
-        clearPhotoSelection();
+        clearImageSelection();
         setEditing(member);
         setName(member.name);
         setDesignation(member.role ?? "");
@@ -159,19 +167,6 @@ function TeamManager() {
         setPassword("");
         setShowPassword(false);
         setExtras(extrasFromMember(member));
-    };
-
-    const onPickPhoto = (file: File | undefined) => {
-        if (!file) return;
-        if (!file.type.startsWith("image/")) {
-            toast.error("Please choose an image file.");
-            return;
-        }
-        if (photoPreview?.startsWith("blob:")) {
-            URL.revokeObjectURL(photoPreview);
-        }
-        setPhotoFile(file);
-        setPhotoPreview(URL.createObjectURL(file));
     };
 
     const fillGeneratedPassword = async () => {
@@ -212,22 +207,8 @@ function TeamManager() {
         void load();
     }, []);
 
-    useEffect(() => {
-        return () => {
-            if (photoPreview?.startsWith("blob:")) {
-                URL.revokeObjectURL(photoPreview);
-            }
-        };
-    }, [photoPreview]);
-
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
-        const file = photoFile ?? fileRef.current?.files?.[0] ?? null;
-
-        if (!isEditMode && !file) {
-            toast.message("Choose a photo.");
-            return;
-        }
         if (!username.trim()) {
             toast.message("Username is required.");
             return;
@@ -266,7 +247,14 @@ function TeamManager() {
                     body.append("currentPassword", currentPassword);
                 }
             }
-            if (file) body.append("photo", file);
+            if (photo.file) body.append("photo", photo.file);
+            else if (isEditMode && removePhoto) {
+                body.append("removePhoto", "true");
+            }
+            if (avatar.file) body.append("avatar", avatar.file);
+            else if (isEditMode && removeAvatar) {
+                body.append("removeAvatar", "true");
+            }
 
             const res = await apiFetch(
                 isEditMode ? `/admin/team/${editing.id}` : "/admin/team",
@@ -287,6 +275,7 @@ function TeamManager() {
                 return;
             }
 
+            if (data.member) await syncOwnImages(data.member as TeamMemberRow);
             toast.success(
                 isEditMode
                     ? "Team member updated."
@@ -341,45 +330,23 @@ function TeamManager() {
                     </CardTitle>
                     <CardDescription className="mt-1.5">
                             {isEditMode
-                                ? "Update name, designation, photo, username, or password. Mark as team lead for admin access."
-                                : "Name, designation, photo, username & password — staff login auto-created. Lead = admin."}
+                                ? "Update name, designation, photo, avatar, username, or password. Mark as team lead for admin access."
+                                : "Name, designation, username & password — staff login auto-created. Photo and avatar are optional. Lead = admin."}
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="pt-5">
                     <form className="grid gap-4" onSubmit={handleSubmit}>
-                        <button
-                            type="button"
-                            onClick={() => fileRef.current?.click()}
-                            className="group relative mx-auto flex size-28 overflow-hidden rounded-2xl border border-dashed border-primary/30 bg-primary/5 shadow-inner transition hover:border-primary/50 dark:bg-primary/10"
-                        >
-                            {currentPhotoSrc ? (
-                                <img
-                                    src={currentPhotoSrc}
-                                    alt={name || "Team photo"}
-                                    className="size-full object-cover transition duration-300 group-hover:scale-105"
-                                />
-                            ) : (
-                                <div className="flex size-full flex-col items-center justify-center gap-1 text-muted-foreground">
-                                    <CameraIcon className="size-5 opacity-70" />
-                                    <span className="text-[10px] font-medium uppercase tracking-wide">
-                                        Photo
-                                    </span>
-                                </div>
-                            )}
-                        </button>
-                        <p className="text-center text-xs text-muted-foreground">
-                            {photoFile
-                                ? photoFile.name
-                                : isEditMode
-                                  ? "Click photo to change"
-                                  : formatImageHint(IMAGE_SPECS.teamPhoto)}
-                        </p>
-                        <input
-                            ref={fileRef}
-                            type="file"
-                            accept="image/jpeg,image/png,image/webp,image/gif"
-                            className="sr-only"
-                            onChange={(e) => onPickPhoto(e.target.files?.[0])}
+                        <TeamImageFields
+                            name={name}
+                            photo={photo}
+                            avatar={avatar}
+                            savedPhotoUrl={editing?.photoUrl}
+                            savedAvatarUrl={editing?.avatarUrl}
+                            removePhoto={removePhoto}
+                            onRemovePhotoChange={setRemovePhoto}
+                            removeAvatar={removeAvatar}
+                            onRemoveAvatarChange={setRemoveAvatar}
+                            compact
                         />
 
                         <div className="grid gap-2">
@@ -633,13 +600,16 @@ function TeamManager() {
                                 No members yet
                             </p>
                             <p className="mt-1 text-xs text-muted-foreground">
-                                Quick-add with name, photo, username & password.
+                                Quick-add with name, username & password.
                             </p>
                         </div>
                     ) : (
                         <ul className="grid gap-3 sm:grid-cols-2">
                             {members.map((member) => {
                                 const selected = editing?.id === member.id;
+                                const imageSrc =
+                                    mediaUrl(member.photoUrl) ??
+                                    mediaUrl(member.avatarUrl);
                                 return (
                                     <li
                                         key={member.id}
@@ -650,20 +620,31 @@ function TeamManager() {
                                         }`}
                                     >
                                         <div className="flex items-start gap-3">
-                                            <Avatar className="size-14 rounded-xl shadow-sm ring-2 ring-background">
-                                                {mediaUrl(member.photoUrl) ? (
-                                                    <AvatarImage
+                                            <div className="relative shrink-0">
+                                                <Avatar className="size-14 rounded-xl shadow-sm ring-2 ring-background after:rounded-xl">
+                                                    {imageSrc ? (
+                                                        <AvatarImage
+                                                            src={imageSrc}
+                                                            alt={member.name}
+                                                            className="rounded-xl object-cover"
+                                                        />
+                                                    ) : null}
+                                                    <AvatarFallback className="rounded-xl bg-gradient-to-br from-primary to-violet-500 text-sm font-semibold text-white">
+                                                        {initials(member.name)}
+                                                    </AvatarFallback>
+                                                </Avatar>
+                                                {member.photoUrl &&
+                                                member.avatarUrl ? (
+                                                    <img
                                                         src={mediaUrl(
-                                                            member.photoUrl,
+                                                            member.avatarUrl,
                                                         )}
-                                                        alt={member.name}
-                                                        className="rounded-xl object-cover"
+                                                        alt=""
+                                                        title="Avatar"
+                                                        className="absolute -right-1.5 -bottom-1.5 size-6 rounded-full object-cover ring-2 ring-background"
                                                     />
                                                 ) : null}
-                                                <AvatarFallback className="rounded-xl text-sm">
-                                                    {initials(member.name)}
-                                                </AvatarFallback>
-                                            </Avatar>
+                                            </div>
                                             <div className="min-w-0 flex-1">
                                                 <p className="truncate font-semibold tracking-tight">
                                                     {member.name}
@@ -766,9 +747,11 @@ export default function AdminTeamPage() {
         <DashboardLayout
             expectedRole="admin"
             title="Team members"
-            description="Fast create: name, designation, photo, username & password"
+            description="Fast create: name, designation, username & password — photo and avatar optional"
         >
-            {() => <TeamManager />}
+            {({ user, setUser }) => (
+                <TeamManager currentUser={user} onUserUpdated={setUser} />
+            )}
         </DashboardLayout>
     );
 }

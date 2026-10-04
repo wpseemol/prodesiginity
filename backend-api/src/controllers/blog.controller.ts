@@ -33,10 +33,12 @@ const postInclude = {
       fullName: true,
       role: true,
       photo: { select: { url: true } },
-      teamMember: { select: { slug: true, role: true, photoUrl: true } },
+      teamMember: { select: { slug: true, role: true, photoUrl: true, avatarUrl: true } },
     },
   },
-  bylineMember: { select: { id: true, slug: true, name: true, role: true, photoUrl: true } },
+  bylineMember: {
+    select: { id: true, slug: true, name: true, role: true, photoUrl: true, avatarUrl: true },
+  },
 } satisfies Prisma.BlogPostInclude;
 
 type PostRow = Prisma.BlogPostGetPayload<{ include: typeof postInclude }>;
@@ -57,7 +59,7 @@ function serializeAuthor(author: PostRow["author"], byline: PostRow["bylineMembe
       slug: byline.slug,
       name: byline.name,
       role: byline.role,
-      photo: byline.photoUrl || null,
+      photo: byline.photoUrl || byline.avatarUrl || null,
     };
   }
   if (!author) return { id: null, slug: null, name: "ProDesignity Team", role: "Editorial", photo: null };
@@ -66,7 +68,11 @@ function serializeAuthor(author: PostRow["author"], byline: PostRow["bylineMembe
     slug: author.teamMember?.slug ?? null,
     name: author.fullName,
     role: author.teamMember?.role ?? (author.role === "admin" ? "Editor" : "Team member"),
-    photo: author.teamMember?.photoUrl || author.photo?.url || null,
+    photo:
+      author.teamMember?.photoUrl ||
+      author.teamMember?.avatarUrl ||
+      author.photo?.url ||
+      null,
   };
 }
 
@@ -381,7 +387,7 @@ export const listBylineMembers = async (_req: AuthRequest, res: Response) => {
   try {
     const members = await prisma.teamMember.findMany({
       orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
-      select: { id: true, name: true, role: true, photoUrl: true },
+      select: { id: true, name: true, role: true, photoUrl: true, avatarUrl: true },
     });
     return res.status(200).json({ members });
   } catch (error) {

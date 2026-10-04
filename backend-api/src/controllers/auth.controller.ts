@@ -17,11 +17,17 @@ import {
   rotateRefreshToken,
 } from "../lib/tokens.js";
 import type { AuthRequest } from "../middleware/auth.js";
-import { publicUserSelect } from "./photo.controller.js";
+import {
+  accountTeamImageSelect,
+  publicUserSelect,
+} from "./photo.controller.js";
 
 function isEmailLogin(value: string) {
   return value.includes("@");
 }
+
+const ACCOUNT_DISABLED_MESSAGE =
+  "This account has been disabled. Contact an administrator.";
 
 const GOOGLE_ISSUERS = new Set(["accounts.google.com", "https://accounts.google.com"]);
 
@@ -99,6 +105,10 @@ export const googleLogin = async (req: Request, res: Response) => {
       return res.status(403).json({
         message: "This email belongs to a staff account. Staff sign in through the staff portal.",
       });
+    }
+
+    if (user?.disabledAt) {
+      return res.status(403).json({ message: ACCOUNT_DISABLED_MESSAGE });
     }
 
     if (user && !user.googleId) {
@@ -218,6 +228,7 @@ export const login = async (req: Request, res: Response) => {
             createdAt: true,
           },
         },
+        teamMember: accountTeamImageSelect,
       },
     });
 
@@ -234,6 +245,10 @@ export const login = async (req: Request, res: Response) => {
         .json({ message: "Invalid username/email or password" });
     }
 
+    if (user.disabledAt) {
+      return res.status(403).json({ message: ACCOUNT_DISABLED_MESSAGE });
+    }
+
     const authUser = {
       id: user.id,
       fullName: user.fullName,
@@ -241,6 +256,7 @@ export const login = async (req: Request, res: Response) => {
       email: user.email,
       role: user.role,
       photo: user.photo,
+      teamMember: user.teamMember,
     };
 
     const tokens = await issueTokenPair(authUser);

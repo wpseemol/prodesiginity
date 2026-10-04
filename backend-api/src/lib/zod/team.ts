@@ -81,6 +81,9 @@ const profileExtras = {
   removeAvatar: boolFlag,
 };
 
+/** Drop the portrait photo; the avatar (then initials) is shown instead. */
+const removePhoto = boolFlag;
+
 export const createTeamMemberSchema = z.object({
   ...profileExtras,
   name: z.string().trim().min(2).max(120),
@@ -117,6 +120,7 @@ export const updateTeamMemberSchema = z.object({
   /** Required with password when the member already has a login. */
   currentPassword: z.string().min(1).optional(),
   photoUrl: z.string().trim().max(512).optional(),
+  removePhoto,
   photoAlt: z.string().trim().max(255).optional().or(z.literal("")),
   photoTitle: z.string().trim().max(160).optional().or(z.literal("")),
   isLead: z
@@ -140,6 +144,7 @@ export const updateMyTeamProfileSchema = z.object({
   description: z.string().trim().max(4000).optional().or(z.literal("")),
   photoAlt: z.string().trim().max(255).optional().or(z.literal("")),
   photoTitle: z.string().trim().max(160).optional().or(z.literal("")),
+  removePhoto,
 });
 
 const optionalId = z

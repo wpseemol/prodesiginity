@@ -1,5 +1,11 @@
 import { Router } from "express";
-import { createStaffUser, listStaffUsers } from "../controllers/admin.controller.js";
+import {
+  createStaffUser,
+  deleteUserAccount,
+  listClientUsers,
+  listStaffUsers,
+  updateUserAccount,
+} from "../controllers/admin.controller.js";
 import {
   homepageUploadErrorHandler,
   listHomepageSections,
@@ -64,6 +70,9 @@ router.use(requireAuth, requireAdmin);
 
 router.get("/users", listStaffUsers);
 router.post("/users", createStaffUser);
+router.patch("/users/:id", updateUserAccount);
+router.delete("/users/:id", deleteUserAccount);
+router.get("/clients", listClientUsers);
 
 router.get("/homepage", listHomepageSections);
 router.post(

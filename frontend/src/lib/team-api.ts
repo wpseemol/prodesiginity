@@ -61,7 +61,6 @@ function toSocials(value: unknown): TeamMember["socials"] {
 function toMember(raw: Json): TeamMember | null {
     const id = str(raw.slug) || str(raw.id);
     const name = str(raw.name);
-    const photo = str(raw.photo);
     if (!id || !name) return null;
 
     return {
@@ -70,7 +69,7 @@ function toMember(raw: Json): TeamMember | null {
         role: str(raw.role) || "Team member",
         tagline: optStr(raw.tagline),
         description: optStr(raw.description),
-        photo: mediaUrl(photo) ?? photo,
+        photo: mediaUrl(optStr(raw.photo)),
         photoAlt: optStr(raw.photoAlt),
         avatar: mediaUrl(optStr(raw.avatar)),
         avatarShape: (optStr(raw.avatarShape) as AvatarShape | undefined) ?? undefined,
@@ -161,6 +160,11 @@ export function postsByMember(posts: BlogPost[], member: TeamMember): BlogPost[]
             ? post.author.slug.toLowerCase() === slug
             : post.author.name.trim().toLowerCase() === name,
     );
+}
+
+/** Best single image for a member: portrait, else avatar. */
+export function staffImage(member: Pick<TeamMember, "photo" | "avatar">): string | undefined {
+    return member.photo || member.avatar;
 }
 
 export function firstName(member: Pick<TeamMember, "name">): string {

@@ -11,6 +11,8 @@ import {
 } from "../controllers/auth.controller.js";
 import { googleAuthLimiter } from "../middleware/rateLimit.js";
 import {
+  clearProfilePhoto,
+  deleteMyPhoto,
   listMyPhotos,
   setActivePhoto,
   uploadErrorHandler,
@@ -43,7 +45,9 @@ router.post(
   },
   uploadProfilePhoto,
 );
+router.delete("/me/photo", requireAuth, clearProfilePhoto);
 router.post("/me/photos/:photoId/activate", requireAuth, setActivePhoto);
+router.delete("/me/photos/:photoId", requireAuth, deleteMyPhoto);
 
 export default router;
 

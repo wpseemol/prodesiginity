@@ -19,6 +19,12 @@ export type DashboardPhoto = {
   createdAt?: string;
 };
 
+/** Images from the linked public team profile, if the account has one. */
+export type DashboardTeamImages = {
+  photoUrl: string | null;
+  avatarUrl: string | null;
+};
+
 export type DashboardUser = {
   id: number;
   fullName: string;
@@ -26,6 +32,7 @@ export type DashboardUser = {
   email: string;
   role: string;
   photo?: DashboardPhoto | null;
+  teamMember?: DashboardTeamImages | null;
 };
 
 function cookieAttributes(maxAge: number): string {

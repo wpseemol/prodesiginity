@@ -1,11 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, ArrowUpRight, Crown } from "lucide-react";
 
 import { HeaderPill } from "@/components/HeaderPill";
+import StaffPortrait from "@/components/team/StaffPortrait";
 import {
     TEAM_INITIAL_INDEX,
     TEAM_MEMBERS,
@@ -59,7 +59,8 @@ export default function TeamSection({ members }: TeamSectionProps) {
         members?.length
             ? members.map((m) => ({
                   ...m,
-                  photo: mediaUrl(m.photo) ?? m.photo,
+                  photo: mediaUrl(m.photo),
+                  avatar: mediaUrl(m.avatar),
               }))
             : TEAM_MEMBERS;
     const count = roster.length;
@@ -345,12 +346,11 @@ function TeamCard({
 function CardPhoto({ member, active }: { member: TeamMember; active: boolean }) {
     return (
         <div className="relative aspect-4/5 w-full overflow-hidden bg-slate-100 dark:bg-slate-800">
-            <Image
-                src={member.photo}
+            <StaffPortrait
+                member={member}
                 alt={`${member.name}, ${member.role}`}
-                fill
                 sizes="(max-width: 640px) 220px, (max-width: 768px) 260px, 290px"
-                className="object-cover"
+                initialsClassName="text-6xl"
                 draggable={false}
             />
 

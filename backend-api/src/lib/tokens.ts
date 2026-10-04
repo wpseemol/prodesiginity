@@ -219,10 +219,17 @@ export async function rotateRefreshToken(refreshToken: string) {
           createdAt: true,
         },
       },
+      teamMember: { select: { photoUrl: true, avatarUrl: true } },
+      disabledAt: true,
     },
   });
 
   if (!user) {
+    return null;
+  }
+
+  if (user.disabledAt) {
+    await revokeAllUserRefreshTokens(user.id);
     return null;
   }
 
@@ -232,8 +239,9 @@ export async function rotateRefreshToken(refreshToken: string) {
     return null;
   }
 
-  const tokens = await issueTokenPair(user, decoded.fid);
-  return { user, ...tokens };
+  const { disabledAt: _disabledAt, ...account } = user;
+  const tokens = await issueTokenPair(account, decoded.fid);
+  return { user: account, ...tokens };
 }
 
 export async function revokeRefreshToken(refreshToken: string) {

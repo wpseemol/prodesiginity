@@ -4,9 +4,8 @@ import { ReduxProvider } from "@/components/providers/ReduxProvider";
 import { SiteDocumentBranding } from "@/components/SiteDocumentBranding";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
-import AdminDashboardPage, {
-  AdminStaffPage,
-} from "@/pages/AdminDashboardPage";
+import AdminDashboardPage from "@/pages/AdminDashboardPage";
+import { AdminStaffPage, AdminUsersPage } from "@/pages/AdminAccountsPage";
 import AdminCareersPage from "@/pages/AdminCareersPage";
 import AdminHomepagePage from "@/pages/AdminHomepagePage";
 import AdminTeamPage from "@/pages/AdminTeamPage";
@@ -35,6 +34,7 @@ export default function App() {
               <Route path="/login" element={<LoginPage />} />
               <Route path="/admin" element={<AdminDashboardPage />} />
               <Route path="/admin/staff" element={<AdminStaffPage />} />
+              <Route path="/admin/users" element={<AdminUsersPage />} />
               <Route path="/admin/homepage" element={<AdminHomepagePage />} />
               <Route path="/admin/team" element={<AdminTeamPage />} />
               <Route path="/admin/services" element={<AdminServicesPage />} />

@@ -18,7 +18,7 @@ import Link from "next/link";
 import { ArrowRight, ChevronRight, Crown, Play, Quote, UsersRound } from "lucide-react";
 import type { ReactNode } from "react";
 
-import SmartImage from "@/components/home/portfolio/SmartImage";
+import StaffPortrait from "@/components/team/StaffPortrait";
 import SocialLinks from "@/components/team/SocialLinks";
 import StaffAvatar from "@/components/team/StaffAvatar";
 import { siteConfig } from "@/config/site";
@@ -138,14 +138,12 @@ function Portrait({
 }) {
     return (
         <div className={cn("relative overflow-hidden bg-slate-200 dark:bg-slate-800", className)}>
-            <SmartImage
-                src={member.photo}
+            <StaffPortrait
+                member={member}
                 alt={member.photoAlt ?? `${member.name}, ${member.role} at ${siteConfig.name}`}
-                fallbackLabel={member.name}
-                fill
                 sizes="(max-width: 1024px) 90vw, 32rem"
                 priority={priority}
-                className="object-cover"
+                initialsClassName="text-7xl sm:text-8xl"
                 draggable={false}
             />
         </div>

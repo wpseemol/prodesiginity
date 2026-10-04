@@ -5,8 +5,8 @@
  * or blob) with a gradient ring in their profile style's colours.
  *
  * Source order: the uploaded avatar image → the portrait photo → initials on
- * the style gradient. `source="photo"` skips the avatar, for places that want
- * the real headshot.
+ * the style gradient. `source="photo"` prefers the real headshot and only
+ * falls back to the avatar when there is no photo.
  */
 
 import SmartImage from "@/components/home/portfolio/SmartImage";
@@ -27,7 +27,7 @@ const SHAPE_CLASS: Record<AvatarShape, string> = {
 
 const HEXAGON = "polygon(50% 0, 93.3% 25%, 93.3% 75%, 50% 100%, 6.7% 75%, 6.7% 25%)";
 
-function initials(name: string) {
+export function staffInitials(name: string) {
     return name
         .split(/\s+/)
         .filter(Boolean)
@@ -59,7 +59,8 @@ export default function StaffAvatar({
     sizes = "160px",
     priority,
 }: StaffAvatarProps) {
-    const src = source === "avatar" ? member.avatar || member.photo : member.photo;
+    const src =
+        source === "avatar" ? member.avatar || member.photo : member.photo || member.avatar;
     const clipPath = shape === "hexagon" ? HEXAGON : undefined;
 
     return (
@@ -83,7 +84,7 @@ export default function StaffAvatar({
                     <SmartImage
                         src={src}
                         alt={member.photoAlt ?? `${member.name}, ${member.role}`}
-                        fallbackLabel={initials(member.name)}
+                        fallbackLabel={staffInitials(member.name)}
                         fill
                         sizes={sizes}
                         priority={priority}
@@ -97,7 +98,7 @@ export default function StaffAvatar({
                             style.classes.gradient,
                         )}
                     >
-                        {initials(member.name)}
+                        {staffInitials(member.name)}
                     </span>
                 )}
             </span>

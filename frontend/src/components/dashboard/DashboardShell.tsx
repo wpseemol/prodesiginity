@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import Logo from "@/components/home/Logo";
 import ThemeToggle from "@/components/ThemeToggle";
+import { staffInitials } from "@/components/team/StaffAvatar";
 import { getAuthUser, signOut, type AuthUser } from "@/lib/auth";
 import { siteConfig } from "@/config/site";
 
@@ -37,6 +38,7 @@ export default function DashboardShell() {
     const router = useRouter();
     const [user, setUser] = useState<AuthUser | null>(null);
     const [ready, setReady] = useState(false);
+    const [pictureFailed, setPictureFailed] = useState(false);
 
     useEffect(() => {
         const current = getAuthUser();
@@ -99,17 +101,23 @@ export default function DashboardShell() {
                 <main className="space-y-8">
                     <section className="rounded-3xl border border-border-color bg-white p-6 shadow-sm dark:border-dark-border-color dark:bg-slate-900/50 sm:p-8">
                         <div className="mb-2 flex items-center gap-3">
-                            {user.picture ? (
+                            {user.picture && !pictureFailed ? (
                                 // eslint-disable-next-line @next/next/no-img-element
                                 <img
                                     src={user.picture}
                                     alt=""
                                     referrerPolicy="no-referrer"
+                                    onError={() => setPictureFailed(true)}
                                     className="h-10 w-10 rounded-xl object-cover"
                                 />
                             ) : (
-                                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary dark:bg-dark-primary/15 dark:text-dark-primary">
-                                    <User className="h-5 w-5" />
+                                <div
+                                    aria-hidden="true"
+                                    className="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-br from-primary to-brand-violet text-sm font-black text-white"
+                                >
+                                    {staffInitials(user.name) || (
+                                        <User className="h-5 w-5" />
+                                    )}
                                 </div>
                             )}
                             <div>

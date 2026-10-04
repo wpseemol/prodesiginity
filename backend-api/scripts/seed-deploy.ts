@@ -12,7 +12,8 @@
  *   - site config / tracking tables
  *   - careers page copy + job openings
  *
- * Staff employee logins are created from Team members in the dashboard./
+ * Staff employee logins are created from Team members in the dashboard.
+ */
 import { spawnSync } from "node:child_process";
 
 const steps = [
