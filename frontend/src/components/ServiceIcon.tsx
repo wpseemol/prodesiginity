@@ -1,79 +1,23 @@
 /**
- * Maps the string keys stored in `data/servicesData.ts` back to lucide icons.
+ * Maps the icon names stored for services (static data and the admin-managed
+ * catalog) back to lucide icons.
  *
- * Why a map instead of putting the component in the data file: the data module
- * is imported by both server and client components. React components cannot be
- * serialised across that boundary, so a `Service` object carrying a live icon
- * component would throw the moment it was passed as a prop to a "use client"
- * component. A string survives the trip.
+ * Why a map instead of putting the component in the data: service objects are
+ * passed from server to client components, and React components cannot be
+ * serialised across that boundary. A string survives the trip.
  */
 
-import {
-    AppWindow,
-    BookOpen,
-    Box,
-    Clapperboard,
-    Eye,
-    FileText,
-    Film,
-    Layout,
-    ListChecks,
-    Megaphone,
-    PackageSearch,
-    Palette,
-    Search,
-    SearchCheck,
-    Share2,
-    ShoppingBag,
-    ShoppingCart,
-    SlidersHorizontal,
-    Sparkles,
-    Store,
-    Target,
-    TrendingUp,
-    UserCheck,
-    Users,
-    Video,
-    type LucideIcon,
-} from "lucide-react";
+import { Sparkles } from "lucide-react";
 
-import type { ServiceIconName } from "@/data/servicesData";
-
-export const SERVICE_ICONS: Record<ServiceIconName, LucideIcon> = {
-    AppWindow,
-    BookOpen,
-    Box,
-    Clapperboard,
-    Eye,
-    FileText,
-    Film,
-    Layout,
-    ListChecks,
-    Megaphone,
-    PackageSearch,
-    Palette,
-    Search,
-    SearchCheck,
-    Share2,
-    ShoppingBag,
-    ShoppingCart,
-    SlidersHorizontal,
-    Sparkles,
-    Store,
-    Target,
-    TrendingUp,
-    UserCheck,
-    Users,
-    Video,
-};
+import { SERVICE_ICON_MAP } from "@/components/serviceIconRegistry";
 
 export default function ServiceIcon({
     name,
     className,
 }: {
-    name: ServiceIconName;
+    name: string;
     className?: string;
 }) {
-    const Icon = SERVICE_ICONS[name] ?? Sparkles;
+    const Icon = SERVICE_ICON_MAP[name] ?? Sparkles;
     return <Icon className={className} aria-hidden="true" />;
 }

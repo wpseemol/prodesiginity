@@ -110,7 +110,9 @@ export async function fetchServicesCatalog(
     init?: RequestInit,
 ): Promise<ServicesCatalog | null> {
     try {
+        // no-store: Next's build cache would otherwise reuse an old catalog.
         const res = await fetch(`${apiBaseUrl}/services`, {
+            cache: "no-store",
             signal: AbortSignal.timeout(10_000),
             ...init,
         });

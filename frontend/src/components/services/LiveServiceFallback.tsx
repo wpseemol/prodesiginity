@@ -57,7 +57,7 @@ export default function LiveServiceFallback({
         if (!slug) return;
         let active = true;
 
-        void fetchServicesCatalog({ cache: "no-store" }).then((catalog) => {
+        void fetchServicesCatalog().then((catalog) => {
             if (!active) return;
             const service = catalog ? findService(catalog, slug) : undefined;
             if (service) document.title = service.seo.title || service.title;

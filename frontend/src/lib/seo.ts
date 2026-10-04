@@ -10,6 +10,12 @@ import { SITE_FAQ } from "@/data/seo/faq";
 import { resolveTokens } from "@/lib/legal";
 import type { LegalDocument } from "@/data/legal/types";
 import { absoluteMediaUrl } from "@/lib/site-settings";
+import { serviceHref } from "@/data/servicesData";
+import {
+    servicesInGroup,
+    visibleGroups,
+    type ServicesCatalog,
+} from "@/lib/services-catalog";
 
 /**
  * lib/seo.ts
@@ -236,11 +242,46 @@ export function siteSchema(config: SiteConfig = siteConfig) {
     };
 }
 
+/**
+ * "What we do" as an OfferCatalog on the organization node — one nested
+ * catalog per category, one Offer per service page. Shares the organization
+ * @id, so crawlers merge it into the ProfessionalService entity.
+ */
+export function servicesOfferCatalogSchema(catalog: ServicesCatalog) {
+    return {
+        "@type": "ProfessionalService",
+        "@id": ORG_ID,
+        hasOfferCatalog: {
+            "@type": "OfferCatalog",
+            "@id": absoluteUrl("/services#catalog"),
+            name: `What ${siteConfig.name} does`,
+            url: absoluteUrl("/services"),
+            itemListElement: visibleGroups(catalog).map((group) => ({
+                "@type": "OfferCatalog",
+                name: group.title,
+                description: group.blurb,
+                itemListElement: servicesInGroup(catalog, group.slug).map(
+                    (service) => ({
+                        "@type": "Offer",
+                        itemOffered: {
+                            "@type": "Service",
+                            name: service.title,
+                            description: service.summary,
+                            url: absoluteUrl(serviceHref(service.slug)),
+                        },
+                    }),
+                ),
+            })),
+        },
+    };
+}
+
 /** Homepage-only graph: the studio FAQ that AI assistants quote from. */
-export function homeSchema() {
+export function homeSchema(catalog?: ServicesCatalog) {
     return {
         "@context": "https://schema.org",
         "@graph": [
+            ...(catalog ? [servicesOfferCatalogSchema(catalog)] : []),
             faqSchema(SITE_FAQ),
             {
                 "@type": "WebPage",
@@ -304,12 +345,14 @@ export function serviceSchema(service: {
     summary: string;
     path: string;
     deliverables: string[];
+    category?: string;
 }) {
     return {
         "@type": "Service",
         "@id": absoluteUrl(`${service.path}#service`),
         name: service.title,
         serviceType: service.title,
+        ...(service.category ? { category: service.category } : {}),
         description: service.summary,
         url: absoluteUrl(service.path),
         provider: { "@id": ORG_ID },

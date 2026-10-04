@@ -17,28 +17,41 @@ import JsonLd from "@/components/home/JsonLd";
 import ServicesHubContent from "@/components/services/ServicesHubContent";
 import { serviceHref } from "@/data/servicesData";
 import { getServicesCatalog } from "@/lib/services-catalog";
-import { breadcrumbSchema, buildMetadata, graph } from "@/lib/seo";
+import {
+    breadcrumbSchema,
+    buildMetadata,
+    graph,
+    servicesOfferCatalogSchema,
+} from "@/lib/seo";
 import { absoluteUrl, siteConfig } from "@/config/site";
 
 import type { Metadata } from "next";
 
 const PATH = "/services";
 
-export const metadata: Metadata = {
-    ...buildMetadata({
-        title: "Our Services",
-        description:
-            "Website and Shopify development, custom web apps, SEO, paid advertising, Amazon and product listings, graphic design, catalogues, 2D and 3D animation and UGC video — from one studio.",
-        path: PATH,
-    }),
-    keywords: [
-        "digital agency services",
-        "web design and seo agency",
-        "shopify and amazon agency",
-        "3d animation and design studio",
-        "ecommerce marketing services",
-    ],
-};
+export async function generateMetadata(): Promise<Metadata> {
+    const catalog = await getServicesCatalog();
+    const titles = catalog.services.map((service) => service.title);
+    const lead = titles.slice(0, 8).join(", ");
+
+    return {
+        ...buildMetadata({
+            title: "Our Services — What We Do",
+            description: `${catalog.services.length} services from one studio: ${lead}${
+                titles.length > 8 ? " and more" : ""
+            }.`.slice(0, 300),
+            path: PATH,
+        }),
+        keywords: [
+            "digital agency services",
+            "web design and seo agency",
+            "shopify and amazon agency",
+            "3d animation and design studio",
+            "ecommerce marketing services",
+            ...titles.map((title) => title.toLowerCase()),
+        ],
+    };
+}
 
 export default async function ServicesHubPage() {
     const catalog = await getServicesCatalog();
@@ -64,6 +77,7 @@ export default async function ServicesHubPage() {
                 })),
             },
         },
+        servicesOfferCatalogSchema(catalog),
     );
 
     return (

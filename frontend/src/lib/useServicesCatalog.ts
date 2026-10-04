@@ -22,7 +22,7 @@ export function useServicesCatalog(
 
     useEffect(() => {
         let active = true;
-        livePromise ??= fetchServicesCatalog({ cache: "no-store" });
+        livePromise ??= fetchServicesCatalog();
         void livePromise.then((live) => {
             if (active && live) setCatalog(live);
         });

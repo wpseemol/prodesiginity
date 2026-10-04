@@ -78,6 +78,7 @@ export default async function ServiceDetailPage({
     if (!service) notFound();
 
     const path = serviceHref(service.slug);
+    const group = findGroup(catalog, service.group);
 
     const schema = graph(
         serviceSchema({
@@ -86,6 +87,7 @@ export default async function ServiceDetailPage({
             summary: service.summary,
             path,
             deliverables: service.deliverables,
+            category: group?.title,
         }),
         breadcrumbSchema([
             { name: "Home", path: "/" },
@@ -110,7 +112,7 @@ export default async function ServiceDetailPage({
             <JsonLd data={schema} />
             <ServiceDetail
                 service={service}
-                group={findGroup(catalog, service.group)}
+                group={group}
                 related={relatedServices(catalog, service)}
             />
         </>

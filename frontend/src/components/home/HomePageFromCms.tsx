@@ -22,12 +22,17 @@ import {
   type RecentProjectsCmsContent,
   type StatsCmsContent,
 } from "@/lib/homepage";
+import type { ServicesCatalog } from "@/lib/services-catalog";
 
 /**
  * Client shell that loads homepage CMS + team from the API and feeds sections.
  * Static fallbacks inside each section keep the page usable if the API is down.
  */
-export default function HomePageFromCms() {
+export default function HomePageFromCms({
+  servicesCatalog,
+}: {
+  servicesCatalog: ServicesCatalog;
+}) {
   const [sections, setSections] = useState<HomepageSectionsMap | null>(null);
   const [team, setTeam] = useState<TeamMember[] | null>(null);
 
@@ -68,7 +73,7 @@ export default function HomePageFromCms() {
       <HeroSection content={hero ?? undefined} />
       <StatsSection content={stats ?? undefined} />
       <BrandsMarquee content={brands ?? undefined} />
-      <ServicesMarquee />
+      <ServicesMarquee initialCatalog={servicesCatalog} />
       <ProcessSection content={process ?? undefined} />
       <RecentProjects
         eyebrow={recent?.eyebrow}
