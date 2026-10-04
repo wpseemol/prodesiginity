@@ -16,6 +16,7 @@
 
 import ServiceIcon from "@/components/ServiceIcon";
 import SmartImage from "@/components/home/portfolio/SmartImage";
+import { mediaUrl } from "@/config/api";
 import { getAccent } from "@/data/blog";
 import type { BlogPost } from "@/data/blog/types";
 import { cn } from "@/lib/utils";
@@ -47,7 +48,7 @@ export default function PostCover({
         return (
             <div className={cn("relative overflow-hidden", className)}>
                 <SmartImage
-                    src={post.cover}
+                    src={mediaUrl(post.cover) ?? ""}
                     alt={post.coverAlt ?? post.title}
                     fallbackLabel={post.category}
                     fill

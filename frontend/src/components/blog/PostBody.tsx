@@ -15,7 +15,9 @@
 import { Fragment } from "react";
 import { CircleCheck, Info, Quote, TriangleAlert } from "lucide-react";
 
+import PostVideo from "@/components/blog/PostVideo";
 import SmartImage from "@/components/home/portfolio/SmartImage";
+import { mediaUrl } from "@/config/api";
 import type { BlogBlock } from "@/data/blog/types";
 import { resolveTokens } from "@/lib/blog";
 import { cn } from "@/lib/utils";
@@ -287,7 +289,7 @@ function Block({ block }: { block: BlogBlock }) {
                 <figure>
                     <div className="relative aspect-16/9 overflow-hidden rounded-2xl border border-border-color dark:border-dark-border-color">
                         <SmartImage
-                            src={block.src}
+                            src={mediaUrl(block.src) ?? ""}
                             alt={block.alt}
                             fallbackLabel={block.caption ?? block.alt}
                             fill
@@ -301,6 +303,15 @@ function Block({ block }: { block: BlogBlock }) {
                         </figcaption>
                     )}
                 </figure>
+            );
+
+        case "video":
+            return (
+                <PostVideo
+                    src={block.src}
+                    title={resolveTokens(block.title ?? block.caption ?? "Video")}
+                    caption={block.caption ? resolveTokens(block.caption) : undefined}
+                />
             );
 
         case "stats":

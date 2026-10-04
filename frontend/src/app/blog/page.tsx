@@ -1,7 +1,8 @@
 /**
  * /blog
  * ---------------------------------------------------------------------------
- * The article index, generated from data/blog/posts/*.json.
+ * The article index: dashboard posts merged with data/blog/posts/*.json
+ * (see lib/blog-api.ts).
  *
  * Server component: every post title, excerpt and link is in the initial HTML,
  * so a crawler that does not execute JavaScript still sees the full index.
@@ -20,13 +21,8 @@ import BlogListing from "@/components/blog/BlogListing";
 import { HeaderPill } from "@/components/HeaderPill";
 import JsonLd from "@/components/home/JsonLd";
 import PortfolioBackground from "@/components/home/portfolio/PortfolioBackground";
-import {
-    BLOG_BASE_PATH,
-    BLOG_CATEGORIES,
-    FEATURED_POST,
-    POSTS,
-    blogHref,
-} from "@/data/blog";
+import { BLOG_BASE_PATH, blogHref } from "@/data/blog";
+import { featuredPostOf, getBlogData } from "@/lib/blog-api";
 import { blogSchema, breadcrumbSchema, buildMetadata, graph } from "@/lib/seo";
 
 import type { Metadata } from "next";
@@ -50,10 +46,13 @@ export const metadata: Metadata = {
     ],
 };
 
-export default function BlogIndexPage() {
+export default async function BlogIndexPage() {
+    const { posts, categories } = await getBlogData();
+    const featured = featuredPostOf(posts);
+
     const schema = graph(
         blogSchema(
-            POSTS.map((post) => ({
+            posts.map((post) => ({
                 title: post.title,
                 path: blogHref(post.slug),
                 datePublished: post.publishedAt,
@@ -96,8 +95,7 @@ export default function BlogIndexPage() {
                     </p>
 
                     <p className="mt-6 text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
-                        {POSTS.length} articles · {BLOG_CATEGORIES.length}{" "}
-                        topics
+                        {posts.length} articles · {categories.length} topics
                     </p>
                 </div>
             </section>
@@ -108,9 +106,9 @@ export default function BlogIndexPage() {
             <section className="relative px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
                 <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                     <BlogListing
-                        posts={POSTS}
-                        categories={BLOG_CATEGORIES}
-                        featured={FEATURED_POST}
+                        posts={posts}
+                        categories={categories}
+                        featured={featured}
                     />
                 </div>
             </section>

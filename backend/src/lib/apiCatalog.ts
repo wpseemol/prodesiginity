@@ -33,6 +33,19 @@ export const API_ROUTES: ApiRoute[] = [
   { method: "GET", path: "/api/settings", auth: "public" },
   { method: "GET", path: "/api/services", auth: "public" },
   { method: "POST", path: "/api/track/visit", auth: "public" },
+  { method: "GET", path: "/api/blog", auth: "public" },
+  { method: "GET", path: "/api/blog/:slug", auth: "public" },
+
+  { method: "GET", path: "/api/manage/blog/categories", auth: "user", note: "admin + staff" },
+  { method: "POST", path: "/api/manage/blog/categories", auth: "admin" },
+  { method: "PUT", path: "/api/manage/blog/categories/:id", auth: "admin" },
+  { method: "DELETE", path: "/api/manage/blog/categories/:id", auth: "admin" },
+  { method: "GET", path: "/api/manage/blog/posts", auth: "user", note: "staff see own posts" },
+  { method: "GET", path: "/api/manage/blog/posts/:id", auth: "user", note: "owner or admin" },
+  { method: "POST", path: "/api/manage/blog/posts", auth: "user", note: "admin + staff" },
+  { method: "PUT", path: "/api/manage/blog/posts/:id", auth: "user", note: "owner or admin" },
+  { method: "DELETE", path: "/api/manage/blog/posts/:id", auth: "user", note: "owner or admin" },
+  { method: "POST", path: "/api/manage/blog/media", auth: "user", note: "multipart, admin + staff" },
 
   { method: "GET", path: "/api/admin/users", auth: "admin" },
   { method: "POST", path: "/api/admin/users", auth: "admin" },
@@ -68,6 +81,8 @@ export const API_ROUTERS = [
   { mount: "/api/settings", description: "Public site settings" },
   { mount: "/api/services", description: "Public services catalog" },
   { mount: "/api/track", description: "Page visit tracking" },
+  { mount: "/api/blog", description: "Public blog posts + categories" },
+  { mount: "/api/manage/blog", description: "Blog management (JWT + admin/staff)" },
   { mount: "/api/admin", description: "Admin CMS (JWT + admin role)" },
   { mount: "/uploads", description: "Static uploaded files" },
 ] as const;

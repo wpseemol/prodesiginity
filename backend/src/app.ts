@@ -1,11 +1,13 @@
 import express, { Request, Response, NextFunction } from "express";
 import fs from "fs";
 import cors from "cors";
+import helmet from "helmet";
 import corsDelegate from "./config/cors.js";
 import rootRouter from "./routes/index.js";
 import { getApiIndex } from "./lib/apiCatalog.js";
 import {
   ASSETS_UPLOAD_ROOT,
+  BLOG_UPLOAD_ROOT,
   HOMEPAGE_UPLOAD_ROOT,
   SITE_UPLOAD_ROOT,
   TEAM_UPLOAD_ROOT,
@@ -22,6 +24,16 @@ fs.mkdirSync(TEAM_UPLOAD_ROOT, { recursive: true });
 fs.mkdirSync(SITE_UPLOAD_ROOT, { recursive: true });
 fs.mkdirSync(HOMEPAGE_UPLOAD_ROOT, { recursive: true });
 fs.mkdirSync(ASSETS_UPLOAD_ROOT, { recursive: true });
+fs.mkdirSync(BLOG_UPLOAD_ROOT, { recursive: true });
+
+// Behind a reverse proxy set TRUST_PROXY (e.g. "1") so rate limits see the real client IP.
+if (process.env.TRUST_PROXY) {
+  const hops = Number(process.env.TRUST_PROXY);
+  app.set("trust proxy", Number.isFinite(hops) ? hops : process.env.TRUST_PROXY);
+}
+
+// Security headers. Uploads are embedded by the website and dashboard on other origins.
+app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 
 // CORS must run before the routes and before the body parsers.
 app.use(cors(corsDelegate));
@@ -31,7 +43,15 @@ app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true }));
 
 // Serve uploads: /uploads/users|team|site/...
-app.use("/uploads", express.static(UPLOADS_ROOT));
+app.use(
+  "/uploads",
+  express.static(UPLOADS_ROOT, {
+    dotfiles: "deny",
+    setHeaders(res) {
+      res.setHeader("X-Content-Type-Options", "nosniff");
+    },
+  }),
+);
 
 // Landing: list all routers + routes (port 4000 by default)
 app.get("/", (_req, res) => {

@@ -10,27 +10,34 @@
  * is in the initial HTML. That matters: a crawler that does not run JavaScript
  * still sees every article title and link.
  *
- * There is no useEffect. The visible list is derived from the two pieces of
- * state during render, which is the pattern GEMINI.md asks for — an effect
- * that "syncs" filtered results into another state variable would give a
- * render with stale results and buy nothing.
+ * The visible list is derived from state during render. The single effect
+ * re-reads the live API once after hydration, so an article published in the
+ * dashboard since the last build is listed straight away.
  */
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Search, X } from "lucide-react";
 
 import BlogCard from "@/components/blog/BlogCard";
+import ServiceIcon from "@/components/ServiceIcon";
 import type { BlogPost } from "@/data/blog/types";
 import { resolveTokens } from "@/lib/blog";
+import {
+    featuredPostOf,
+    fetchBlogFromApi,
+    mergeBlogData,
+    type BlogCategoryInfo,
+    type BlogData,
+} from "@/lib/blog-api";
 import { cn } from "@/lib/utils";
 
 const ALL = "All";
 
 interface BlogListingProps {
     posts: BlogPost[];
-    categories: string[];
+    categories: BlogCategoryInfo[];
     /** Given the wide slot, but only while the list is unfiltered. */
-    featured: BlogPost;
+    featured?: BlogPost;
 }
 
 /** Everything a search should match, lowercased once per post. */
@@ -40,13 +47,27 @@ function haystack(post: BlogPost): string {
     ).toLowerCase();
 }
 
-export default function BlogListing({
-    posts,
-    categories,
-    featured,
-}: BlogListingProps) {
+export default function BlogListing(props: BlogListingProps) {
+    const [live, setLive] = useState<BlogData | null>(null);
     const [category, setCategory] = useState<string>(ALL);
     const [query, setQuery] = useState("");
+
+    useEffect(() => {
+        let active = true;
+        void fetchBlogFromApi().then((data) => {
+            if (active && data) setLive(mergeBlogData(data));
+        });
+        return () => {
+            active = false;
+        };
+    }, []);
+
+    const posts = live?.posts ?? props.posts;
+    const categories = (live?.categories ?? props.categories).map((c) => c.name);
+    const categoryIcons = new Map(
+        (live?.categories ?? props.categories).map((c) => [c.name, c.icon]),
+    );
+    const featured = live ? featuredPostOf(live.posts) : props.featured;
 
     const trimmed = query.trim().toLowerCase();
     const isBrowsing = category === ALL && trimmed === "";
@@ -63,9 +84,10 @@ export default function BlogListing({
 
     // The featured post gets the wide card at the top, so it is removed from
     // the grid below to avoid showing the same article twice.
-    const gridPosts = isBrowsing
-        ? matches.filter((post) => post.slug !== featured.slug)
-        : matches;
+    const gridPosts =
+        isBrowsing && featured
+            ? matches.filter((post) => post.slug !== featured.slug)
+            : matches;
 
     const counts = new Map<string, number>();
     for (const post of posts) {
@@ -85,6 +107,7 @@ export default function BlogListing({
                 >
                     {[ALL, ...categories].map((item) => {
                         const isActive = category === item;
+                        const icon = categoryIcons.get(item);
                         const count =
                             item === ALL ? posts.length : (counts.get(item) ?? 0);
 
@@ -102,6 +125,7 @@ export default function BlogListing({
                                         : "border-border-color bg-card-bg text-slate-600 hover:border-primary/40 hover:text-primary dark:border-dark-border-color dark:bg-dark-card-bg dark:text-slate-300 dark:hover:text-dark-primary",
                                 )}
                             >
+                                {icon && <ServiceIcon name={icon} className="h-3.5 w-3.5" />}
                                 {item}
                                 <span
                                     className={cn(
@@ -174,7 +198,7 @@ export default function BlogListing({
                     </div>
                 ) : (
                     <>
-                        {isBrowsing && (
+                        {isBrowsing && featured && (
                             <div className="mb-6">
                                 <BlogCard post={featured} variant="featured" />
                             </div>

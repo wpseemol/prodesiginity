@@ -29,6 +29,7 @@
     "db:ensure-tracking": "tsx scripts/ensure-tracking-settings.ts",
     "db:ensure-services": "tsx scripts/ensure-services.ts",
     "db:ensure-site-config": "tsx scripts/ensure-site-config.ts",
+    "db:ensure-blog": "prisma db execute --file prisma/sql/blog-tables.sql",
     "geoip:download": "tsx scripts/download-geolite2.ts",
     "services:export-seed": "tsx scripts/export-services-seed.ts"
   },
@@ -55,6 +56,8 @@
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "express-rate-limit": "^8.7.0",
+    "helmet": "^8.3.0",
     "jsonwebtoken": "^9.0.3",
     "mariadb": "^3.5.4",
     "multer": "^2.3.0",

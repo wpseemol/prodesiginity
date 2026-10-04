@@ -24,7 +24,8 @@ const nextConfig = {
             // Local / production API uploads (`/uploads/...`)
             { protocol: "http", hostname: "localhost", port: "4000" },
             { protocol: "http", hostname: "127.0.0.1", port: "4000" },
-            { protocol: "https", hostname: " api.prodesignity.com" },
+            { protocol: "https", hostname: "api.prodesignity.com" },
+            { protocol: "https", hostname: "i.vimeocdn.com" },
         ],
     },
 };

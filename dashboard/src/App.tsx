@@ -11,6 +11,7 @@ import AdminHomepagePage from "@/pages/AdminHomepagePage";
 import AdminTeamPage from "@/pages/AdminTeamPage";
 import AdminSettingsPage from "@/pages/AdminSettingsPage";
 import AdminServicesPage from "@/pages/AdminServicesPage";
+import { AdminBlogPage, StaffBlogPage } from "@/pages/BlogPage";
 import LoginPage from "@/pages/LoginPage";
 import ProfilePage from "@/pages/ProfilePage";
 import StaffHomePage from "@/pages/StaffHomePage";
@@ -36,12 +37,14 @@ export default function App() {
               <Route path="/admin/homepage" element={<AdminHomepagePage />} />
               <Route path="/admin/team" element={<AdminTeamPage />} />
               <Route path="/admin/services" element={<AdminServicesPage />} />
+              <Route path="/admin/blog" element={<AdminBlogPage />} />
               <Route path="/admin/settings" element={<AdminSettingsPage />} />
               <Route
                 path="/admin/profile"
                 element={<ProfilePage expectedRole="admin" />}
               />
               <Route path="/employee" element={<StaffHomePage />} />
+              <Route path="/employee/blog" element={<StaffBlogPage />} />
               <Route
                 path="/employee/public-profile"
                 element={<StaffPublicProfilePage />}

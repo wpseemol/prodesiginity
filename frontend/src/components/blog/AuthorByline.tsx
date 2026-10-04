@@ -12,6 +12,7 @@
  */
 
 import SmartImage from "@/components/home/portfolio/SmartImage";
+import { mediaUrl } from "@/config/api";
 import type { BlogAuthor } from "@/data/blog/types";
 import { authorInitials } from "@/lib/blog";
 import { cn } from "@/lib/utils";
@@ -32,7 +33,7 @@ function Avatar({ author, size }: { author: BlogAuthor; size: number }) {
         >
             {author.photo ? (
                 <SmartImage
-                    src={author.photo}
+                    src={mediaUrl(author.photo) ?? ""}
                     alt={author.name}
                     fallbackLabel={initials}
                     fill

@@ -7,6 +7,8 @@ import teamRoutes from "./team.routes.js";
 import settingsRoutes from "./settings.routes.js";
 import trackingRoutes from "./tracking.routes.js";
 import servicesRoutes from "./services.routes.js";
+import blogRoutes from "./blog.routes.js";
+import blogManageRoutes from "./blogManage.routes.js";
 import prisma from "../lib/prisma.js";
 
 const rootRouter = Router();
@@ -38,6 +40,8 @@ rootRouter.use("/team", teamRoutes);
 rootRouter.use("/settings", settingsRoutes);
 rootRouter.use("/track", trackingRoutes);
 rootRouter.use("/services", servicesRoutes);
+rootRouter.use("/blog", blogRoutes);
+rootRouter.use("/manage/blog", blogManageRoutes);
 rootRouter.use("/admin", adminRoutes);
 
 export default rootRouter;

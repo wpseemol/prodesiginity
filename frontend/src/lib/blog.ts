@@ -41,6 +41,8 @@ function blockText(block: BlogBlock): string {
             return [...block.head, ...block.rows.flat()].join(" ");
         case "image":
             return block.caption ?? "";
+        case "video":
+            return `${block.title ?? ""} ${block.caption ?? ""}`;
         case "stats":
             return block.items
                 .map((item) => `${item.value} ${item.label}`)

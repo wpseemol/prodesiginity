@@ -39,6 +39,12 @@ type BuildMetadataArgs = {
     publishedTime?: string;
     modifiedTime?: string;
     config?: SiteConfig;
+    /** "article" adds og:article:* tags (author, section, tags, dates). */
+    type?: "website" | "article";
+    imageAlt?: string;
+    authors?: string[];
+    section?: string;
+    tags?: string[];
 };
 
 export function buildMetadata({
@@ -50,38 +56,51 @@ export function buildMetadata({
     publishedTime,
     modifiedTime,
     config = siteConfig,
+    type = "website",
+    imageAlt,
+    authors,
+    section,
+    tags,
 }: BuildMetadataArgs): Metadata {
     const url = absoluteUrl(path);
     const fullTitle = `${title} | ${config.name}`;
     const ogImage = absoluteMediaUrl(image ?? config.ogImage, config.url);
+    const images = [{ url: ogImage, width: 1200, height: 630, alt: imageAlt ?? title }];
 
     return {
         title,
         description,
         alternates: { canonical: url },
-        openGraph: {
-            type: "website",
-            url,
-            siteName: config.name,
-            title: fullTitle,
-            description,
-            locale: "en_US",
-            images: [
-                {
-                    url: ogImage,
-                    width: 1200,
-                    height: 630,
-                    alt: title,
-                },
-            ],
-            ...(publishedTime ? { publishedTime } : {}),
-            ...(modifiedTime ? { modifiedTime } : {}),
-        },
+        openGraph:
+            type === "article"
+                ? {
+                      type: "article",
+                      url,
+                      siteName: config.name,
+                      title: fullTitle,
+                      description,
+                      locale: "en_US",
+                      images,
+                      ...(publishedTime ? { publishedTime } : {}),
+                      ...(modifiedTime ? { modifiedTime } : {}),
+                      ...(authors?.length ? { authors } : {}),
+                      ...(section ? { section } : {}),
+                      ...(tags?.length ? { tags } : {}),
+                  }
+                : {
+                      type: "website",
+                      url,
+                      siteName: config.name,
+                      title: fullTitle,
+                      description,
+                      locale: "en_US",
+                      images,
+                  },
         twitter: {
             card: "summary_large_image",
             title: fullTitle,
             description,
-            images: [ogImage],
+            images: [{ url: ogImage, alt: imageAlt ?? title }],
         },
         robots: {
             index,
@@ -391,27 +410,31 @@ export function articleSchema(article: {
     image: string;
     datePublished: string;
     dateModified?: string;
-    author: { name: string; role: string };
+    author: { name: string; role: string; photo?: string };
     keywords: string[];
     section: string;
     wordCount: number;
+    readingMinutes?: number;
+    video?: ReturnType<typeof videoSchema> | null;
 }) {
     const url = absoluteUrl(article.path);
 
     return {
         "@type": "BlogPosting",
         "@id": `${url}#article`,
-        headline: article.title,
+        headline: article.title.slice(0, 110),
         description: article.description,
         url,
-        mainEntityOfPage: { "@type": "WebPage", "@id": `${url}#webpage` },
-        image: [absoluteUrl(article.image)],
+        mainEntityOfPage: { "@type": "WebPage", "@id": url },
+        image: [absoluteMediaUrl(article.image)],
+        thumbnailUrl: absoluteMediaUrl(article.image),
         datePublished: article.datePublished,
         dateModified: article.dateModified ?? article.datePublished,
         author: {
             "@type": "Person",
             name: article.author.name,
             jobTitle: article.author.role,
+            ...(article.author.photo ? { image: absoluteMediaUrl(article.author.photo) } : {}),
             worksFor: { "@id": ORG_ID },
         },
         publisher: { "@id": ORG_ID },
@@ -419,7 +442,29 @@ export function articleSchema(article: {
         articleSection: article.section,
         keywords: article.keywords.join(", "),
         wordCount: article.wordCount,
+        ...(article.readingMinutes ? { timeRequired: `PT${article.readingMinutes}M` } : {}),
+        ...(article.video ? { video: article.video } : {}),
         inLanguage: "en",
+    };
+}
+
+/** VideoObject for an article's featured video (YouTube, Vimeo or an uploaded file). */
+export function videoSchema(video: {
+    name: string;
+    description: string;
+    thumbnail: string;
+    uploadDate: string;
+    embedUrl?: string;
+    contentUrl?: string;
+}) {
+    return {
+        "@type": "VideoObject",
+        name: video.name,
+        description: video.description,
+        thumbnailUrl: [absoluteMediaUrl(video.thumbnail)],
+        uploadDate: video.uploadDate,
+        ...(video.embedUrl ? { embedUrl: video.embedUrl } : {}),
+        ...(video.contentUrl ? { contentUrl: video.contentUrl } : {}),
     };
 }
 

@@ -1,13 +1,14 @@
 import { MetadataRoute } from "next";
 import { siteConfig } from "@/config/site";
 import { serviceHref } from "@/data/servicesData";
-import { POSTS, blogHref } from "@/data/blog";
+import { blogCanonicalPath } from "@/data/blog";
+import { getBlogData } from "@/lib/blog-api";
 import { getServicesCatalog } from "@/lib/services-catalog";
 
 export const dynamic = "force-static";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-    const { services } = await getServicesCatalog();
+    const [{ services }, { posts }] = await Promise.all([getServicesCatalog(), getBlogData()]);
     const baseUrl = siteConfig.url;
 
     const routes = [
@@ -36,8 +37,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     // Real dates here, not `new Date()` — a sitemap that claims every
     // article changed today teaches a crawler to ignore the field.
-    const blogRoutes = POSTS.map((post) => ({
-        url: `${baseUrl}${blogHref(post.slug)}`,
+    const blogRoutes = posts.map((post) => ({
+        url: `${baseUrl}${blogCanonicalPath(post.slug)}`,
         lastModified: new Date(post.updatedAt ?? post.publishedAt),
         changeFrequency: "monthly" as const,
         priority: 0.7,

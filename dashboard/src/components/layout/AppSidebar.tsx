@@ -9,6 +9,7 @@ import {
   BriefcaseIcon,
   UserRoundIcon,
   SettingsIcon,
+  NewspaperIcon,
 } from "lucide-react";
 import type { DashboardUser } from "@/lib/session";
 import { BrandLogo } from "@/components/BrandLogo";
@@ -60,6 +61,7 @@ export function AppSidebar({ user, onLogout }: AppSidebarProps) {
         { title: "Overview", to: "/admin", icon: LayoutDashboardIcon },
         { title: "Homepage", to: "/admin/homepage", icon: LayoutTemplateIcon },
         { title: "Services", to: "/admin/services", icon: BriefcaseIcon },
+        { title: "Blog", to: "/admin/blog", icon: NewspaperIcon },
         { title: "Team", to: "/admin/team", icon: UsersRoundIcon },
         { title: "Staff", to: "/admin/staff", icon: UsersIcon },
         { title: "Settings", to: "/admin/settings", icon: SettingsIcon },
@@ -67,6 +69,7 @@ export function AppSidebar({ user, onLogout }: AppSidebarProps) {
       ]
     : [
         { title: "Dashboard", to: "/employee", icon: BriefcaseIcon },
+        { title: "My articles", to: "/employee/blog", icon: NewspaperIcon },
         {
           title: "Public profile",
           to: "/employee/public-profile",

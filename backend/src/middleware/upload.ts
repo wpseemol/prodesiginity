@@ -1,10 +1,12 @@
 import multer from "multer";
 import {
+  ensureBlogUploadDir,
   ensureHomepageUploadDir,
   ensureSiteUploadDir,
   ensureTeamUploadDir,
   ensureUserUploadDir,
   uniqueUploadName,
+  uniqueUploadNameForMime,
 } from "../lib/uploads.js";
 import type { AuthRequest } from "./auth.js";
 
@@ -169,6 +171,26 @@ export const homepageLogoUpload = multer({
   storage: homepageStorage,
   fileFilter: imageFileFilter,
   limits: { fileSize: 1 * 1024 * 1024, files: 1 },
+}).single("file");
+
+const blogStorage = multer.diskStorage({
+  destination(_req, _file, cb) {
+    try {
+      cb(null, ensureBlogUploadDir());
+    } catch (err) {
+      cb(err as Error, "");
+    }
+  },
+  filename(_req, file, cb) {
+    cb(null, uniqueUploadNameForMime(file.mimetype));
+  },
+});
+
+/** Blog covers, category images and in-article media: images 5 MB, videos 120 MB. */
+export const blogMediaUpload = multer({
+  storage: blogStorage,
+  fileFilter: homepageMediaFilter,
+  limits: { fileSize: 120 * 1024 * 1024, files: 1, fields: 5, fieldSize: 1024 },
 }).single("file");
 
 /** Homepage CMS media: images up to 5 MB, videos up to 120 MB. */

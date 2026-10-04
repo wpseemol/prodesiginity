@@ -192,6 +192,15 @@ export function blogHref(slug: string): string {
     return `${BLOG_BASE_PATH}/${slug}`;
 }
 
+/**
+ * The URL a crawler ends up on. `trailingSlash: true` exports a folder per
+ * post, and the host 301s `/blog/x` to `/blog/x/`, so canonical, sitemap and
+ * JSON-LD all use the slashed form.
+ */
+export function blogCanonicalPath(slug: string): string {
+    return `${blogHref(slug)}/`;
+}
+
 export function getPost(slug: string): BlogPost | undefined {
     return POSTS.find((post) => post.slug === slug);
 }

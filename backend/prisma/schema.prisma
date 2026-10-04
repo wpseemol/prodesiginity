@@ -19,6 +19,7 @@ model User {
   teamMember    TeamMember?
   created_at    DateTime       @default(now())
   refreshTokens RefreshToken[]
+  blogPosts     BlogPost[]     @relation("BlogPostAuthor")
 
   @@map("users")
 }
@@ -189,4 +190,59 @@ model Service {
   @@index([sortOrder])
   @@index([published])
   @@map("services")
+}
+
+/// Blog category (filter chips on /blog). Image and icon are optional.
+model BlogCategory {
+  id          Int        @id @default(autoincrement())
+  slug        String     @unique @db.VarChar(80)
+  name        String     @db.VarChar(120)
+  description String?    @db.VarChar(512)
+  imageUrl    String?    @map("image_url") @db.VarChar(512)
+  icon        String?    @db.VarChar(64)
+  sortOrder   Int        @default(0) @map("sort_order")
+  posts       BlogPost[]
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+
+  @@index([sortOrder])
+  @@map("blog_categories")
+}
+
+enum BlogStatus {
+  draft
+  published
+}
+
+/// Blog article. `body` is an array of typed blocks (same shape the website
+/// renders), never raw HTML.
+model BlogPost {
+  id           Int          @id @default(autoincrement())
+  slug         String       @unique @db.VarChar(160)
+  title        String       @db.VarChar(200)
+  excerpt      String       @db.VarChar(600)
+  categoryId   Int          @map("category_id")
+  category     BlogCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  authorId     Int?         @map("author_id")
+  author       User?        @relation("BlogPostAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  coverImage   String?      @map("cover_image") @db.VarChar(512)
+  coverAlt     String?      @map("cover_alt") @db.VarChar(255)
+  videoUrl     String?      @map("video_url") @db.VarChar(512)
+  accent       String       @default("indigo") @db.VarChar(16)
+  icon         String?      @db.VarChar(64)
+  body         Json
+  keyTakeaways Json         @map("key_takeaways")
+  faqs         Json
+  tags         Json
+  seo          Json
+  featured     Boolean      @default(false)
+  status       BlogStatus   @default(draft)
+  publishedAt  DateTime?    @map("published_at")
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+
+  @@index([categoryId])
+  @@index([authorId])
+  @@index([status, publishedAt])
+  @@map("blog_posts")
 }

@@ -1,5 +1,6 @@
 import { Response, NextFunction } from "express";
 import {
+  isStaffRole,
   verifyAccessToken,
   type AccessTokenPayload,
 } from "../lib/tokens.js";
@@ -42,6 +43,18 @@ export function requireAdmin(
 ) {
   if (req.user?.role !== "admin") {
     return res.status(403).json({ message: "Admin access required." });
+  }
+  return next();
+}
+
+/** Admin or staff (`employer`). */
+export function requireStaff(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) {
+  if (!req.user || !isStaffRole(req.user.role)) {
+    return res.status(403).json({ message: "Staff access required." });
   }
   return next();
 }
