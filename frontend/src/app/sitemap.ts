@@ -1,16 +1,19 @@
 import { MetadataRoute } from "next";
 import { siteConfig } from "@/config/site";
 import { serviceHref } from "@/data/servicesData";
+import { industryHref } from "@/data/industriesData";
 import { blogCanonicalPath } from "@/data/blog";
 import { getBlogData } from "@/lib/blog-api";
+import { getIndustries } from "@/lib/industries-catalog";
 import { getServicesCatalog } from "@/lib/services-catalog";
 import { getTeamData, staffHref } from "@/lib/team-api";
 
 export const dynamic = "force-static";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-    const [{ services }, { posts }, team] = await Promise.all([
+    const [{ services }, industries, { posts }, team] = await Promise.all([
         getServicesCatalog(),
+        getIndustries(),
         getBlogData(),
         getTeamData(),
     ]);
@@ -22,6 +25,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         "/blog",
         "/careers",
         "/contact",
+        "/industries",
         "/privacy-policy",
         "/services",
         "/services/our-service",
@@ -36,6 +40,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     const serviceRoutes = services.map((service) => ({
         url: `${baseUrl}${serviceHref(service.slug)}`,
+        lastModified: new Date(),
+        changeFrequency: "weekly" as const,
+        priority: 0.7,
+    }));
+
+    const industryRoutes = industries.map((industry) => ({
+        url: `${baseUrl}${industryHref(industry.slug)}`,
         lastModified: new Date(),
         changeFrequency: "weekly" as const,
         priority: 0.7,
@@ -57,5 +68,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         priority: 0.6,
     }));
 
-    return [...routes, ...serviceRoutes, ...blogRoutes, ...teamRoutes];
+    return [
+        ...routes,
+        ...serviceRoutes,
+        ...industryRoutes,
+        ...blogRoutes,
+        ...teamRoutes,
+    ];
 }

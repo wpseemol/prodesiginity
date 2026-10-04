@@ -7,6 +7,7 @@ export const TEAM_UPLOAD_ROOT = path.join(UPLOADS_ROOT, "team");
 export const SITE_UPLOAD_ROOT = path.join(UPLOADS_ROOT, "site");
 export const HOMEPAGE_UPLOAD_ROOT = path.join(UPLOADS_ROOT, "homepage");
 export const BLOG_UPLOAD_ROOT = path.join(UPLOADS_ROOT, "blog");
+export const AVATAR_UPLOAD_ROOT = path.join(UPLOADS_ROOT, "avatars");
 
 /** Not served by express.static: files here are only streamed to admins. */
 export const PRIVATE_STORAGE_ROOT = path.resolve(process.cwd(), "storage");
@@ -35,6 +36,14 @@ export function ensureHomepageUploadDir(): string {
 
 export function ensureBlogUploadDir(): string {
   return ensureDir(BLOG_UPLOAD_ROOT);
+}
+
+export function ensureAvatarUploadDir(): string {
+  return ensureDir(AVATAR_UPLOAD_ROOT);
+}
+
+export function publicAvatarUploadPath(filename: string): string {
+  return `/uploads/avatars/${filename}`;
 }
 
 export function ensureCareersStorageDir(): string {

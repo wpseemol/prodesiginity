@@ -13,7 +13,9 @@ import {
 import Logo from "@/components/home/Logo";
 import ThemeToggle from "@/components/ThemeToggle";
 import { staffInitials } from "@/components/team/StaffAvatar";
+import ProfilePicturePicker from "@/components/dashboard/ProfilePicturePicker";
 import { getAuthUser, signOut, type AuthUser } from "@/lib/auth";
+import { mediaUrl } from "@/config/api";
 import { siteConfig } from "@/config/site";
 
 const nav = [
@@ -104,7 +106,7 @@ export default function DashboardShell() {
                             {user.picture && !pictureFailed ? (
                                 // eslint-disable-next-line @next/next/no-img-element
                                 <img
-                                    src={user.picture}
+                                    src={mediaUrl(user.picture) ?? user.picture}
                                     alt=""
                                     referrerPolicy="no-referrer"
                                     onError={() => setPictureFailed(true)}
@@ -157,9 +159,13 @@ export default function DashboardShell() {
                         className="rounded-3xl border border-border-color bg-white p-6 shadow-sm dark:border-dark-border-color dark:bg-slate-900/50 sm:p-8"
                     >
                         <h2 className="text-lg font-bold">Settings</h2>
-                        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                            Account preferences will live in this section.
-                        </p>
+                        <ProfilePicturePicker
+                            user={user}
+                            onChange={(next) => {
+                                setUser(next);
+                                setPictureFailed(false);
+                            }}
+                        />
                     </section>
                 </main>
             </div>

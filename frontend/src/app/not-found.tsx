@@ -2,12 +2,14 @@ import Link from "next/link";
 import { Home, Compass } from "lucide-react";
 import PortfolioBackground from "@/components/home/portfolio/PortfolioBackground";
 import LiveServiceFallback from "@/components/services/LiveServiceFallback";
+import LiveIndustryFallback from "@/components/industries/LiveIndustryFallback";
 import LiveBlogFallback from "@/components/blog/LiveBlogFallback";
 import LiveStaffFallback from "@/components/team/LiveStaffFallback";
 
 export default function NotFound() {
   return (
     <LiveServiceFallback>
+    <LiveIndustryFallback>
     <LiveBlogFallback>
     <LiveStaffFallback>
       <main className="relative min-h-[85vh] flex items-center justify-center bg-white dark:bg-[#070B14] border-b border-border-color dark:border-dark-border-color transition-colors duration-300 font-sans overflow-hidden px-4 sm:px-6 lg:px-8 select-none">
@@ -55,6 +57,7 @@ export default function NotFound() {
       </main>
     </LiveStaffFallback>
     </LiveBlogFallback>
+    </LiveIndustryFallback>
     </LiveServiceFallback>
   );
 }

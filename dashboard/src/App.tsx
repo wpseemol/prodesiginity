@@ -11,6 +11,7 @@ import AdminHomepagePage from "@/pages/AdminHomepagePage";
 import AdminTeamPage from "@/pages/AdminTeamPage";
 import AdminSettingsPage from "@/pages/AdminSettingsPage";
 import AdminServicesPage from "@/pages/AdminServicesPage";
+import AdminIndustriesPage from "@/pages/AdminIndustriesPage";
 import { AdminBlogPage, StaffBlogPage } from "@/pages/BlogPage";
 import LoginPage from "@/pages/LoginPage";
 import ProfilePage from "@/pages/ProfilePage";
@@ -38,6 +39,7 @@ export default function App() {
               <Route path="/admin/homepage" element={<AdminHomepagePage />} />
               <Route path="/admin/team" element={<AdminTeamPage />} />
               <Route path="/admin/services" element={<AdminServicesPage />} />
+              <Route path="/admin/industries" element={<AdminIndustriesPage />} />
               <Route path="/admin/blog" element={<AdminBlogPage />} />
               <Route path="/admin/careers" element={<AdminCareersPage />} />
               <Route path="/admin/settings" element={<AdminSettingsPage />} />

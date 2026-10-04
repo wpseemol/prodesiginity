@@ -2,6 +2,7 @@ import crypto from "crypto";
 import path from "path";
 import multer from "multer";
 import {
+  ensureAvatarUploadDir,
   ensureBlogUploadDir,
   ensureCareersStorageDir,
   ensureHomepageUploadDir,
@@ -130,6 +131,26 @@ const homepageStorage = multer.diskStorage({
     cb(null, uniqueUploadName(file.originalname, fallback));
   },
 });
+
+const avatarStorage = multer.diskStorage({
+  destination(_req, _file, cb) {
+    try {
+      cb(null, ensureAvatarUploadDir());
+    } catch (err) {
+      cb(err as Error, "");
+    }
+  },
+  filename(_req, file, cb) {
+    cb(null, uniqueUploadName(file.originalname, ".png"));
+  },
+});
+
+/** Admin avatar presets that staff and clients can pick from. */
+export const avatarPresetUpload = multer({
+  storage: avatarStorage,
+  fileFilter: imageFileFilter,
+  limits: { fileSize: 2 * 1024 * 1024, files: 1 },
+}).single("image");
 
 export const profilePhotoUpload = multer({
   storage: profileStorage,

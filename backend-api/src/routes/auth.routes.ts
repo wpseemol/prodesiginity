@@ -18,6 +18,10 @@ import {
   uploadErrorHandler,
   uploadProfilePhoto,
 } from "../controllers/photo.controller.js";
+import {
+  chooseAvatar,
+  getAvatarPresets,
+} from "../controllers/avatarPresets.controller.js";
 import { requireAuth } from "../middleware/auth.js";
 import { profilePhotoUpload } from "../middleware/upload.js";
 
@@ -48,6 +52,9 @@ router.post(
 router.delete("/me/photo", requireAuth, clearProfilePhoto);
 router.post("/me/photos/:photoId/activate", requireAuth, setActivePhoto);
 router.delete("/me/photos/:photoId", requireAuth, deleteMyPhoto);
+
+router.get("/avatar-presets", requireAuth, getAvatarPresets);
+router.put("/me/avatar", requireAuth, chooseAvatar);
 
 export default router;
 

@@ -13,6 +13,7 @@ const companyLinks = [
     { name: "About ProDesignity", href: "/about" },
     { name: "Our Team", href: "/team" },
     { name: "Services Portfolio", href: "/services" },
+    { name: "Industries We Serve", href: "/industries" },
     { name: "Journal", href: "/blog" },
     { name: "Contact & Inquiries", href: siteConfig.contactPath },
     { name: "Careers", href: "/careers" },

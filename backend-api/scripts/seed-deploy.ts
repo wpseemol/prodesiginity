@@ -9,6 +9,7 @@
  *   - homepage CMS sections
  *   - team + site settings
  *   - services catalog
+ *   - industries we serve
  *   - site config / tracking tables
  *   - careers page copy + job openings
  *
@@ -21,7 +22,9 @@ const steps = [
   ["tsx", "scripts/ensure-team-settings.ts"],
   ["tsx", "scripts/ensure-site-config.ts"],
   ["tsx", "scripts/ensure-services.ts"],
+  ["tsx", "scripts/ensure-industries.ts"],
   ["tsx", "scripts/ensure-tracking-settings.ts"],
+  ["tsx", "scripts/ensure-auth-avatars.ts"],
   ["tsx", "scripts/ensure-careers-content.ts"],
 ] as const;
 

@@ -92,6 +92,24 @@ export async function getResolvedSiteConfig(): Promise<SiteConfig> {
   }
 }
 
+/**
+ * Google OAuth client ID set in the admin dashboard, read at runtime so a
+ * static build picks up changes. Falls back to NEXT_PUBLIC_GOOGLE_CLIENT_ID.
+ */
+export async function getGoogleClientId(): Promise<string> {
+  const fallback = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? "";
+  try {
+    const res = await fetch(`${apiBaseUrl}/settings`, { cache: "no-store" });
+    if (!res.ok) return fallback;
+    const data = (await res.json()) as {
+      settings?: { googleClientId?: string | null };
+    };
+    return data.settings?.googleClientId?.trim() || fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 /** Absolute URL for logos / OG images (API uploads or site paths). */
 export function absoluteMediaUrl(
   path: string,

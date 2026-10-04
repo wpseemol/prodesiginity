@@ -22,6 +22,7 @@ const publicSettingsSelect = {
   metaPixelId: true,
   googleMeasurementId: true,
   googleAdsId: true,
+  googleClientId: true,
   siteConfig: true,
 } as const;
 
@@ -106,6 +107,9 @@ function toPublicSettingsPayload(
     metaPixelId: row.metaPixelId,
     googleMeasurementId: row.googleMeasurementId,
     googleAdsId: row.googleAdsId,
+    /** Public by design: the browser needs it to render the Google button. */
+    googleClientId:
+      row.googleClientId?.trim() || process.env.GOOGLE_CLIENT_ID?.trim() || null,
     siteConfig,
   };
 }

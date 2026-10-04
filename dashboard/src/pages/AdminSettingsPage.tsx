@@ -24,10 +24,14 @@ import {
   GlobeIcon,
   MapPinIcon,
   SendIcon,
+  KeyRoundIcon,
+  UserRoundIcon,
 } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { MailSettingsPanel } from "@/components/settings/MailSettingsPanel";
+import { GoogleSignInPanel } from "@/components/settings/GoogleSignInPanel";
+import { AvatarPresetsPanel } from "@/components/settings/AvatarPresetsPanel";
 import { mediaUrl } from "@/config";
 import { apiFetch } from "@/lib/api";
 import { WEBSITE_LOGOS } from "@/lib/brand";
@@ -87,6 +91,8 @@ type SettingsTab =
   | "commercial"
   | "legal"
   | "login"
+  | "google"
+  | "avatars"
   | "favicon"
   | "mail"
   | "tracking";
@@ -132,6 +138,18 @@ const TABS: {
     label: "Login",
     icon: LogInIcon,
     hint: "Staff login screen copy.",
+  },
+  {
+    id: "google",
+    label: "Google sign-in",
+    icon: KeyRoundIcon,
+    hint: "OAuth client ID and secret for “Sign in with Google” on the website.",
+  },
+  {
+    id: "avatars",
+    label: "Avatars",
+    icon: UserRoundIcon,
+    hint: "Up to 5 profile pictures staff and clients can choose from.",
   },
   {
     id: "favicon",
@@ -1299,6 +1317,10 @@ function SettingsManager({ adminEmail }: { adminEmail?: string }) {
           ) : null}
 
           {tab === "mail" ? <MailSettingsPanel adminEmail={adminEmail} /> : null}
+
+          {tab === "google" ? <GoogleSignInPanel /> : null}
+
+          {tab === "avatars" ? <AvatarPresetsPanel /> : null}
 
           {/* Tracking — keep compact from before */}
           {tab === "tracking" ? (

@@ -17,7 +17,9 @@ import {
   rotateRefreshToken,
 } from "../lib/tokens.js";
 import type { AuthRequest } from "../middleware/auth.js";
+import { getGoogleClientId } from "../lib/googleAuthConfig.js";
 import {
+  accountAvatarSelect,
   accountTeamImageSelect,
   publicUserSelect,
 } from "./photo.controller.js";
@@ -82,7 +84,7 @@ async function uniqueUsername(email: string) {
 /** POST /api/auth/google — client sign-in with a Google ID token. */
 export const googleLogin = async (req: Request, res: Response) => {
   try {
-    const clientId = process.env.GOOGLE_CLIENT_ID;
+    const clientId = await getGoogleClientId();
     if (!clientId) {
       return res.status(503).json({ message: "Google sign-in is not configured yet." });
     }
@@ -111,27 +113,32 @@ export const googleLogin = async (req: Request, res: Response) => {
       return res.status(403).json({ message: ACCOUNT_DISABLED_MESSAGE });
     }
 
-    if (user && !user.googleId) {
-      user = await prisma.user.update({ where: { id: user.id }, data: { googleId: google.sub } });
-    } else if (!user) {
-      user = await prisma.user.create({
-        data: {
-          fullName: (google.name || google.email.split("@")[0]).slice(0, 120),
-          username: await uniqueUsername(google.email),
-          email: google.email,
-          googleId: google.sub,
-          password: await bcrypt.hash(crypto.randomBytes(32).toString("hex"), 10),
-          role: "user",
-        },
-      });
-    }
+    const googlePictureUrl = google.picture?.slice(0, 512) ?? null;
+    const account = user
+      ? await prisma.user.update({
+          where: { id: user.id },
+          data: { ...(user.googleId ? {} : { googleId: google.sub }), googlePictureUrl },
+          select: { id: true, fullName: true, username: true, email: true, role: true, ...accountAvatarSelect },
+        })
+      : await prisma.user.create({
+          data: {
+            fullName: (google.name || google.email.split("@")[0]).slice(0, 120),
+            username: await uniqueUsername(google.email),
+            email: google.email,
+            googleId: google.sub,
+            googlePictureUrl,
+            password: await bcrypt.hash(crypto.randomBytes(32).toString("hex"), 10),
+            role: "user",
+          },
+          select: { id: true, fullName: true, username: true, email: true, role: true, ...accountAvatarSelect },
+        });
 
     const authUser = {
-      id: user.id,
-      fullName: user.fullName,
-      username: user.username,
-      email: user.email,
-      role: user.role,
+      id: account.id,
+      fullName: account.fullName,
+      username: account.username,
+      email: account.email,
+      role: account.role,
     };
     const tokens = await issueTokenPair(authUser);
 
@@ -141,7 +148,12 @@ export const googleLogin = async (req: Request, res: Response) => {
       refreshToken: tokens.refreshToken,
       expiresIn: tokens.expiresIn,
       refreshExpiresInDays: tokens.refreshExpiresInDays,
-      user: { ...authUser, picture: google.picture ?? null },
+      user: {
+        ...authUser,
+        avatarPreset: account.avatarPreset,
+        googlePictureUrl: account.googlePictureUrl,
+        picture: account.avatarPreset?.url ?? account.googlePictureUrl,
+      },
     });
   } catch (error) {
     console.error("Google login error:", error);
@@ -229,6 +241,7 @@ export const login = async (req: Request, res: Response) => {
           },
         },
         teamMember: accountTeamImageSelect,
+        avatarPreset: accountAvatarSelect.avatarPreset,
       },
     });
 
@@ -257,6 +270,8 @@ export const login = async (req: Request, res: Response) => {
       role: user.role,
       photo: user.photo,
       teamMember: user.teamMember,
+      avatarPreset: user.avatarPreset,
+      googlePictureUrl: user.googlePictureUrl,
     };
 
     const tokens = await issueTokenPair(authUser);

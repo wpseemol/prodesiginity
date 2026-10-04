@@ -33,6 +33,8 @@ export type DashboardUser = {
   role: string;
   photo?: DashboardPhoto | null;
   teamMember?: DashboardTeamImages | null;
+  /** Admin-provided avatar the user picked instead of an uploaded photo. */
+  avatarPreset?: { id: number; url: string } | null;
 };
 
 function cookieAttributes(maxAge: number): string {

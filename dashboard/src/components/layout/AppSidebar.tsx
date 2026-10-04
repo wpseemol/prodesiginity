@@ -12,6 +12,7 @@ import {
   UserRoundIcon,
   SettingsIcon,
   NewspaperIcon,
+  FactoryIcon,
 } from "lucide-react";
 import type { DashboardUser } from "@/lib/session";
 import { BrandLogo } from "@/components/BrandLogo";
@@ -53,6 +54,7 @@ export function AppSidebar({ user, onLogout }: AppSidebarProps) {
         { title: "Overview", to: "/admin", icon: LayoutDashboardIcon },
         { title: "Homepage", to: "/admin/homepage", icon: LayoutTemplateIcon },
         { title: "Services", to: "/admin/services", icon: BriefcaseIcon },
+        { title: "Industries", to: "/admin/industries", icon: FactoryIcon },
         { title: "Blog", to: "/admin/blog", icon: NewspaperIcon },
         { title: "Careers", to: "/admin/careers", icon: InboxIcon },
         { title: "Team", to: "/admin/team", icon: UsersRoundIcon },

@@ -14,10 +14,15 @@ model User {
   password      String
   /// Google account `sub` for clients who sign in with Google.
   googleId      String?        @unique @map("google_id") @db.VarChar(64)
+  /// Profile picture from the user's Google account, refreshed on each Google sign-in.
+  googlePictureUrl String?     @map("google_picture_url") @db.VarChar(512)
   role          Role           @default(user)
   photoId       Int?           @map("photo_id")
   photo         Photo?         @relation("UserProfilePhoto", fields: [photoId], references: [id], onDelete: SetNull)
   photos        Photo[]        @relation("UserPhotos")
+  /// Admin-provided avatar the user picked instead of an uploaded photo.
+  avatarPresetId Int?          @map("avatar_preset_id")
+  avatarPreset  AvatarPreset?  @relation(fields: [avatarPresetId], references: [id], onDelete: SetNull)
   teamMember    TeamMember?
   /// Set by an admin to block sign-in and token refresh.
   disabledAt    DateTime?      @map("disabled_at")
@@ -55,6 +60,19 @@ model Photo {
 
   @@index([ownerId])
   @@map("photos")
+}
+
+/// Avatar images an admin uploads (max 5) for staff and clients to choose from.
+model AvatarPreset {
+  id        Int      @id @default(autoincrement())
+  url       String   @db.VarChar(512)
+  label     String?  @db.VarChar(80)
+  sortOrder Int      @default(0) @map("sort_order")
+  users     User[]
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([sortOrder])
+  @@map("avatar_presets")
 }
 
 enum Role {
@@ -137,6 +155,10 @@ model SiteSetting {
   googleAdsCustomerId             String?  @map("google_ads_customer_id") @db.VarChar(32)
   googleEnhancedConversionsApiKey String?  @map("google_enhanced_conversions_api_key") @db.Text
 
+  /// "Sign in with Google" OAuth client. The secret is AES-GCM encrypted (lib/secretBox).
+  googleClientId     String? @map("google_client_id") @db.VarChar(255)
+  googleClientSecret String? @map("google_client_secret") @db.Text
+
   /// Editable marketing site config (contact, social, legal, …).
   siteConfig Json? @map("site_config")
 
@@ -208,6 +230,46 @@ model Service {
   @@index([sortOrder])
   @@index([published])
   @@map("services")
+}
+
+/// Target industry (nav "Industries" menu + /industries/[slug] landing pages).
+model Industry {
+  id           Int      @id @default(autoincrement())
+  slug         String   @unique @db.VarChar(120)
+  /// Short label used in the menu and cards, e.g. "HVAC".
+  title        String   @db.VarChar(160)
+  /// Page <h1>, e.g. "Websites & Marketing for HVAC Companies".
+  headline     String   @db.VarChar(255)
+  icon         String   @db.VarChar(64)
+  tagline      String   @db.VarChar(255)
+  summary      String   @db.Text
+  heroImage    String?  @map("hero_image") @db.VarChar(512)
+  heroImageAlt String?  @map("hero_image_alt") @db.VarChar(255)
+  /// string[] — one entry per paragraph.
+  intro        Json
+  /// string[] — the kinds of businesses the page targets.
+  audience     Json
+  /// { title, body }[] — pain points the industry has online.
+  challenges   Json
+  /// { title, body }[] — how the studio solves them.
+  solutions    Json
+  /// string[] — service slugs shown as "services for this industry".
+  services     Json
+  /// { value, label }[]
+  stats        Json
+  faqs         Json
+  ctaTitle     String?  @map("cta_title") @db.VarChar(200)
+  ctaBody      String?  @map("cta_body") @db.VarChar(600)
+  accent       Json
+  seo          Json
+  sortOrder    Int      @default(0) @map("sort_order")
+  published    Boolean  @default(true)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@index([sortOrder])
+  @@index([published])
+  @@map("industries")
 }
 
 /// Blog category (filter chips on /blog). Image and icon are optional.

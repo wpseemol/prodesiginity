@@ -26,7 +26,10 @@ type ProfilePhotoManagerProps = {
   onUserUpdated: (user: DashboardUser) => void;
 };
 
+type AvatarPreset = { id: number; url: string; label: string | null };
+
 function fallbackHint(user: DashboardUser) {
+  if (user.avatarPreset) return "You're using one of the provided avatars.";
   if (user.teamMember?.photoUrl) return "Without a profile photo, your team photo is shown.";
   if (user.teamMember?.avatarUrl) return "Without a profile photo, your team avatar is shown.";
   return "Without a profile photo, your initials are shown.";
@@ -43,8 +46,11 @@ export function ProfilePhotoManager({
   const [removing, setRemoving] = useState(false);
   const [busyId, setBusyId] = useState<number | null>(null);
   const [pendingDelete, setPendingDelete] = useState<DashboardPhoto | null>(null);
+  const [presets, setPresets] = useState<AvatarPreset[]>([]);
+  const [busyPresetId, setBusyPresetId] = useState<number | "none" | null>(null);
 
   const activePhotoId = user.photo?.id ?? null;
+  const activePresetId = user.avatarPreset?.id ?? null;
 
   const applyUser = async (nextUser: DashboardUser) => {
     await updateDashboardUser(nextUser);
@@ -75,6 +81,35 @@ export function ProfilePhotoManager({
     void loadPhotos();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- load once per user
   }, [user.id]);
+
+  useEffect(() => {
+    apiFetch("/auth/avatar-presets")
+      .then((res) => (res.ok ? res.json() : { presets: [] }))
+      .then((data: { presets?: AvatarPreset[] }) => setPresets(data.presets ?? []))
+      .catch(() => setPresets([]));
+  }, []);
+
+  const handleChoosePreset = async (presetId: number | null) => {
+    if (presetId !== null && presetId === activePresetId) return;
+    setBusyPresetId(presetId ?? "none");
+    try {
+      const res = await apiFetch("/auth/me/avatar", {
+        method: "PUT",
+        body: JSON.stringify({ presetId }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(readError(data, "Could not change your avatar."));
+        return;
+      }
+      await applyUser(data.user as DashboardUser);
+      toast.success(presetId === null ? "Avatar removed." : "Avatar updated.");
+    } catch {
+      toast.error("Could not reach the server.");
+    } finally {
+      setBusyPresetId(null);
+    }
+  };
 
   const handleUpload = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -215,6 +250,60 @@ export function ProfilePhotoManager({
             </div>
           </form>
         </div>
+
+        {presets.length > 0 ? (
+          <div className="grid gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm font-medium">Or choose an avatar</p>
+              {user.avatarPreset ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  disabled={busyPresetId !== null}
+                  onClick={() => void handleChoosePreset(null)}
+                >
+                  {busyPresetId === "none" ? <Loader2Icon className="animate-spin" /> : <XIcon />}
+                  Stop using avatar
+                </Button>
+              ) : null}
+            </div>
+            <div className="flex flex-wrap gap-3">
+              {presets.map((preset) => {
+                const selected = preset.id === activePresetId;
+                return (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    disabled={busyPresetId !== null}
+                    onClick={() => void handleChoosePreset(preset.id)}
+                    title={preset.label ?? "Use this avatar"}
+                    aria-pressed={selected}
+                    className={cn(
+                      "relative size-16 overflow-hidden rounded-full border bg-muted/40 transition hover:ring-2 hover:ring-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                      selected && "ring-2 ring-primary ring-offset-2 ring-offset-background",
+                    )}
+                  >
+                    <img
+                      src={mediaUrl(preset.url)}
+                      alt={preset.label ?? "Avatar"}
+                      className="size-full object-cover"
+                    />
+                    {busyPresetId === preset.id ? (
+                      <span className="absolute inset-0 flex items-center justify-center bg-background/60">
+                        <Loader2Icon className="size-4 animate-spin text-primary" />
+                      </span>
+                    ) : selected ? (
+                      <span className="absolute bottom-0.5 right-0.5 flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                        <CheckIcon className="size-3" />
+                      </span>
+                    ) : null}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
 
         <div className="grid gap-2">
           <p className="text-sm font-medium">Your images</p>

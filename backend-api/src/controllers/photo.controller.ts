@@ -18,6 +18,12 @@ export const accountTeamImageSelect = {
   select: { photoUrl: true, avatarUrl: true },
 } as const;
 
+/** Chosen avatar preset and Google picture, which the account picture also falls back to. */
+export const accountAvatarSelect = {
+  avatarPreset: { select: { id: true, url: true } },
+  googlePictureUrl: true,
+} as const;
+
 export const publicUserSelect = {
   id: true,
   fullName: true,
@@ -29,6 +35,7 @@ export const publicUserSelect = {
     select: photoSelect,
   },
   teamMember: accountTeamImageSelect,
+  ...accountAvatarSelect,
 } as const;
 
 export const uploadProfilePhoto = async (
@@ -63,7 +70,7 @@ export const uploadProfilePhoto = async (
     // Keep previous image files + Photo rows; only switch the active profile photo.
     const user = await prisma.user.update({
       where: { id: req.user.userId },
-      data: { photoId: photo.id },
+      data: { photoId: photo.id, avatarPresetId: null },
       select: publicUserSelect,
     });
 
@@ -128,7 +135,7 @@ export const setActivePhoto = async (req: AuthRequest, res: Response) => {
 
     const user = await prisma.user.update({
       where: { id: req.user.userId },
-      data: { photoId: photo.id },
+      data: { photoId: photo.id, avatarPresetId: null },
       select: publicUserSelect,
     });
 

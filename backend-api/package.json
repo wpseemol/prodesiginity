@@ -32,11 +32,14 @@
     "db:ensure-careers-content": "tsx scripts/ensure-careers-content.ts",
     "db:ensure-tracking": "tsx scripts/ensure-tracking-settings.ts",
     "db:ensure-services": "tsx scripts/ensure-services.ts",
+    "db:ensure-industries": "tsx scripts/ensure-industries.ts",
+    "db:ensure-auth-avatars": "tsx scripts/ensure-auth-avatars.ts",
     "db:ensure-site-config": "tsx scripts/ensure-site-config.ts",
     "db:ensure-blog": "prisma db execute --file prisma/sql/blog-tables.sql && tsx scripts/ensure-blog-columns.ts",
     "db:import-blog": "tsx scripts/import-static-blog.ts",
     "geoip:download": "tsx scripts/download-geolite2.ts",
-    "services:export-seed": "tsx scripts/export-services-seed.ts"
+    "services:export-seed": "tsx scripts/export-services-seed.ts",
+    "industries:export-seed": "tsx scripts/export-industries-seed.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

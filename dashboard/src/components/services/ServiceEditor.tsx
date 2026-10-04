@@ -63,7 +63,7 @@ type FaqItem = { q: string; aHtml: string };
 
 const EMPTY_LIST = "<ul><li><p></p></li></ul>";
 
-function Field({
+export function Field({
   label,
   htmlFor,
   required,
@@ -103,7 +103,7 @@ function Field({
   );
 }
 
-function StepHeading({ title, text }: { title: string; text: string }) {
+export function StepHeading({ title, text }: { title: string; text: string }) {
   return (
     <div className="space-y-1">
       <h2 className="text-lg font-semibold">{title}</h2>

@@ -220,6 +220,8 @@ export async function rotateRefreshToken(refreshToken: string) {
         },
       },
       teamMember: { select: { photoUrl: true, avatarUrl: true } },
+      avatarPreset: { select: { id: true, url: true } },
+      googlePictureUrl: true,
       disabledAt: true,
     },
   });

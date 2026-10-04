@@ -120,7 +120,7 @@ export interface Service {
    Accent presets — keeps the colour logic out of the 13 service entries.
    ------------------------------------------------------------------------- */
 
-const ACCENTS: Record<string, ServiceAccent> = {
+export const ACCENTS: Record<string, ServiceAccent> = {
     violet: {
         iconBg: "bg-brand-violet/10 dark:bg-dark-brand-violet/15",
         iconColor: "text-brand-violet dark:text-dark-brand-violet",

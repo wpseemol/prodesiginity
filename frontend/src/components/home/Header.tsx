@@ -6,12 +6,14 @@ import Link from "next/link";
 import { siteConfig } from "@/config/site";
 
 /**
- * `mega: true` swaps the plain link for the cascading Services flyout. The
- * items inside it are read from data/servicesData.ts, not listed here.
+ * `mega` swaps the plain link for a dropdown: "services" is the cascading
+ * Services flyout, "industries" the Industries grid. Their items come from
+ * the services catalog and the industries list, not from here.
  */
 const navLinks: NavLink[] = [
     { name: "Home", href: "/" },
-    { name: "Services", href: "/services", mega: true },
+    { name: "Services", href: "/services", mega: "services" },
+    { name: "Industries", href: "/industries", mega: "industries" },
     { name: "Pricing", href: "/#pricing" },
     { name: "About", href: "/about" },
     { name: "Blog", href: "/blog" },

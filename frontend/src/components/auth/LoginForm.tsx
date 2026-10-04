@@ -5,10 +5,10 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Loader2, ShieldCheck } from "lucide-react";
 import { getAuthUser, signInWithGoogle } from "@/lib/auth";
+import { getGoogleClientId } from "@/lib/site-settings";
 import { siteConfig } from "@/config/site";
 import GoogleIcon from "@/components/auth/GoogleIcon";
 
-const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? "";
 const GSI_SRC = "https://accounts.google.com/gsi/client";
 
 let gsiPromise: Promise<void> | null = null;
@@ -36,7 +36,7 @@ export default function LoginForm() {
     const buttonRef = useRef<HTMLDivElement>(null);
     const [error, setError] = useState("");
     const [status, setStatus] = useState<"loading" | "ready" | "signing-in" | "unavailable">(
-        GOOGLE_CLIENT_ID ? "loading" : "unavailable",
+        "loading",
     );
 
     useEffect(() => {
@@ -59,17 +59,21 @@ export default function LoginForm() {
     );
 
     useEffect(() => {
-        if (!GOOGLE_CLIENT_ID) return;
         let cancelled = false;
 
-        loadGoogleIdentity()
-            .then(() => {
+        getGoogleClientId()
+            .then(async (clientId) => {
+                if (!clientId) {
+                    if (!cancelled) setStatus("unavailable");
+                    return;
+                }
+                await loadGoogleIdentity();
                 const container = buttonRef.current;
                 const gsi = window.google?.accounts.id;
                 if (cancelled || !container || !gsi) return;
 
                 gsi.initialize({
-                    client_id: GOOGLE_CLIENT_ID,
+                    client_id: clientId,
                     callback: (response) => void handleCredential(response),
                     ux_mode: "popup",
                     context: "signin",
@@ -134,7 +138,7 @@ export default function LoginForm() {
             {status === "unavailable" && !error ? (
                 <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-center text-sm text-amber-700 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-300">
                     {process.env.NODE_ENV === "development"
-                        ? "Set NEXT_PUBLIC_GOOGLE_CLIENT_ID to enable Google sign-in."
+                        ? "Add a Google client ID in the admin dashboard (Settings → Google sign-in) to enable sign-in."
                         : "Google sign-in is temporarily unavailable. Please try again later."}
                 </p>
             ) : null}

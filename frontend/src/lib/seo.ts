@@ -393,6 +393,64 @@ export function serviceSchema(service: {
 }
 
 /**
+ * Structured data for one industry landing page: a `Service` aimed at a
+ * `BusinessAudience`, so a crawler can tell "web design for HVAC companies"
+ * apart from the generic web design service page.
+ */
+export function industrySchema(industry: {
+    title: string;
+    headline: string;
+    summary: string;
+    path: string;
+    audience: string[];
+    image?: string;
+    services: { name: string; path: string }[];
+}) {
+    const url = absoluteUrl(industry.path);
+
+    return {
+        "@type": "Service",
+        "@id": `${url}#service`,
+        name: industry.headline,
+        serviceType: `Web design and digital marketing for ${industry.title}`,
+        description: industry.summary,
+        url,
+        ...(industry.image
+            ? { image: absoluteMediaUrl(industry.image) }
+            : {}),
+        provider: { "@id": ORG_ID },
+        audience: {
+            "@type": "BusinessAudience",
+            name: `${industry.title} businesses`,
+            ...(industry.audience.length
+                ? { audienceType: industry.audience.join(", ") }
+                : {}),
+        },
+        areaServed: siteConfig.serviceAreas.map((name) => ({
+            "@type": "AdministrativeArea",
+            name,
+        })),
+        ...(industry.services.length
+            ? {
+                  hasOfferCatalog: {
+                      "@type": "OfferCatalog",
+                      name: `Services for ${industry.title} businesses`,
+                      itemListElement: industry.services.map((service, i) => ({
+                          "@type": "Offer",
+                          position: i + 1,
+                          itemOffered: {
+                              "@type": "Service",
+                              name: service.name,
+                              url: absoluteUrl(service.path),
+                          },
+                      })),
+                  },
+              }
+            : {}),
+    };
+}
+
+/**
  * Structured data for one blog post.
  *
  * Emits a `BlogPosting` wired to the Organization as publisher and to a Person

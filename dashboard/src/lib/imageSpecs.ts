@@ -94,6 +94,14 @@ export const IMAGE_SPECS = {
     formats: "JPEG / PNG / WebP",
     note: "square",
   },
+  industryHero: {
+    label: "Industry hero image",
+    width: 1600,
+    height: 1200,
+    maxMb: 5,
+    formats: "JPEG / PNG / WebP",
+    note: "4:3 — shown beside the page heading",
+  },
   homepageImage: {
     label: "Homepage image",
     width: 1600,

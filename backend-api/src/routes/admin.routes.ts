@@ -46,6 +46,13 @@ import {
   updateServiceGroup,
 } from "../controllers/services.controller.js";
 import {
+  createIndustry,
+  deleteIndustry,
+  listAdminIndustries,
+  reorderIndustries,
+  updateIndustry,
+} from "../controllers/industries.controller.js";
+import {
   createCareerJob,
   deleteCareerJob,
   getAdminCareersContent,
@@ -53,8 +60,20 @@ import {
   updateCareerJob,
   updateCareersPage,
 } from "../controllers/careersContent.controller.js";
+import {
+  getGoogleSettings,
+  updateGoogleSettings,
+} from "../controllers/googleSettings.controller.js";
+import {
+  createAvatarPreset,
+  deleteAvatarPreset,
+  listAdminAvatarPresets,
+  reorderAvatarPresets,
+  updateAvatarPreset,
+} from "../controllers/avatarPresets.controller.js";
 import { requireAuth, requireAdmin } from "../middleware/auth.js";
 import {
+  avatarPresetUpload,
   homepageLogoUpload,
   homepageMediaUpload,
   siteBrandLogoUpload,
@@ -130,6 +149,12 @@ router.post("/services", createService);
 router.put("/services/:id", updateService);
 router.delete("/services/:id", deleteService);
 
+router.get("/industries", listAdminIndustries);
+router.post("/industries", createIndustry);
+router.put("/industries/order", reorderIndustries);
+router.put("/industries/:id", updateIndustry);
+router.delete("/industries/:id", deleteIndustry);
+
 router.get("/careers", getAdminCareersContent);
 router.put("/careers/page", updateCareersPage);
 router.post("/careers/jobs", createCareerJob);
@@ -142,6 +167,23 @@ router.put("/settings", updateSiteSettings);
 router.get("/settings/mail", getMailSettings);
 router.put("/settings/mail", updateMailSettings);
 router.post("/settings/mail/test", mailTestLimiter, sendTestMail);
+router.get("/settings/google", getGoogleSettings);
+router.put("/settings/google", updateGoogleSettings);
+
+router.get("/avatar-presets", listAdminAvatarPresets);
+router.post(
+  "/avatar-presets",
+  (req, res, next) => {
+    avatarPresetUpload(req, res, (err) => {
+      if (err) return settingsUploadErrorHandler(err, req, res, next);
+      return next();
+    });
+  },
+  createAvatarPreset,
+);
+router.put("/avatar-presets/order", reorderAvatarPresets);
+router.patch("/avatar-presets/:id", updateAvatarPreset);
+router.delete("/avatar-presets/:id", deleteAvatarPreset);
 router.post(
   "/settings/favicon",
   (req, res, next) => {
