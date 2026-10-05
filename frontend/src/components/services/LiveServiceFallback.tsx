@@ -1,14 +1,13 @@
 "use client";
 
-import {
-    useEffect,
-    useState,
-    useSyncExternalStore,
-    type ReactNode,
-} from "react";
+import { useEffect, type ReactNode } from "react";
 
 import ServiceDetail from "@/components/services/ServiceDetail";
-import { SERVICES_BASE_PATH, type Service } from "@/data/servicesData";
+import LoadErrorView from "@/components/ui/LoadErrorView";
+import NotFoundView from "@/components/ui/NotFoundView";
+import PageLoader from "@/components/ui/PageLoader";
+import type { Service } from "@/data/servicesData";
+import { LIVE_ROUTES } from "@/lib/live-routes";
 import {
     fetchServicesCatalog,
     findGroup,
@@ -16,25 +15,18 @@ import {
     relatedServices,
     type ServicesCatalog,
 } from "@/lib/services-catalog";
+import { useLiveLookup, type LiveLookup } from "@/lib/useLiveLookup";
 
-const SERVICE_PATH = new RegExp(`^${SERVICES_BASE_PATH}/([^/]+)/?$`);
+type Found = { catalog: ServicesCatalog; service: Service };
 
-const subscribe = () => () => {};
-
-/**
- * Read the browser URL: on the static 404 page the router's pathname is the
- * not-found route, not what the visitor requested.
- */
-function requestedServiceSlug(): string | null {
-    const match = window.location.pathname.match(SERVICE_PATH);
-    return match ? decodeURIComponent(match[1]) : null;
+async function loadService(slug: string): Promise<LiveLookup<Found>> {
+    const catalog = await fetchServicesCatalog();
+    if (!catalog) return { status: "error" };
+    const service = findService(catalog, slug);
+    return service
+        ? { status: "found", data: { catalog, service } }
+        : { status: "missing" };
 }
-
-type Lookup = {
-    slug: string;
-    catalog: ServicesCatalog | null;
-    service: Service | undefined;
-};
 
 /**
  * The static host serves 404.html for any URL it has no file for, including
@@ -46,51 +38,46 @@ export default function LiveServiceFallback({
 }: {
     children: ReactNode;
 }) {
-    const slug = useSyncExternalStore(
-        subscribe,
-        requestedServiceSlug,
-        () => null,
+    const { slug, lookup, retry } = useLiveLookup(
+        LIVE_ROUTES.service,
+        loadService,
     );
-    const [lookup, setLookup] = useState<Lookup | null>(null);
 
     useEffect(() => {
-        if (!slug) return;
-        let active = true;
-
-        void fetchServicesCatalog().then((catalog) => {
-            if (!active) return;
-            const service = catalog ? findService(catalog, slug) : undefined;
-            if (service) document.title = service.seo.title || service.title;
-            setLookup({ slug, catalog, service });
-        });
-
-        return () => {
-            active = false;
-        };
-    }, [slug]);
+        if (lookup?.status !== "found") return;
+        const { service } = lookup.data;
+        document.title = service.seo.title || service.title;
+    }, [lookup]);
 
     if (!slug) return <>{children}</>;
+    if (!lookup) return <PageLoader label="Loading service" />;
 
-    if (lookup?.slug !== slug) {
+    if (lookup.status === "error") {
         return (
-            <div
-                className="min-h-[70vh] flex items-center justify-center bg-white dark:bg-[#070B14]"
-                aria-busy="true"
-            >
-                <span className="w-8 h-8 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
-            </div>
-        );
-    }
-
-    if (lookup.catalog && lookup.service) {
-        return (
-            <ServiceDetail
-                service={lookup.service}
-                group={findGroup(lookup.catalog, lookup.service.group)}
-                related={relatedServices(lookup.catalog, lookup.service)}
+            <LoadErrorView
+                onRetry={retry}
+                backHref="/services"
+                backLabel="Browse all services"
             />
         );
     }
 
-    return <>{children}</>;
+    if (lookup.status === "missing") {
+        return (
+            <NotFoundView
+                title="Service not found"
+                message="We could not find a service at this address. It may have been renamed or retired."
+                action={{ href: "/services", label: "Browse all services" }}
+            />
+        );
+    }
+
+    const { catalog, service } = lookup.data;
+    return (
+        <ServiceDetail
+            service={service}
+            group={findGroup(catalog, service.group)}
+            related={relatedServices(catalog, service)}
+        />
+    );
 }

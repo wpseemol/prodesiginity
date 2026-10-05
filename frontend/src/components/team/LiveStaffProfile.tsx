@@ -1,9 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect } from "react";
 
 import StaffProfileView from "@/components/team/StaffProfileView";
+import NotFoundView from "@/components/ui/NotFoundView";
+import PageLoader from "@/components/ui/PageLoader";
 import type { BlogPost } from "@/data/blog/types";
 import type { TeamMember } from "@/data/teamData";
 import { findStaff, TEAM_BASE_PATH } from "@/lib/team-api";
@@ -38,23 +39,13 @@ export default function LiveStaffProfile({
     }, [live, member]);
 
     if (!member) {
-        if (!live) return null;
+        if (!live) return <PageLoader label="Loading profile" />;
         return (
-            <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 bg-white px-4 text-center dark:bg-[#070B14]">
-                <h1 className="text-2xl font-black text-slate-900 dark:text-white">
-                    This profile is no longer available
-                </h1>
-                <p className="max-w-md text-sm text-slate-600 dark:text-slate-400">
-                    This person may have moved on or changed their profile
-                    address. Meet the rest of the team instead.
-                </p>
-                <Link
-                    href={TEAM_BASE_PATH}
-                    className="rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white hover:opacity-90"
-                >
-                    Meet the team
-                </Link>
-            </div>
+            <NotFoundView
+                title="This profile is no longer available"
+                message="This person may have moved on or changed their profile address. Meet the rest of the team instead."
+                action={{ href: TEAM_BASE_PATH, label: "Meet the team" }}
+            />
         );
     }
 

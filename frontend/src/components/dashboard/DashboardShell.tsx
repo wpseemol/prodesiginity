@@ -16,6 +16,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import { staffInitials } from "@/components/team/StaffAvatar";
 import MyApplications from "@/components/dashboard/MyApplications";
 import ProfilePicturePicker from "@/components/dashboard/ProfilePicturePicker";
+import PageLoader from "@/components/ui/PageLoader";
 import {
     getCurrentUser,
     notifyAuthChange,
@@ -76,13 +77,7 @@ export default function DashboardShell() {
     };
 
     if (!ready || !user) {
-        return (
-            <main className="flex min-h-screen items-center justify-center bg-white font-sans dark:bg-[#070B14]">
-                <p className="text-sm text-slate-500 dark:text-slate-400">
-                    Loading dashboard…
-                </p>
-            </main>
-        );
+        return <PageLoader label="Loading dashboard" className="min-h-screen" />;
     }
 
     return (
