@@ -4,8 +4,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import {
   ArrowLeftIcon,
   CheckIcon,
+  ChevronsLeftIcon,
   CloudOffIcon,
   ExternalLinkIcon,
+  EyeIcon,
   GitCompareArrowsIcon,
   HistoryIcon,
   Loader2Icon,
@@ -26,6 +28,9 @@ import {
   type LocalDraft,
 } from "@/lib/blogDrafts";
 import { cn } from "@/lib/utils";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { useAppDispatch, useAppSelector } from "@/lib/store/hooks";
+import { setPreviewOpen, togglePreview } from "@/lib/store/blogEditorUiSlice";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { IconPicker } from "@/components/ServiceIcon";
@@ -60,6 +65,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { BlockListEditor } from "./BlockListEditor";
+import { BlogLivePreview } from "./BlogLivePreview";
 import { BlogMediaInput } from "./BlogMediaInput";
 import { diffPost, type Change, type ChangeContext, type FieldKey } from "./blogChanges";
 import { ChangeList, ChangesPanel, SectionEdited, UnsavedCount } from "./ChangesPanel";
@@ -132,6 +138,10 @@ export function BlogPostEditor({
   const [stale, setStale] = useState(false);
   const [comparing, setComparing] = useState(false);
   const [comparison, setComparison] = useState<{ theirs: Change[]; yours: Change[] } | null>(null);
+  const dispatch = useAppDispatch();
+  const previewOpen = useAppSelector((s) => s.blogEditorUi.previewOpen);
+  const wideScreen = useMediaQuery("(min-width: 1536px)");
+  const [previewSheet, setPreviewSheet] = useState(false);
   const [sessionLost, setSessionLost] = useState(false);
   const [restorable, setRestorable] = useState<LocalDraft<BlogPostFormValues> | null>(() => {
     const draft = loadLocalDraft<BlogPostFormValues>(draftKey);
@@ -298,6 +308,13 @@ export function BlogPostEditor({
     [categories, members, services],
   );
 
+  const previewProps = {
+    control: form.control,
+    categories,
+    members,
+    authorName: initial?.author.name ?? "You",
+  };
+
   const undoField = (key: FieldKey) => {
     if (!baseline) return;
     if (key === "slug") setSlugTouched(true);
@@ -377,6 +394,17 @@ export function BlogPostEditor({
             )}
           </p>
         </div>
+        <Button
+          type="button"
+          variant={wideScreen && previewOpen ? "secondary" : "outline"}
+          size="sm"
+          aria-pressed={wideScreen ? previewOpen : undefined}
+          title={wideScreen ? (previewOpen ? "Hide the live preview" : "Show the live preview") : "Open the live preview"}
+          onClick={() => (wideScreen ? dispatch(togglePreview()) : setPreviewSheet(true))}
+        >
+          <EyeIcon />
+          <span className="hidden sm:inline">Preview</span>
+        </Button>
         {isEdit && initial.status === "published" ? (
           <a
             href={blogPostUrl(initial.slug)}
@@ -464,7 +492,14 @@ export function BlogPostEditor({
         </Alert>
       ) : null}
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+      <div
+        className={cn(
+          "grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]",
+          previewOpen
+            ? "2xl:grid-cols-[minmax(0,1fr)_17rem_24rem] min-[1800px]:grid-cols-[minmax(0,1fr)_20rem_30rem]"
+            : "2xl:grid-cols-[minmax(0,1fr)_20rem_2.75rem]",
+        )}
+      >
         <div className="grid min-w-0 content-start gap-6">
           {/* ------------------------------------------------------- Basics */}
           <Card id={SECTION_IDS.basics} className="scroll-mt-32">
@@ -1094,7 +1129,43 @@ export function BlogPostEditor({
             </CardContent>
           </Card>
         </div>
+
+        {/* ------------------------------------------------- Live preview */}
+        {wideScreen ? (
+          <aside className="sticky top-[7.5rem] h-[calc(100vh-9rem)] self-start">
+            {previewOpen ? (
+              <BlogLivePreview
+                {...previewProps}
+                className="h-full"
+                onExpand={() => setPreviewSheet(true)}
+                onCollapse={() => dispatch(setPreviewOpen(false))}
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={() => dispatch(setPreviewOpen(true))}
+                title="Show the live preview"
+                className="flex h-full w-full flex-col items-center gap-3 rounded-2xl border bg-card py-3 text-muted-foreground shadow-sm transition-colors hover:border-primary/40 hover:text-foreground"
+              >
+                <ChevronsLeftIcon className="size-4" />
+                <EyeIcon className="size-4" />
+                <span className="text-xs font-medium [writing-mode:vertical-rl]">Live preview</span>
+              </button>
+            )}
+          </aside>
+        ) : null}
       </div>
+
+      <Sheet open={previewSheet} onOpenChange={setPreviewSheet}>
+        <SheetContent className="w-full gap-0 p-0 sm:max-w-xl" showCloseButton={false}>
+          <SheetTitle className="sr-only">Live preview</SheetTitle>
+          <BlogLivePreview
+            {...previewProps}
+            className="h-full rounded-none border-0 shadow-none"
+            onCollapse={() => setPreviewSheet(false)}
+          />
+        </SheetContent>
+      </Sheet>
 
       <Sheet
         open={comparison !== null}
