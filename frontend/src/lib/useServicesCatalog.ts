@@ -12,8 +12,9 @@ let livePromise: Promise<ServicesCatalog | null> | null = null;
 
 /**
  * Starts from the catalog baked into the static export, then swaps in the live
- * API catalog so services an admin adds show up without a redeploy. One
- * request is shared by every component on the page.
+ * API catalog so services an admin adds or edits show up without a redeploy.
+ * Components mounting together share one request; later mounts (e.g. after a
+ * client-side navigation) fetch again so the data never goes stale.
  */
 export function useServicesCatalog(
     initial: ServicesCatalog = STATIC_SERVICES_CATALOG,
@@ -22,8 +23,15 @@ export function useServicesCatalog(
 
     useEffect(() => {
         let active = true;
-        livePromise ??= fetchServicesCatalog();
-        void livePromise.then((live) => {
+        let request = livePromise;
+        if (!request) {
+            const fresh = fetchServicesCatalog();
+            request = livePromise = fresh;
+            void fresh.finally(() => {
+                if (livePromise === fresh) livePromise = null;
+            });
+        }
+        void request.then((live) => {
             if (active && live) setCatalog(live);
         });
         return () => {
