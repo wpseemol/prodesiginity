@@ -5,7 +5,9 @@
  * (GET /api/industries, falling back to data/industriesData.ts).
  *
  * `generateStaticParams` emits every slug known at build time, which is what
- * makes these routes work under `output: "export"`. Industries an admin
+ * makes these routes work under `output: "export"`. The prebuilt HTML is then
+ * refreshed in the browser from the live API (LiveIndustryDetail), so edits
+ * and hiding in the dashboard apply without a redeploy. Industries an admin
  * creates after the build are rendered client-side by app/not-found.tsx until
  * the next deploy prebuilds them.
  *
@@ -16,14 +18,13 @@
 import { notFound } from "next/navigation";
 
 import JsonLd from "@/components/home/JsonLd";
-import IndustryDetail from "@/components/industries/IndustryDetail";
+import LiveIndustryDetail from "@/components/industries/LiveIndustryDetail";
 import { INDUSTRIES_BASE_PATH, industryHref } from "@/data/industriesData";
 import { serviceHref } from "@/data/servicesData";
 import {
     findIndustry,
     getIndustries,
     industryServices,
-    relatedIndustries,
 } from "@/lib/industries-catalog";
 import { getServicesCatalog } from "@/lib/services-catalog";
 import {
@@ -120,10 +121,10 @@ export default async function IndustryPage({
     return (
         <>
             <JsonLd data={schema} />
-            <IndustryDetail
-                industry={industry}
-                services={services}
-                related={relatedIndustries(industries, industry)}
+            <LiveIndustryDetail
+                slug={industry.slug}
+                initialIndustries={industries}
+                initialCatalog={catalog}
             />
         </>
     );

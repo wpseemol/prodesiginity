@@ -5,9 +5,11 @@
  * (GET /api/team, falling back to data/teamData.ts).
  *
  * `generateStaticParams` emits every member known at build time, which is
- * what makes these routes work under `output: "export"`. Members added after
- * the build are rendered client-side by LiveStaffFallback (from the 404 page)
- * until the next deploy.
+ * what makes these routes work under `output: "export"`. The prebuilt HTML is
+ * then refreshed in the browser from the live API (LiveStaffProfile), so bio,
+ * photo and social-link edits in the dashboard apply without a redeploy.
+ * Members added after the build are rendered client-side by LiveStaffFallback
+ * (from the 404 page) until the next deploy.
  *
  * SEO: canonical URL, per-person title/description, ProfilePage + Person
  * (with sameAs socials) + BreadcrumbList JSON-LD (in StaffProfileView).
@@ -15,7 +17,7 @@
 
 import { notFound } from "next/navigation";
 
-import StaffProfileView from "@/components/team/StaffProfileView";
+import LiveStaffProfile from "@/components/team/LiveStaffProfile";
 import { siteConfig } from "@/config/site";
 import { resolveStaffStyle } from "@/data/staffStyles";
 import { getBlogData } from "@/lib/blog-api";
@@ -78,5 +80,11 @@ export default async function StaffProfilePage({
 
     if (!member) notFound();
 
-    return <StaffProfileView member={member} team={team} posts={postsByMember(posts, member)} />;
+    return (
+        <LiveStaffProfile
+            slug={staffSlug(member)}
+            initialTeam={team}
+            posts={postsByMember(posts, member)}
+        />
+    );
 }

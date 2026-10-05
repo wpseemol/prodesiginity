@@ -54,7 +54,7 @@ const PROFILE_STYLES: {
   { key: "people", label: "People / HR", hint: "Friendly banner", icon: HeartHandshakeIcon, swatch: "from-cyan-500 via-teal-500 to-emerald-400" },
 ];
 
-const AVATAR_SHAPES: { key: string; label: string; className: string; clip?: string }[] = [
+export const AVATAR_SHAPES: { key: string; label: string; className: string; clip?: string }[] = [
   { key: "auto", label: "Auto", className: "rounded-md border-2 border-dashed border-muted-foreground/40 bg-transparent" },
   { key: "circle", label: "Circle", className: "rounded-full" },
   { key: "squircle", label: "Squircle", className: "rounded-[30%]" },
@@ -109,6 +109,8 @@ export function invalidSocial(extras: ProfileExtras): string | null {
   return null;
 }
 
+const FIELD_CLASS = "grid scroll-mt-24 gap-2 rounded-lg transition-shadow";
+
 interface StaffProfileExtrasProps {
   value: ProfileExtras;
   onChange: (next: ProfileExtras) => void;
@@ -154,7 +156,7 @@ export function StaffProfileExtras({
 
   return (
     <div className="grid gap-6">
-      <div className="grid gap-2">
+      <div id={`${idPrefix}-field-style`} data-slot="field" className={FIELD_CLASS}>
         <Label>Profile page style</Label>
         <p className="text-xs text-muted-foreground">
           Each style gives the public profile its own layout and colours.
@@ -187,7 +189,7 @@ export function StaffProfileExtras({
         </div>
       </div>
 
-      <div className="grid gap-2">
+      <div id={`${idPrefix}-field-frame`} data-slot="field" className={FIELD_CLASS}>
         <Label>Avatar frame</Label>
         <div className="flex flex-wrap gap-2">
           {AVATAR_SHAPES.map((shape) => {
@@ -216,7 +218,7 @@ export function StaffProfileExtras({
         </div>
       </div>
 
-      <div className="grid gap-2">
+      <div id={`${idPrefix}-field-skills`} data-slot="field" className={FIELD_CLASS}>
         <Label htmlFor={`${idPrefix}-skills`}>Skills ({value.skills.length}/12)</Label>
         <div className="flex min-h-10 flex-wrap items-center gap-1.5 rounded-lg border border-input px-2 py-1.5 focus-within:ring-2 focus-within:ring-ring/50">
           {value.skills.map((skill) => (
@@ -251,14 +253,14 @@ export function StaffProfileExtras({
         </p>
       </div>
 
-      <div className="grid gap-2">
+      <div id={`${idPrefix}-field-socials`} data-slot="field" className={FIELD_CLASS}>
         <Label>Social accounts</Label>
         <p className="text-xs text-muted-foreground">
           Full links, e.g. https://facebook.com/yourname. Empty fields are hidden.
         </p>
         <div className={cn("grid gap-2.5", !compact && "sm:grid-cols-2")}>
           {SOCIAL_FIELDS.map((field) => (
-            <div key={field.key} className="grid gap-1">
+            <div key={field.key} data-slot="field" className="grid gap-1 rounded-lg transition-shadow">
               <label
                 htmlFor={`${idPrefix}-social-${field.key}`}
                 className="flex items-center gap-1.5 text-xs font-medium"
