@@ -21,8 +21,9 @@ import {
 
 import JsonLd from "@/components/home/JsonLd";
 import { HeaderPill } from "@/components/HeaderPill";
+import LiveServiceGroupCount from "@/components/services/LiveServiceGroupCount";
 import ServicesByGroupGrid from "@/components/services/ServicesByGroupGrid";
-import { getServicesCatalog, visibleGroups } from "@/lib/services-catalog";
+import { getServicesCatalog } from "@/lib/services-catalog";
 import { getTeamData } from "@/lib/team-api";
 import { breadcrumbSchema, buildMetadata, graph } from "@/lib/seo";
 import { siteConfig } from "@/config/site";
@@ -129,7 +130,7 @@ export default async function OurServiceAndTeamPage() {
                     </h1>
 
                     <p className="mt-6 text-base sm:text-lg text-slate-600 dark:text-slate-400 leading-relaxed max-w-2xl ">
-                        {visibleGroups(catalog).length} service groups, one studio, and
+                        <LiveServiceGroupCount initialCatalog={catalog} /> service groups, one studio, and
                         a team of {team.length} who each own a
                         discipline end to end. Here is how the work runs and who
                         you will actually be talking to.

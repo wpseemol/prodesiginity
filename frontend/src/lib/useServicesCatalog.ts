@@ -15,11 +15,14 @@ let livePromise: Promise<ServicesCatalog | null> | null = null;
  * API catalog so services an admin adds or edits show up without a redeploy.
  * Components mounting together share one request; later mounts (e.g. after a
  * client-side navigation) fetch again so the data never goes stale.
+ *
+ * `live` turns true once the API answered, so callers can tell "not in the
+ * live catalog" (hidden or deleted in the dashboard) from "still loading".
  */
-export function useServicesCatalog(
+export function useLiveServicesCatalog(
     initial: ServicesCatalog = STATIC_SERVICES_CATALOG,
-): ServicesCatalog {
-    const [catalog, setCatalog] = useState(initial);
+): { catalog: ServicesCatalog; live: boolean } {
+    const [state, setState] = useState({ catalog: initial, live: false });
 
     useEffect(() => {
         let active = true;
@@ -31,13 +34,19 @@ export function useServicesCatalog(
                 if (livePromise === fresh) livePromise = null;
             });
         }
-        void request.then((live) => {
-            if (active && live) setCatalog(live);
+        void request.then((catalog) => {
+            if (active && catalog) setState({ catalog, live: true });
         });
         return () => {
             active = false;
         };
     }, []);
 
-    return catalog;
+    return state;
+}
+
+export function useServicesCatalog(
+    initial: ServicesCatalog = STATIC_SERVICES_CATALOG,
+): ServicesCatalog {
+    return useLiveServicesCatalog(initial).catalog;
 }
