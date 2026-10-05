@@ -1,4 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
 import { Controller, useFieldArray, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -30,7 +36,13 @@ import {
 import { cn } from "@/lib/utils";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { useAppDispatch, useAppSelector } from "@/lib/store/hooks";
-import { setPreviewOpen, togglePreview } from "@/lib/store/blogEditorUiSlice";
+import {
+  PREVIEW_WIDTH,
+  resetPreviewWidth,
+  setPreviewOpen,
+  setPreviewWidth,
+  togglePreview,
+} from "@/lib/store/blogEditorUiSlice";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { IconPicker } from "@/components/ServiceIcon";
@@ -142,6 +154,39 @@ export function BlogPostEditor({
   const previewOpen = useAppSelector((s) => s.blogEditorUi.previewOpen);
   const wideScreen = useMediaQuery("(min-width: 1536px)");
   const [previewSheet, setPreviewSheet] = useState(false);
+  const previewWidth = useAppSelector((s) => s.blogEditorUi.previewWidth);
+  const [dragWidth, setDragWidth] = useState<number | null>(null);
+
+  const startResize = (e: ReactPointerEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const handle = e.currentTarget;
+    handle.setPointerCapture(e.pointerId);
+    const startX = e.clientX;
+    const startWidth = previewWidth;
+    const maxWidth = Math.min(PREVIEW_WIDTH.max, Math.round(window.innerWidth * 0.5));
+    const widthAt = (x: number) =>
+      Math.round(Math.min(maxWidth, Math.max(PREVIEW_WIDTH.min, startWidth + (startX - x))));
+    let latest = startWidth;
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+
+    const onMove = (ev: PointerEvent) => {
+      latest = widthAt(ev.clientX);
+      setDragWidth(latest);
+    };
+    const onUp = () => {
+      handle.removeEventListener("pointermove", onMove);
+      handle.removeEventListener("pointerup", onUp);
+      handle.removeEventListener("pointercancel", onUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      dispatch(setPreviewWidth(latest));
+      setDragWidth(null);
+    };
+    handle.addEventListener("pointermove", onMove);
+    handle.addEventListener("pointerup", onUp);
+    handle.addEventListener("pointercancel", onUp);
+  };
   const [sessionLost, setSessionLost] = useState(false);
   const [restorable, setRestorable] = useState<LocalDraft<BlogPostFormValues> | null>(() => {
     const draft = loadLocalDraft<BlogPostFormValues>(draftKey);
@@ -493,12 +538,16 @@ export function BlogPostEditor({
       ) : null}
 
       <div
-        className={cn(
-          "grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]",
-          previewOpen
-            ? "2xl:grid-cols-[minmax(0,1fr)_17rem_24rem] min-[1800px]:grid-cols-[minmax(0,1fr)_20rem_30rem]"
-            : "2xl:grid-cols-[minmax(0,1fr)_20rem_2.75rem]",
-        )}
+        className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]"
+        style={
+          wideScreen
+            ? {
+                gridTemplateColumns: previewOpen
+                  ? `minmax(0,1fr) 17rem ${dragWidth ?? previewWidth}px`
+                  : "minmax(0,1fr) 20rem 2.75rem",
+              }
+            : undefined
+        }
       >
         <div className="grid min-w-0 content-start gap-6">
           {/* ------------------------------------------------------- Basics */}
@@ -1133,6 +1182,34 @@ export function BlogPostEditor({
         {/* ------------------------------------------------- Live preview */}
         {wideScreen ? (
           <aside className="sticky top-[7.5rem] h-[calc(100vh-9rem)] self-start">
+            {previewOpen ? (
+              <div
+                role="separator"
+                aria-orientation="vertical"
+                aria-label="Resize the preview"
+                aria-valuemin={PREVIEW_WIDTH.min}
+                aria-valuemax={PREVIEW_WIDTH.max}
+                aria-valuenow={dragWidth ?? previewWidth}
+                tabIndex={0}
+                title="Drag to resize · double-click to reset"
+                onPointerDown={startResize}
+                onDoubleClick={() => dispatch(resetPreviewWidth())}
+                onKeyDown={(e) => {
+                  if (e.key === "ArrowLeft") dispatch(setPreviewWidth(previewWidth + 24));
+                  else if (e.key === "ArrowRight") dispatch(setPreviewWidth(previewWidth - 24));
+                  else return;
+                  e.preventDefault();
+                }}
+                className="group/resize absolute inset-y-0 -left-4 z-10 flex w-4 cursor-col-resize touch-none items-center justify-center outline-none"
+              >
+                <span
+                  className={cn(
+                    "h-14 w-1.5 rounded-full bg-border transition-colors group-hover/resize:bg-primary/60 group-focus-visible/resize:bg-primary",
+                    dragWidth !== null && "bg-primary",
+                  )}
+                />
+              </div>
+            ) : null}
             {previewOpen ? (
               <BlogLivePreview
                 {...previewProps}
