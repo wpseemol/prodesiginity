@@ -16,13 +16,12 @@
 import { notFound } from "next/navigation";
 
 import JsonLd from "@/components/home/JsonLd";
-import ServiceDetail from "@/components/services/ServiceDetail";
+import LiveServiceDetail from "@/components/services/LiveServiceDetail";
 import { serviceHref } from "@/data/servicesData";
 import {
     findGroup,
     findService,
     getServicesCatalog,
-    relatedServices,
 } from "@/lib/services-catalog";
 import {
     breadcrumbSchema,
@@ -110,11 +109,7 @@ export default async function ServiceDetailPage({
     return (
         <>
             <JsonLd data={schema} />
-            <ServiceDetail
-                service={service}
-                group={group}
-                related={relatedServices(catalog, service)}
-            />
+            <LiveServiceDetail slug={service.slug} initialCatalog={catalog} />
         </>
     );
 }
