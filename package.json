@@ -3,7 +3,7 @@
   "private": true,
   "packageManager": "pnpm@10.28.0",
   "scripts": {
-    "dev": "pnpm -r --parallel --filter \"./frontend\" --filter \"./dashboard\" run dev",
+    "dev": "pnpm -r --parallel --filter \"./frontend\" --filter \"./dashboard\" --filter \"./backend-api\" run dev",
     "dev:frontend": "pnpm --filter prodesignity dev",
     "dev:dashboard": "pnpm --filter prodesignity-dashboard dev",
     "dev:backend": "pnpm --filter prodesignity-api dev",
