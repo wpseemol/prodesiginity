@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowDownIcon,
   ArrowLeftIcon,
@@ -6,9 +6,9 @@ import {
   ArrowUpIcon,
   CheckIcon,
   CircleAlertIcon,
+  ExternalLinkIcon,
   EyeIcon,
   EyeOffIcon,
-  GlobeIcon,
   Loader2Icon,
   PlusIcon,
   SaveIcon,
@@ -17,105 +17,102 @@ import {
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
 import { IMAGE_SPECS } from "@/lib/imageSpecs";
-import { IconPicker, ServiceIcon } from "@/components/ServiceIcon";
+import { jumpToEdit } from "@/lib/jumpToEdit";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { useAppDispatch, useAppSelector } from "@/lib/store/hooks";
 import {
-  SimpleEditor,
-  htmlToList,
-  htmlToParagraphs,
-  htmlToText,
-  listToHtml,
-  paragraphsToHtml,
-  textToHtml,
-} from "@/components/editor/SimpleEditor";
+  addFaq,
+  addPoint,
+  addStat,
+  endSession,
+  movePoint,
+  removeFaq,
+  removePoint,
+  removeServices,
+  removeStat,
+  resetPreviewWidth,
+  setField,
+  setHeadline,
+  setPreviewOpen,
+  setPreviewWidth,
+  setShowErrors,
+  setSlug,
+  setStep,
+  setTitle,
+  startSession,
+  toggleService,
+  togglePreview,
+  updateFaq,
+  updatePoint,
+  updateStat,
+  INDUSTRY_PREVIEW_WIDTH,
+  MAX_INDUSTRY_STATS,
+  type IndustryDraft,
+  type IndustryPointDraft,
+  type IndustryPointList,
+  type IndustryStepId,
+} from "@/lib/store/industryEditorSlice";
+import { IconPicker, ServiceIcon } from "@/components/ServiceIcon";
+import { SimpleEditor } from "@/components/editor/SimpleEditor";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { MediaUploadField } from "@/components/homepage/MediaUploadField";
+import { CollapsedPreviewRail, ResizeHandle } from "@/components/preview/PreviewKit";
 import { Field, StepHeading } from "@/components/services/ServiceEditor";
-import {
-  COLOR_THEMES,
-  DEFAULT_THEME,
-  readMessage,
-  slugify,
-  themeKeyFor,
-} from "@/components/services/serviceTypes";
+import { COLOR_THEMES, readMessage, slugify } from "@/components/services/serviceTypes";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import {
-  INDUSTRY_PATH,
-  defaultHeadline,
-  type IndustryRow,
-  type IndustryStat,
-  type ServiceOption,
-} from "./industryTypes";
-
-type StepId = "basics" | "card" | "page" | "problems" | "services" | "search";
-
-const STEPS: { id: StepId; title: string; hint: string }[] = [
-  { id: "basics", title: "Basic info", hint: "Name and page heading" },
-  { id: "card", title: "Card look", hint: "Icon, colour, short text" },
-  { id: "page", title: "Page intro", hint: "Image, intro, audience" },
-  { id: "problems", title: "Problems & help", hint: "Pain points, solutions" },
-  { id: "services", title: "Services & FAQ", hint: "Linked services, CTA" },
-  { id: "search", title: "Google search", hint: "Optional" },
-];
-
-type PointDraft = { title: string; bodyHtml: string };
-type FaqDraft = { q: string; aHtml: string };
-
-const EMPTY_LIST = "<ul><li><p></p></li></ul>";
-const MAX_STATS = 6;
-const MAX_SERVICES = 12;
-
-const DEFAULT_STATS: IndustryStat[] = [
-  { value: "24/7", label: "Online booking & quote capture" },
-  { value: "3–5 wks", label: "Typical website launch" },
-  { value: "1 team", label: "Web, SEO, ads & branding" },
-];
-
-function toPointDrafts(points: { title: string; body: string }[] | undefined) {
-  return (points ?? []).map((p) => ({
-    title: p.title,
-    bodyHtml: textToHtml(p.body),
-  }));
-}
+  MAX_SERVICES,
+  STEPS,
+  STEP_FIELDS,
+  buildPayload,
+  challengeItemId,
+  faqItemId,
+  industrySpotTarget,
+  makeDraft,
+  solutionItemId,
+  statItemId,
+  validateIndustry,
+  type IndustryEditTarget,
+  type IndustrySpot,
+} from "./industryDraft";
+import { IndustryLivePreview } from "./IndustryLivePreview";
+import { INDUSTRY_PATH, defaultHeadline, industryPageUrl, type IndustryRow, type ServiceOption } from "./industryTypes";
 
 function PointListEditor({
+  list,
   items,
-  onChange,
+  itemId,
   titlePlaceholder,
   bodyPlaceholder,
   addLabel,
 }: {
-  items: PointDraft[];
-  onChange: (items: PointDraft[]) => void;
+  list: IndustryPointList;
+  items: IndustryPointDraft[];
+  itemId: (index: number) => string;
   titlePlaceholder: string;
   bodyPlaceholder: string;
   addLabel: string;
 }) {
-  const update = (index: number, patch: Partial<PointDraft>) => {
-    const next = [...items];
-    next[index] = { ...next[index], ...patch };
-    onChange(next);
-  };
-  const move = (index: number, by: number) => {
-    const target = index + by;
-    if (target < 0 || target >= items.length) return;
-    const next = [...items];
-    [next[index], next[target]] = [next[target], next[index]];
-    onChange(next);
-  };
+  const dispatch = useAppDispatch();
 
   return (
     <div className="grid gap-3">
       {items.map((item, index) => (
-        <div key={index} className="grid gap-2 rounded-xl border bg-muted/10 p-3">
+        <div
+          key={index}
+          id={itemId(index)}
+          className="grid scroll-mt-24 gap-2 rounded-xl border bg-muted/10 p-3 transition-shadow"
+        >
           <div className="flex items-center gap-2">
             <Badge variant="secondary">{index + 1}</Badge>
             <Input
               value={item.title}
               placeholder={titlePlaceholder}
-              onChange={(e) => update(index, { title: e.target.value })}
+              onChange={(e) => dispatch(updatePoint({ list, index, title: e.target.value }))}
             />
             <Button
               type="button"
@@ -123,7 +120,7 @@ function PointListEditor({
               variant="ghost"
               aria-label="Move up"
               disabled={index === 0}
-              onClick={() => move(index, -1)}
+              onClick={() => dispatch(movePoint({ list, index, by: -1 }))}
             >
               <ArrowUpIcon />
             </Button>
@@ -133,7 +130,7 @@ function PointListEditor({
               variant="ghost"
               aria-label="Move down"
               disabled={index === items.length - 1}
-              onClick={() => move(index, 1)}
+              onClick={() => dispatch(movePoint({ list, index, by: 1 }))}
             >
               <ArrowDownIcon />
             </Button>
@@ -143,32 +140,28 @@ function PointListEditor({
               variant="ghost"
               aria-label={`Remove item ${index + 1}`}
               disabled={items.length <= 1}
-              onClick={() => onChange(items.filter((_, i) => i !== index))}
+              onClick={() => dispatch(removePoint({ list, index }))}
             >
               <Trash2Icon />
             </Button>
           </div>
           <SimpleEditor
             value={item.bodyHtml}
-            onChange={(html) => update(index, { bodyHtml: html })}
+            onChange={(html) => dispatch(updatePoint({ list, index, bodyHtml: html }))}
             placeholder={bodyPlaceholder}
             minHeight="64px"
           />
         </div>
       ))}
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        className="w-fit"
-        onClick={() => onChange([...items, { title: "", bodyHtml: "<p></p>" }])}
-      >
+      <Button type="button" variant="outline" size="sm" className="w-fit" onClick={() => dispatch(addPoint(list))}>
         <PlusIcon />
         {addLabel}
       </Button>
     </div>
   );
 }
+
+let sessionCounter = 0;
 
 export function IndustryEditor({
   initial,
@@ -182,219 +175,97 @@ export function IndustryEditor({
   onSaved: () => void;
 }) {
   const isEdit = initial !== null;
+  const dispatch = useAppDispatch();
 
-  const [step, setStep] = useState<StepId>("basics");
-  const [showErrors, setShowErrors] = useState(false);
+  /* ---------------------------------------------------- Redux-held draft */
+  const [session] = useState(() => `industry-editor-${++sessionCounter}`);
+  const [initialDraft] = useState(() => makeDraft(initial));
+
+  useLayoutEffect(() => {
+    dispatch(startSession({ session, draft: initialDraft }));
+    return () => {
+      dispatch(endSession(session));
+    };
+  }, [dispatch, session, initialDraft]);
+
+  const stored = useAppSelector((s) => s.industryEditor);
+  const ours = stored.session === session && stored.draft !== null;
+  const draft = ours && stored.draft ? stored.draft : initialDraft;
+  const step: IndustryStepId = ours ? stored.step : "basics";
+  const showErrors = ours && stored.showErrors;
+  const ui = stored.ui;
+
+  const set = <K extends keyof IndustryDraft>(key: K, value: IndustryDraft[K]) =>
+    dispatch(setField({ key, value } as Parameters<typeof setField>[0]));
+
   const [saving, setSaving] = useState(false);
   const [confirmLeave, setConfirmLeave] = useState(false);
 
-  const [title, setTitle] = useState(initial?.title ?? "");
-  const [headline, setHeadline] = useState(initial?.headline ?? "");
-  const [headlineTouched, setHeadlineTouched] = useState(isEdit);
-  const [slug, setSlug] = useState(initial?.slug ?? "");
-  const [slugTouched, setSlugTouched] = useState(isEdit);
-  const [tagline, setTagline] = useState(initial?.tagline ?? "");
-  const [published, setPublished] = useState(initial?.published ?? true);
+  /* ---------------------------------------------------- Live preview UI */
+  const wideScreen = useMediaQuery("(min-width: 1280px)");
+  const [previewSheet, setPreviewSheet] = useState(false);
+  const [dragWidth, setDragWidth] = useState<number | null>(null);
+  const previewDraft = useDeferredValue(draft);
 
-  const [icon, setIcon] = useState(initial?.icon ?? "Building2");
-  const [themeKey, setThemeKey] = useState(
-    initial ? themeKeyFor(initial.accent) : DEFAULT_THEME,
-  );
-  const [summaryHtml, setSummaryHtml] = useState(
-    initial ? textToHtml(initial.summary) : "<p></p>",
-  );
-
-  const [heroImage, setHeroImage] = useState(initial?.heroImage ?? "");
-  const [heroImageAlt, setHeroImageAlt] = useState(initial?.heroImageAlt ?? "");
-  const [introHtml, setIntroHtml] = useState(
-    initial ? paragraphsToHtml(initial.intro) : "<p></p>",
-  );
-  const [audienceHtml, setAudienceHtml] = useState(
-    initial?.audience.length ? listToHtml(initial.audience) : EMPTY_LIST,
-  );
-  const [stats, setStats] = useState<IndustryStat[]>(
-    initial ? initial.stats : DEFAULT_STATS,
-  );
-
-  const [challenges, setChallenges] = useState<PointDraft[]>(
-    initial?.challenges.length
-      ? toPointDrafts(initial.challenges)
-      : [{ title: "", bodyHtml: "<p></p>" }],
-  );
-  const [solutions, setSolutions] = useState<PointDraft[]>(
-    initial?.solutions.length
-      ? toPointDrafts(initial.solutions)
-      : [{ title: "", bodyHtml: "<p></p>" }],
-  );
-
-  const [services, setServices] = useState<string[]>(initial?.services ?? []);
-  const [faqs, setFaqs] = useState<FaqDraft[]>(
-    (initial?.faqs ?? []).map((f) => ({ q: f.q, aHtml: textToHtml(f.a) })),
-  );
-  const [ctaTitle, setCtaTitle] = useState(initial?.ctaTitle ?? "");
-  const [ctaBody, setCtaBody] = useState(initial?.ctaBody ?? "");
-
-  const [seoTitle, setSeoTitle] = useState(initial?.seo?.title ?? "");
-  const [seoDescription, setSeoDescription] = useState(
-    initial?.seo?.description ?? "",
-  );
-  const [seoKeywords, setSeoKeywords] = useState(
-    (initial?.seo?.keywords ?? []).join(", "),
-  );
-
-  const summary = htmlToText(summaryHtml);
-  const theme = COLOR_THEMES[themeKey] ?? COLOR_THEMES[DEFAULT_THEME];
-  const effectiveSlug = slug || slugify(title);
-  const effectiveHeadline = headline.trim() || defaultHeadline(title);
-
-  const payload = useMemo(() => {
-    const points = (list: PointDraft[]) =>
-      list
-        .map((p) => ({ title: p.title.trim(), body: htmlToText(p.bodyHtml) }))
-        .filter((p) => p.title || p.body);
-    return {
-      title: title.trim(),
-      headline: effectiveHeadline,
-      slug: effectiveSlug,
-      icon,
-      tagline: tagline.trim(),
-      summary,
-      heroImage: heroImage.trim() || null,
-      heroImageAlt: heroImageAlt.trim() || null,
-      intro: htmlToParagraphs(introHtml),
-      audience: htmlToList(audienceHtml),
-      challenges: points(challenges),
-      solutions: points(solutions),
-      services,
-      stats: stats
-        .map((s) => ({ value: s.value.trim(), label: s.label.trim() }))
-        .filter((s) => s.value || s.label),
-      faqs: faqs
-        .map((f) => ({ q: f.q.trim(), a: htmlToText(f.aHtml) }))
-        .filter((f) => f.q || f.a),
-      ctaTitle: ctaTitle.trim() || null,
-      ctaBody: ctaBody.trim() || null,
-      accent: theme.website,
-      seo: {
-        title: seoTitle.trim() || `${title.trim()} Website Design & Marketing`,
-        description: seoDescription.trim() || summary.slice(0, 320),
-        keywords: seoKeywords
-          .split(",")
-          .map((k) => k.trim())
-          .filter(Boolean),
-      },
-      published,
-    };
-  }, [
-    title,
-    effectiveHeadline,
-    effectiveSlug,
-    icon,
-    tagline,
-    summary,
-    heroImage,
-    heroImageAlt,
-    introHtml,
-    audienceHtml,
-    challenges,
-    solutions,
-    services,
-    stats,
-    faqs,
-    ctaTitle,
-    ctaBody,
-    theme,
-    seoTitle,
-    seoDescription,
-    seoKeywords,
-    published,
-  ]);
-
-  const [initialSnapshot] = useState(() => JSON.stringify(payload));
+  /* ---------------------------------------------------- Derived values */
+  const payload = useMemo(() => buildPayload(draft), [draft]);
+  const [initialSnapshot] = useState(() => JSON.stringify(buildPayload(initialDraft)));
   const dirty = JSON.stringify(payload) !== initialSnapshot;
+  const errors = useMemo(() => validateIndustry(payload), [payload]);
+  const missingServices = draft.services.filter((s) => !serviceOptions.some((o) => o.slug === s));
 
-  const errors = useMemo(() => {
-    const e: Record<string, string> = {};
-    if (payload.title.length < 2) e.title = "Give the industry a name.";
-    if (payload.headline.length < 2) e.headline = "Add a page heading.";
-    if (payload.tagline.length < 2) e.tagline = "Add a one-line tagline.";
-    if (payload.summary.length < 2) e.summary = "Write a short description.";
-    if (!payload.intro.length) e.intro = "Write at least one paragraph.";
-    if (payload.stats.some((s) => !s.value || !s.label))
-      e.stats = "Every highlight needs both a number and a label (or remove it).";
-    if (!payload.challenges.length) e.challenges = "Add at least one problem.";
-    else if (payload.challenges.some((p) => !p.title || !p.body))
-      e.challenges = "Every problem needs a title and a description.";
-    if (!payload.solutions.length) e.solutions = "Add at least one way you help.";
-    else if (payload.solutions.some((p) => !p.title || !p.body))
-      e.solutions = "Every point needs a title and a description.";
-    if (payload.faqs.some((f) => !f.q || !f.a))
-      e.faqs = "Every question needs an answer (or remove it).";
-    if (
-      !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(payload.slug) ||
-      payload.slug.length < 2
-    )
-      e.slug = "Use lowercase letters, numbers and dashes only.";
-    return e;
-  }, [payload]);
-
-  const stepFields: Record<StepId, string[]> = {
-    basics: ["title", "headline", "tagline"],
-    card: ["summary"],
-    page: ["intro", "stats"],
-    problems: ["challenges", "solutions"],
-    services: ["faqs"],
-    search: ["slug"],
-  };
-  const stepHasErrors = (id: StepId) =>
-    stepFields[id].some((field) => errors[field]);
+  const stepHasErrors = (id: IndustryStepId) => STEP_FIELDS[id].some((field) => errors[field]);
   const err = (field: string) => (showErrors ? errors[field] : undefined);
 
   const stepIndex = STEPS.findIndex((s) => s.id === step);
   const goTo = (index: number) => {
     const next = STEPS[index];
     if (next) {
-      setStep(next.id);
+      dispatch(setStep(next.id));
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
 
-  const toggleService = (serviceSlug: string) => {
-    setServices((list) => {
-      if (list.includes(serviceSlug))
-        return list.filter((s) => s !== serviceSlug);
-      if (list.length >= MAX_SERVICES) {
-        toast.info(`You can link up to ${MAX_SERVICES} services.`);
-        return list;
-      }
-      return [...list, serviceSlug];
-    });
+  /** Opens the step that holds the field, then scrolls to and flashes it. */
+  const jumpTo = (target: IndustryEditTarget) => {
+    // A closing sheet hands focus back to its trigger, so wait for it.
+    const delay = previewSheet ? 220 : target.step === step ? 0 : 80;
+    setPreviewSheet(false);
+    if (target.step !== step) dispatch(setStep(target.step));
+    if (delay) window.setTimeout(() => jumpToEdit(target), delay);
+    else jumpToEdit(target);
+  };
+  const editSpot = (spot: IndustrySpot) => jumpTo(industrySpotTarget(spot));
+
+  const pickService = (slug: string) => {
+    if (!draft.services.includes(slug) && draft.services.length >= MAX_SERVICES) {
+      toast.info(`You can link up to ${MAX_SERVICES} services.`);
+      return;
+    }
+    dispatch(toggleService(slug));
   };
 
   const handleSave = async () => {
-    setShowErrors(true);
+    dispatch(setShowErrors(true));
     const firstBroken = STEPS.find((s) => stepHasErrors(s.id));
     if (firstBroken) {
-      setStep(firstBroken.id);
+      dispatch(setStep(firstBroken.id));
       toast.error(`Please finish “${firstBroken.title}” before saving.`);
       return;
     }
 
     setSaving(true);
     try {
-      const res = await apiFetch(
-        isEdit ? `/admin/industries/${initial.id}` : "/admin/industries",
-        {
-          method: isEdit ? "PUT" : "POST",
-          body: JSON.stringify(payload),
-        },
-      );
+      const res = await apiFetch(isEdit ? `/admin/industries/${initial.id}` : "/admin/industries", {
+        method: isEdit ? "PUT" : "POST",
+        body: JSON.stringify(payload),
+      });
       if (!res.ok) {
         toast.error(await readMessage(res, "Could not save the industry."));
         return;
       }
       toast.success(
-        published
+        draft.published
           ? `“${payload.title}” is saved and visible on the website.`
           : `“${payload.title}” is saved as hidden.`,
       );
@@ -406,7 +277,37 @@ export function IndustryEditor({
     }
   };
 
+  const completedSteps = STEPS.filter((s) => !stepHasErrors(s.id)).length;
+  const canSave = !saving && (!isEdit || dirty);
+
+  const saveRef = useRef<() => void>(() => {});
+  useEffect(() => {
+    saveRef.current = () => {
+      if (canSave) void handleSave();
+    };
+  });
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        saveRef.current();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  useEffect(() => {
+    if (!dirty || saving) return;
+    const warn = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty, saving]);
+
   const leave = () => (dirty ? setConfirmLeave(true) : onCancel());
+
+  const previewWidth = dragWidth ?? ui.previewWidth;
 
   return (
     <div className="grid gap-5">
@@ -418,25 +319,74 @@ export function IndustryEditor({
             All industries
           </Button>
           <div className="hidden h-6 w-px bg-border sm:block" />
-          <div>
-            <p className="text-sm font-semibold">
-              {isEdit ? `Editing “${initial.title}”` : "Add a new industry"}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Step {stepIndex + 1} of {STEPS.length} ·{" "}
-              {dirty ? "Unsaved changes" : "No changes yet"}
-            </p>
+          <div className="grid gap-1">
+            <p className="text-sm font-semibold">{isEdit ? `Editing “${initial.title}”` : "Add a new industry"}</p>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span className="h-1.5 w-20 overflow-hidden rounded-full bg-muted">
+                <span
+                  className="block h-full rounded-full bg-emerald-500 transition-all"
+                  style={{ width: `${(completedSteps / STEPS.length) * 100}%` }}
+                />
+              </span>
+              <span>
+                {completedSteps} of {STEPS.length} sections complete ·{" "}
+                {dirty ? (
+                  <span className="font-medium text-amber-600 dark:text-amber-400">Unsaved changes</span>
+                ) : (
+                  "No changes yet"
+                )}
+              </span>
+            </div>
           </div>
         </div>
-        <Button type="button" onClick={() => void handleSave()} disabled={saving}>
-          {saving ? <Loader2Icon className="animate-spin" /> : <SaveIcon />}
-          {isEdit ? "Save changes" : "Save industry"}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant={wideScreen && ui.previewOpen ? "secondary" : "outline"}
+            size="sm"
+            aria-pressed={wideScreen ? ui.previewOpen : undefined}
+            title={
+              wideScreen
+                ? ui.previewOpen
+                  ? "Hide the live preview"
+                  : "Show the live preview"
+                : "Open the live preview"
+            }
+            onClick={() => (wideScreen ? dispatch(togglePreview()) : setPreviewSheet(true))}
+          >
+            <EyeIcon />
+            <span className="hidden sm:inline">Preview</span>
+          </Button>
+          {isEdit && initial.published ? (
+            <a
+              href={industryPageUrl(initial.slug)}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
+            >
+              <ExternalLinkIcon className="size-4" />
+              <span className="hidden sm:inline">View on website</span>
+            </a>
+          ) : null}
+          <Button type="button" onClick={() => void handleSave()} disabled={!canSave} title="Save (Ctrl+S)">
+            {saving ? <Loader2Icon className="animate-spin" /> : <SaveIcon />}
+            {isEdit ? (dirty ? "Save changes" : "Saved") : "Save industry"}
+          </Button>
+        </div>
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-[220px_minmax(0,1fr)_300px]">
+      <div
+        className="grid gap-5 lg:grid-cols-[200px_minmax(0,1fr)]"
+        style={
+          wideScreen
+            ? {
+                gridTemplateColumns: `200px minmax(0,1fr) ${ui.previewOpen ? `${previewWidth}px` : "2.75rem"}`,
+              }
+            : undefined
+        }
+      >
         {/* Steps */}
-        <nav className="flex gap-2 overflow-x-auto lg:flex-col lg:overflow-visible">
+        <nav className="flex gap-2 self-start overflow-x-auto lg:sticky lg:top-[4.5rem] lg:flex-col lg:overflow-visible">
           {STEPS.map((s, index) => {
             const active = s.id === step;
             const broken = showErrors && stepHasErrors(s.id);
@@ -448,9 +398,7 @@ export function IndustryEditor({
                 onClick={() => goTo(index)}
                 className={cn(
                   "flex min-w-44 items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors lg:min-w-0",
-                  active
-                    ? "border-primary bg-primary/10"
-                    : "border-transparent hover:bg-muted",
+                  active ? "border-primary bg-primary/10" : "border-transparent hover:bg-muted",
                 )}
               >
                 <span
@@ -475,9 +423,7 @@ export function IndustryEditor({
                 </span>
                 <span>
                   <span className="block text-sm font-medium">{s.title}</span>
-                  <span className="block text-xs text-muted-foreground">
-                    {s.hint}
-                  </span>
+                  <span className="block text-xs text-muted-foreground">{s.hint}</span>
                 </span>
               </button>
             );
@@ -493,6 +439,7 @@ export function IndustryEditor({
                 text="The industry name appears in the website's Industries menu; the heading is the big title on its page."
               />
               <Field
+                id="ind-field-title"
                 label="Industry name"
                 htmlFor="indTitle"
                 required
@@ -501,17 +448,21 @@ export function IndustryEditor({
               >
                 <Input
                   id="indTitle"
-                  value={title}
+                  value={draft.title}
                   placeholder="e.g. HVAC"
-                  onChange={(e) => {
-                    setTitle(e.target.value);
-                    if (!slugTouched) setSlug(slugify(e.target.value));
-                    if (!headlineTouched)
-                      setHeadline(defaultHeadline(e.target.value));
-                  }}
+                  onChange={(e) =>
+                    dispatch(
+                      setTitle({
+                        title: e.target.value,
+                        slug: slugify(e.target.value),
+                        headline: defaultHeadline(e.target.value),
+                      }),
+                    )
+                  }
                 />
               </Field>
               <Field
+                id="ind-field-headline"
                 label="Page heading"
                 htmlFor="indHeadline"
                 required
@@ -520,15 +471,13 @@ export function IndustryEditor({
               >
                 <Input
                   id="indHeadline"
-                  value={headline}
+                  value={draft.headline}
                   placeholder="e.g. Websites & Marketing for HVAC Companies"
-                  onChange={(e) => {
-                    setHeadlineTouched(true);
-                    setHeadline(e.target.value);
-                  }}
+                  onChange={(e) => dispatch(setHeadline(e.target.value))}
                 />
               </Field>
               <Field
+                id="ind-field-tagline"
                 label="Tagline"
                 htmlFor="indTagline"
                 required
@@ -537,23 +486,24 @@ export function IndustryEditor({
               >
                 <Input
                   id="indTagline"
-                  value={tagline}
+                  value={draft.tagline}
                   placeholder="e.g. Websites, local SEO and ads that keep your technicians booked."
-                  onChange={(e) => setTagline(e.target.value)}
+                  onChange={(e) => set("tagline", e.target.value)}
                 />
               </Field>
-              <label className="flex cursor-pointer items-center justify-between gap-4 rounded-xl border bg-muted/20 p-4">
+              <label
+                id="ind-field-visibility"
+                className="flex cursor-pointer items-center justify-between gap-4 rounded-xl border bg-muted/20 p-4 transition-shadow"
+              >
                 <span className="flex items-start gap-3">
-                  {published ? (
+                  {draft.published ? (
                     <EyeIcon className="mt-0.5 size-5 text-emerald-600" />
                   ) : (
                     <EyeOffIcon className="mt-0.5 size-5 text-muted-foreground" />
                   )}
                   <span>
                     <span className="block text-sm font-medium">
-                      {published
-                        ? "Visible on the website"
-                        : "Hidden from the website"}
+                      {draft.published ? "Visible on the website" : "Hidden from the website"}
                     </span>
                     <span className="block text-xs text-muted-foreground">
                       Hidden industries disappear from the menu and their page.
@@ -563,8 +513,8 @@ export function IndustryEditor({
                 <input
                   type="checkbox"
                   className="size-5 accent-primary"
-                  checked={published}
-                  onChange={(e) => setPublished(e.target.checked)}
+                  checked={draft.published}
+                  onChange={(e) => set("published", e.target.checked)}
                 />
               </label>
             </>
@@ -577,38 +527,37 @@ export function IndustryEditor({
                 text="The card on the Industries page and the icon in the menu. Watch the preview on the right."
               />
               <Field
+                id="ind-field-summary"
                 label="Short description"
                 required
                 help="One or two sentences. Also used as the Google description if you leave that blank."
                 error={err("summary")}
               >
                 <SimpleEditor
-                  value={summaryHtml}
-                  onChange={setSummaryHtml}
+                  value={draft.summaryHtml}
+                  onChange={(html) => set("summaryHtml", html)}
                   placeholder="e.g. Web design, local SEO and Google Ads for HVAC contractors…"
                   minHeight="88px"
                 />
                 <p
                   className={cn(
                     "text-right text-xs",
-                    summary.length > 200
-                      ? "text-amber-600"
-                      : "text-muted-foreground",
+                    payload.summary.length > 200 ? "text-amber-600" : "text-muted-foreground",
                   )}
                 >
-                  {summary.length} characters
+                  {payload.summary.length} characters
                 </p>
               </Field>
-              <Field label="Colour" required help="Accent colour for the icon and page.">
+              <Field id="ind-field-color" label="Colour" required help="Accent colour for the icon and page.">
                 <div className="flex flex-wrap gap-2">
                   {Object.entries(COLOR_THEMES).map(([key, t]) => (
                     <button
                       key={key}
                       type="button"
-                      onClick={() => setThemeKey(key)}
+                      onClick={() => set("themeKey", key)}
                       className={cn(
                         "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors",
-                        themeKey === key
+                        draft.themeKey === key
                           ? "border-primary bg-primary/10 text-primary"
                           : "border-border text-muted-foreground hover:border-primary/40",
                       )}
@@ -619,12 +568,8 @@ export function IndustryEditor({
                   ))}
                 </div>
               </Field>
-              <Field
-                label="Icon"
-                required
-                help="Look in “Industries & Lifestyle” for trade icons."
-              >
-                <IconPicker value={icon} onChange={setIcon} />
+              <Field id="ind-field-icon" label="Icon" required help="Look in “Industries & Lifestyle” for trade icons.">
+                <IconPicker value={draft.icon} onChange={(icon) => set("icon", icon)} />
               </Field>
             </>
           )}
@@ -635,91 +580,91 @@ export function IndustryEditor({
                 title="Page intro"
                 text="The top of the industry page: picture, introduction, who it's for and a few highlights."
               />
-              <MediaUploadField
-                label="Hero image (optional)"
-                value={heroImage}
-                onChange={setHeroImage}
-                spec={IMAGE_SPECS.industryHero}
-              />
-              {heroImage ? (
-                <Field
-                  label="Image description"
-                  htmlFor="indHeroAlt"
-                  help="Describe the photo for Google and screen readers. Example: HVAC technician servicing an outdoor AC unit"
-                >
-                  <Input
-                    id="indHeroAlt"
-                    value={heroImageAlt}
-                    maxLength={255}
-                    onChange={(e) => setHeroImageAlt(e.target.value)}
-                  />
-                </Field>
-              ) : (
-                <p className="-mt-2 text-xs text-muted-foreground">
-                  Without an image the page shows a designed panel with the
-                  industry icon.
-                </p>
-              )}
+              <div id="ind-field-hero" data-slot="field" className="grid scroll-mt-24 gap-3 rounded-lg transition-shadow">
+                <MediaUploadField
+                  label="Hero image (optional)"
+                  value={draft.heroImage}
+                  onChange={(url) => set("heroImage", url)}
+                  spec={IMAGE_SPECS.industryHero}
+                />
+                {draft.heroImage ? (
+                  <Field
+                    label="Image description"
+                    htmlFor="indHeroAlt"
+                    help="Describe the photo for Google and screen readers. Example: HVAC technician servicing an outdoor AC unit"
+                  >
+                    <Input
+                      id="indHeroAlt"
+                      value={draft.heroImageAlt}
+                      maxLength={255}
+                      onChange={(e) => set("heroImageAlt", e.target.value)}
+                    />
+                  </Field>
+                ) : (
+                  <p className="-mt-1 text-xs text-muted-foreground">
+                    Without an image the page shows a designed panel with the industry icon.
+                  </p>
+                )}
+              </div>
               <Field
+                id="ind-field-intro"
                 label="Introduction"
                 required
                 help="Explain how customers in this industry buy, and how you help. Press Enter for a new paragraph."
                 error={err("intro")}
               >
                 <SimpleEditor
-                  value={introHtml}
-                  onChange={setIntroHtml}
+                  value={draft.introHtml}
+                  onChange={(html) => set("introHtml", html)}
                   placeholder="Describe the industry and your approach in a few short paragraphs…"
                   minHeight="140px"
                 />
               </Field>
               <Field
+                id="ind-field-audience"
                 label="Who you work with"
                 help="Types of businesses in this industry, one per line. Example: Residential HVAC contractors"
               >
                 <SimpleEditor
-                  value={audienceHtml}
-                  onChange={setAudienceHtml}
+                  value={draft.audienceHtml}
+                  onChange={(html) => set("audienceHtml", html)}
                   placeholder="e.g. Commercial mechanical contractors"
                   listMode
                   minHeight="110px"
                 />
               </Field>
               <Field
+                id="ind-field-stats"
                 label="Highlights"
-                help={`Up to ${MAX_STATS} short facts shown under the heading. Use real numbers where you can.`}
+                help={`Up to ${MAX_INDUSTRY_STATS} short facts shown under the heading. Use real numbers where you can.`}
                 error={err("stats")}
               >
                 <div className="grid gap-2">
-                  {stats.map((stat, index) => (
-                    <div key={index} className="flex items-center gap-2">
+                  {draft.stats.map((stat, index) => (
+                    <div
+                      key={index}
+                      id={statItemId(index)}
+                      className="flex scroll-mt-24 items-center gap-2 rounded-lg transition-shadow"
+                    >
                       <Input
                         value={stat.value}
                         className="w-32"
                         placeholder="e.g. 120+"
-                        onChange={(e) => {
-                          const next = [...stats];
-                          next[index] = { ...stat, value: e.target.value };
-                          setStats(next);
-                        }}
+                        aria-label={`Highlight ${index + 1} number`}
+                        onChange={(e) => dispatch(updateStat({ index, value: e.target.value }))}
                       />
                       <Input
                         value={stat.label}
                         placeholder="e.g. HVAC sites launched"
-                        onChange={(e) => {
-                          const next = [...stats];
-                          next[index] = { ...stat, label: e.target.value };
-                          setStats(next);
-                        }}
+                        aria-label={`Highlight ${index + 1} label`}
+                        onChange={(e) => dispatch(updateStat({ index, label: e.target.value }))}
                       />
                       <Button
                         type="button"
                         size="icon"
                         variant="ghost"
                         aria-label={`Remove highlight ${index + 1}`}
-                        onClick={() =>
-                          setStats(stats.filter((_, i) => i !== index))
-                        }
+                        onClick={() => dispatch(removeStat(index))}
                       >
                         <Trash2Icon />
                       </Button>
@@ -730,10 +675,8 @@ export function IndustryEditor({
                     variant="outline"
                     size="sm"
                     className="w-fit"
-                    disabled={stats.length >= MAX_STATS}
-                    onClick={() =>
-                      setStats([...stats, { value: "", label: "" }])
-                    }
+                    disabled={draft.stats.length >= MAX_INDUSTRY_STATS}
+                    onClick={() => dispatch(addStat())}
                   >
                     <PlusIcon />
                     Add a highlight
@@ -750,28 +693,32 @@ export function IndustryEditor({
                 text="Speak to the visitor's real pain points, then show how you solve them. This is what convinces them to call."
               />
               <Field
+                id="ind-field-challenges"
                 label="Problems they face"
                 required
                 help="Shown as “What holds these businesses back online”. Three works best."
                 error={err("challenges")}
               >
                 <PointListEditor
-                  items={challenges}
-                  onChange={setChallenges}
+                  list="challenges"
+                  items={draft.challenges}
+                  itemId={challengeItemId}
                   titlePlaceholder="e.g. Feast-or-famine seasons"
                   bodyPlaceholder="Describe the problem in a sentence or two…"
                   addLabel="Add a problem"
                 />
               </Field>
               <Field
+                id="ind-field-solutions"
                 label="How you help"
                 required
                 help="Shown as numbered points. Four to six works best."
                 error={err("solutions")}
               >
                 <PointListEditor
-                  items={solutions}
-                  onChange={setSolutions}
+                  list="solutions"
+                  items={draft.solutions}
+                  itemId={solutionItemId}
                   titlePlaceholder="e.g. Local SEO & Google Maps"
                   bodyPlaceholder="What you do and the result for the client…"
                   addLabel="Add a point"
@@ -787,6 +734,7 @@ export function IndustryEditor({
                 text="Link the services that matter for this industry, answer common questions and set the closing message."
               />
               <Field
+                id="ind-field-services"
                 label="Services for this industry"
                 help={`Tap to add or remove (up to ${MAX_SERVICES}). They show in the order you pick them.`}
               >
@@ -797,13 +745,14 @@ export function IndustryEditor({
                 ) : (
                   <div className="flex flex-wrap gap-2">
                     {serviceOptions.map((option) => {
-                      const position = services.indexOf(option.slug);
+                      const position = draft.services.indexOf(option.slug);
                       const selected = position !== -1;
                       return (
                         <button
                           key={option.slug}
                           type="button"
-                          onClick={() => toggleService(option.slug)}
+                          aria-pressed={selected}
+                          onClick={() => pickService(option.slug)}
                           className={cn(
                             "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
                             selected
@@ -826,63 +775,59 @@ export function IndustryEditor({
                     })}
                   </div>
                 )}
-                {services.some(
-                  (s) => !serviceOptions.some((o) => o.slug === s),
-                ) ? (
-                  <p className="text-xs text-amber-600">
-                    Some linked services no longer exist and will be skipped:{" "}
-                    {services
-                      .filter((s) => !serviceOptions.some((o) => o.slug === s))
-                      .join(", ")}
+                {missingServices.length ? (
+                  <p className="flex flex-wrap items-center gap-x-2 text-xs text-amber-600">
+                    Some linked services no longer exist and will be skipped: {missingServices.join(", ")}
+                    <Button
+                      type="button"
+                      variant="link"
+                      size="sm"
+                      className="h-auto p-0 text-xs"
+                      onClick={() => dispatch(removeServices(missingServices))}
+                    >
+                      Remove them
+                    </Button>
                   </p>
                 ) : null}
               </Field>
 
               <Field
+                id="ind-field-faqs"
                 label="Questions & answers"
                 help="Questions business owners in this industry ask before hiring you."
                 error={err("faqs")}
               >
                 <div className="grid gap-3">
-                  {faqs.length === 0 ? (
+                  {draft.faqs.length === 0 ? (
                     <p className="rounded-xl border border-dashed p-4 text-center text-sm text-muted-foreground">
                       No questions yet.
                     </p>
                   ) : null}
-                  {faqs.map((faq, index) => (
+                  {draft.faqs.map((faq, index) => (
                     <div
                       key={index}
-                      className="grid gap-2 rounded-xl border bg-muted/10 p-3"
+                      id={faqItemId(index)}
+                      className="grid scroll-mt-24 gap-2 rounded-xl border bg-muted/10 p-3 transition-shadow"
                     >
                       <div className="flex items-center gap-2">
                         <Input
                           value={faq.q}
                           placeholder="Question, e.g. Do you run Local Services Ads?"
-                          onChange={(e) => {
-                            const next = [...faqs];
-                            next[index] = { ...faq, q: e.target.value };
-                            setFaqs(next);
-                          }}
+                          onChange={(e) => dispatch(updateFaq({ index, q: e.target.value }))}
                         />
                         <Button
                           type="button"
                           size="icon"
                           variant="ghost"
                           aria-label={`Remove question ${index + 1}`}
-                          onClick={() =>
-                            setFaqs(faqs.filter((_, i) => i !== index))
-                          }
+                          onClick={() => dispatch(removeFaq(index))}
                         >
                           <Trash2Icon />
                         </Button>
                       </div>
                       <SimpleEditor
                         value={faq.aHtml}
-                        onChange={(html) => {
-                          const next = [...faqs];
-                          next[index] = { ...faq, aHtml: html };
-                          setFaqs(next);
-                        }}
+                        onChange={(html) => dispatch(updateFaq({ index, aHtml: html }))}
                         placeholder="Answer…"
                         minHeight="64px"
                       />
@@ -893,9 +838,7 @@ export function IndustryEditor({
                     variant="outline"
                     size="sm"
                     className="w-fit"
-                    onClick={() =>
-                      setFaqs([...faqs, { q: "", aHtml: "<p></p>" }])
-                    }
+                    onClick={() => dispatch(addFaq())}
                   >
                     <PlusIcon />
                     Add a question
@@ -903,27 +846,31 @@ export function IndustryEditor({
                 </div>
               </Field>
 
-              <div className="grid gap-4 rounded-xl border bg-muted/10 p-4">
+              <div
+                id="ind-field-cta"
+                data-slot="field"
+                className="grid scroll-mt-24 gap-4 rounded-xl border bg-muted/10 p-4 transition-shadow"
+              >
                 <p className="text-sm font-medium">Closing call to action</p>
                 <Field
                   label="Title"
                   htmlFor="indCtaTitle"
-                  help={`Leave blank for “Ready to grow your ${title.trim().toLowerCase() || "…"} business?”`}
+                  help={`Leave blank for “Ready to grow your ${draft.title.trim().toLowerCase() || "…"} business?”`}
                 >
                   <Input
                     id="indCtaTitle"
-                    value={ctaTitle}
+                    value={draft.ctaTitle}
                     maxLength={200}
-                    onChange={(e) => setCtaTitle(e.target.value)}
+                    onChange={(e) => set("ctaTitle", e.target.value)}
                   />
                 </Field>
                 <Field label="Text" htmlFor="indCtaBody">
                   <textarea
                     id="indCtaBody"
                     rows={3}
-                    value={ctaBody}
+                    value={draft.ctaBody}
                     maxLength={600}
-                    onChange={(e) => setCtaBody(e.target.value)}
+                    onChange={(e) => set("ctaBody", e.target.value)}
                     className="w-full rounded-lg border bg-transparent px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                   />
                 </Field>
@@ -942,7 +889,7 @@ export function IndustryEditor({
                   Google preview
                 </p>
                 <p className="truncate text-xs text-emerald-700 dark:text-emerald-400">
-                  {INDUSTRY_PATH}/{effectiveSlug || "your-industry"}
+                  {INDUSTRY_PATH}/{payload.slug || "your-industry"}
                 </p>
                 <p className="truncate text-base text-blue-700 dark:text-blue-400">
                   {payload.seo.title || "Industry name"}
@@ -952,17 +899,15 @@ export function IndustryEditor({
                 </p>
               </div>
               <Field
+                id="ind-field-seoTitle"
                 label="Search title"
                 htmlFor="indSeoTitle"
-                help={`Leave blank to use “${title.trim() || "Industry"} Website Design & Marketing”. Best under 60 characters.`}
+                help={`Leave blank to use “${draft.title.trim() || "Industry"} Website Design & Marketing”. Best under 60 characters.`}
               >
-                <Input
-                  id="indSeoTitle"
-                  value={seoTitle}
-                  onChange={(e) => setSeoTitle(e.target.value)}
-                />
+                <Input id="indSeoTitle" value={draft.seoTitle} onChange={(e) => set("seoTitle", e.target.value)} />
               </Field>
               <Field
+                id="ind-field-seoDescription"
                 label="Search description"
                 htmlFor="indSeoDesc"
                 help="Leave blank to use the short description. Best under 160 characters."
@@ -970,25 +915,27 @@ export function IndustryEditor({
                 <textarea
                   id="indSeoDesc"
                   rows={3}
-                  value={seoDescription}
+                  value={draft.seoDescription}
                   maxLength={320}
-                  onChange={(e) => setSeoDescription(e.target.value)}
+                  onChange={(e) => set("seoDescription", e.target.value)}
                   className="w-full rounded-lg border bg-transparent px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                 />
               </Field>
               <Field
+                id="ind-field-keywords"
                 label="Keywords"
                 htmlFor="indSeoKw"
                 help="What business owners would search for, separated by commas."
               >
                 <Input
                   id="indSeoKw"
-                  value={seoKeywords}
+                  value={draft.seoKeywords}
                   placeholder="e.g. hvac marketing, hvac website design"
-                  onChange={(e) => setSeoKeywords(e.target.value)}
+                  onChange={(e) => set("seoKeywords", e.target.value)}
                 />
               </Field>
               <Field
+                id="ind-field-slug"
                 label="Page address"
                 htmlFor="indSlug"
                 required
@@ -1001,11 +948,8 @@ export function IndustryEditor({
                   </span>
                   <input
                     id="indSlug"
-                    value={slug}
-                    onChange={(e) => {
-                      setSlugTouched(true);
-                      setSlug(slugify(e.target.value));
-                    }}
+                    value={draft.slug}
+                    onChange={(e) => dispatch(setSlug(slugify(e.target.value)))}
                     className="min-w-0 flex-1 bg-transparent px-3 py-2 text-sm outline-none"
                   />
                 </div>
@@ -1015,12 +959,7 @@ export function IndustryEditor({
 
           {/* Step navigation */}
           <div className="flex items-center justify-between gap-2 border-t pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              disabled={stepIndex === 0}
-              onClick={() => goTo(stepIndex - 1)}
-            >
+            <Button type="button" variant="outline" disabled={stepIndex === 0} onClick={() => goTo(stepIndex - 1)}>
               <ArrowLeftIcon />
               Back
             </Button>
@@ -1030,68 +969,58 @@ export function IndustryEditor({
                 <ArrowRightIcon />
               </Button>
             ) : (
-              <Button
-                type="button"
-                onClick={() => void handleSave()}
-                disabled={saving}
-              >
+              <Button type="button" onClick={() => void handleSave()} disabled={!canSave}>
                 {saving ? <Loader2Icon className="animate-spin" /> : <SaveIcon />}
-                {isEdit ? "Save changes" : "Save industry"}
+                {isEdit ? (dirty ? "Save changes" : "Saved") : "Save industry"}
               </Button>
             )}
           </div>
         </div>
 
         {/* Live preview */}
-        <aside className="grid content-start gap-3 lg:sticky lg:top-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Preview on the website
-          </p>
-          <div className="flex flex-col rounded-3xl border bg-card p-6 shadow-sm">
-            <div
-              className={cn(
-                "mb-4 flex size-12 items-center justify-center rounded-2xl",
-                theme.preview,
-              )}
-            >
-              <ServiceIcon name={icon} className="size-6" />
-            </div>
-            <p className="mb-2 text-lg font-black leading-tight">
-              {title || "Industry name"}
-            </p>
-            <p className="line-clamp-3 text-sm text-muted-foreground">
-              {summary || "Your short description will appear here."}
-            </p>
-            <div className="mt-5 border-t pt-4 text-[11px] font-bold uppercase tracking-widest text-primary">
-              {title || "Industry"} marketing
-            </div>
-          </div>
-          <div className="grid gap-2 rounded-2xl border bg-muted/20 p-4 text-xs">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-muted-foreground">Status</span>
-              {published ? (
-                <Badge>On website</Badge>
-              ) : (
-                <Badge variant="secondary">Hidden</Badge>
-              )}
-            </div>
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-muted-foreground">Linked services</span>
-              <span className="font-medium">{services.length}</span>
-            </div>
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-muted-foreground">Questions</span>
-              <span className="font-medium">{payload.faqs.length}</span>
-            </div>
-            <div className="flex items-start gap-2 pt-1 text-muted-foreground">
-              <GlobeIcon className="mt-0.5 size-3.5 shrink-0" />
-              <span className="break-all">
-                {INDUSTRY_PATH}/{effectiveSlug || "…"}
-              </span>
-            </div>
-          </div>
-        </aside>
+        {wideScreen ? (
+          <aside className="sticky top-[4.5rem] h-[calc(100vh-5.5rem)] self-start">
+            {ui.previewOpen ? (
+              <>
+                <ResizeHandle
+                  width={previewWidth}
+                  min={INDUSTRY_PREVIEW_WIDTH.min}
+                  max={INDUSTRY_PREVIEW_WIDTH.max}
+                  dragging={dragWidth !== null}
+                  onDrag={setDragWidth}
+                  onCommit={(width) => dispatch(setPreviewWidth(width))}
+                  onReset={() => dispatch(resetPreviewWidth())}
+                />
+                <IndustryLivePreview
+                  draft={previewDraft}
+                  serviceOptions={serviceOptions}
+                  onEdit={editSpot}
+                  onJump={jumpTo}
+                  onExpand={() => setPreviewSheet(true)}
+                  onCollapse={() => dispatch(setPreviewOpen(false))}
+                  className="h-full"
+                />
+              </>
+            ) : (
+              <CollapsedPreviewRail onOpen={() => dispatch(setPreviewOpen(true))} />
+            )}
+          </aside>
+        ) : null}
       </div>
+
+      <Sheet open={previewSheet} onOpenChange={setPreviewSheet}>
+        <SheetContent className="w-full gap-0 p-0 sm:max-w-xl" showCloseButton={false}>
+          <SheetTitle className="sr-only">Live preview</SheetTitle>
+          <IndustryLivePreview
+            draft={previewDraft}
+            serviceOptions={serviceOptions}
+            onEdit={editSpot}
+            onJump={jumpTo}
+            onCollapse={() => setPreviewSheet(false)}
+            className="h-full rounded-none border-0 shadow-none"
+          />
+        </SheetContent>
+      </Sheet>
 
       <ConfirmDialog
         open={confirmLeave}
