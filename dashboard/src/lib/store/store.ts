@@ -3,6 +3,7 @@ import homepageReducer from "@/lib/store/homepageSlice";
 import brandsEditorReducer from "@/lib/store/brandsEditorSlice";
 import blogEditorUiReducer, { BLOG_EDITOR_UI_STORAGE_KEY } from "@/lib/store/blogEditorUiSlice";
 import serviceEditorReducer, { SERVICE_EDITOR_UI_STORAGE_KEY } from "@/lib/store/serviceEditorSlice";
+import industryEditorReducer, { INDUSTRY_EDITOR_UI_STORAGE_KEY } from "@/lib/store/industryEditorSlice";
 
 export const store = configureStore({
   reducer: {
@@ -10,6 +11,7 @@ export const store = configureStore({
     brandsEditor: brandsEditorReducer,
     blogEditorUi: blogEditorUiReducer,
     serviceEditor: serviceEditorReducer,
+    industryEditor: industryEditorReducer,
   },
 });
 
@@ -30,6 +32,7 @@ function persist<T>(key: string, select: (state: RootState) => T) {
 
 persist(BLOG_EDITOR_UI_STORAGE_KEY, (s) => s.blogEditorUi);
 persist(SERVICE_EDITOR_UI_STORAGE_KEY, (s) => s.serviceEditor.ui);
+persist(INDUSTRY_EDITOR_UI_STORAGE_KEY, (s) => s.industryEditor.ui);
 
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;
