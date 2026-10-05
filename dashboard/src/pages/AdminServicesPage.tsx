@@ -1,15 +1,24 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import {
+  ArrowDownIcon,
+  ArrowUpIcon,
   BriefcaseIcon,
+  ClockIcon,
+  CopyIcon,
   ExternalLinkIcon,
   EyeIcon,
   EyeOffIcon,
   FolderIcon,
+  LinkIcon,
   Loader2Icon,
+  MoreHorizontalIcon,
   PencilIcon,
   PlusIcon,
   SearchIcon,
+  TagIcon,
   Trash2Icon,
+  XIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
@@ -20,6 +29,7 @@ import { CategoryManager } from "@/components/services/CategoryManager";
 import { ServiceEditor } from "@/components/services/ServiceEditor";
 import {
   COLOR_THEMES,
+  SERVICE_PATH,
   readMessage,
   servicePageUrl,
   themeKeyFor,
@@ -36,6 +46,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -44,26 +61,48 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
-
-type View =
-  | { kind: "list" }
-  | { kind: "edit"; service: ServiceRow | null };
 
 const ALL = "all";
 
+type StatusFilter = "all" | "visible" | "hidden";
+
+type EditorTarget =
+  | { mode: "create"; groupId?: number }
+  | { mode: "edit"; service: ServiceRow }
+  | { mode: "copy"; service: ServiceRow };
+
+const byOrder = (a: ServiceRow, b: ServiceRow) =>
+  a.sortOrder - b.sortOrder || a.id - b.id;
+
+function isTypingTarget(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) return false;
+  return (
+    target.isContentEditable ||
+    ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName)
+  );
+}
+
 function ServicesManager() {
-  const [tab, setTab] = useState<"services" | "categories">("services");
-  const [view, setView] = useState<View>({ kind: "list" });
+  const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
+  const navigate = useNavigate();
+
   const [groups, setGroups] = useState<GroupRow[]>([]);
   const [services, setServices] = useState<ServiceRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState(ALL);
-  const [togglingId, setTogglingId] = useState<number | null>(null);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [busyId, setBusyId] = useState<number | null>(null);
   const [pendingDelete, setPendingDelete] = useState<ServiceRow | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [highlightId, setHighlightId] = useState<number | null>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  const tab = searchParams.get("tab") === "categories" ? "categories" : "services";
 
   const load = async () => {
     setError(null);
@@ -87,54 +126,176 @@ function ServicesManager() {
     void load();
   }, []);
 
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "/" && !isTypingTarget(e.target)) {
+        e.preventDefault();
+        searchRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  useEffect(() => {
+    if (highlightId === null) return;
+    const el = document.getElementById(`service-row-${highlightId}`);
+    el?.scrollIntoView({ behavior: "smooth", block: "center" });
+    const timer = window.setTimeout(() => setHighlightId(null), 2500);
+    return () => window.clearTimeout(timer);
+  }, [highlightId]);
+
+  const editor = useMemo<EditorTarget | null>(() => {
+    const find = (param: string | null) =>
+      param ? services.find((s) => String(s.id) === param) : undefined;
+    const editing = find(searchParams.get("edit"));
+    if (editing) return { mode: "edit", service: editing };
+    const copying = find(searchParams.get("copy"));
+    if (copying) return { mode: "copy", service: copying };
+    if (searchParams.get("new") !== null) {
+      const groupId = Number(searchParams.get("category"));
+      return {
+        mode: "create",
+        groupId: Number.isFinite(groupId) && groupId > 0 ? groupId : undefined,
+      };
+    }
+    return null;
+  }, [searchParams, services]);
+
+  const openEditor = (params: Record<string, string>) =>
+    setSearchParams(params, { state: { fromList: true } });
+
+  const closeEditor = () => {
+    if ((location.state as { fromList?: boolean } | null)?.fromList) {
+      navigate(-1);
+    } else {
+      setSearchParams({}, { replace: true });
+    }
+  };
+
+  const setTab = (next: "services" | "categories") =>
+    setSearchParams(next === "categories" ? { tab: next } : {}, {
+      replace: true,
+    });
+
   const serviceCount = (groupId: number) =>
     services.filter((s) => s.groupId === groupId).length;
 
+  const query = search.trim().toLowerCase();
+  const filtersActive =
+    query !== "" || categoryFilter !== ALL || statusFilter !== "all";
+
   const sections = useMemo(() => {
-    const query = search.trim().toLowerCase();
+    const matches = (s: ServiceRow) =>
+      (statusFilter === "all" ||
+        (statusFilter === "visible" ? s.published : !s.published)) &&
+      (!query ||
+        [s.title, s.summary, s.tagline, s.slug].some((field) =>
+          field.toLowerCase().includes(query),
+        ));
+
     return groups
       .filter((g) => categoryFilter === ALL || String(g.id) === categoryFilter)
       .map((group) => ({
         group,
-        items: services.filter(
-          (s) =>
-            s.groupId === group.id &&
-            (!query ||
-              s.title.toLowerCase().includes(query) ||
-              s.summary.toLowerCase().includes(query)),
-        ),
+        all: services.filter((s) => s.groupId === group.id).sort(byOrder),
       }))
-      .filter((section) => section.items.length > 0 || !query);
-  }, [groups, services, search, categoryFilter]);
+      .map((section) => ({ ...section, items: section.all.filter(matches) }))
+      .filter((section) => section.items.length > 0 || !filtersActive);
+  }, [groups, services, query, categoryFilter, statusFilter, filtersActive]);
 
   const visibleCount = services.filter((s) => s.published).length;
+  const hiddenCount = services.length - visibleCount;
   const filteredCount = sections.reduce((n, s) => n + s.items.length, 0);
 
-  const togglePublished = async (row: ServiceRow) => {
-    setTogglingId(row.id);
+  const clearFilters = () => {
+    setSearch("");
+    setCategoryFilter(ALL);
+    setStatusFilter("all");
+  };
+
+  const setPublished = async (row: ServiceRow, published: boolean) => {
+    setBusyId(row.id);
     try {
       const res = await apiFetch(`/admin/services/${row.id}`, {
         method: "PUT",
-        body: JSON.stringify({ published: !row.published }),
+        body: JSON.stringify({ published }),
       });
       if (!res.ok) {
         toast.error(await readMessage(res, "Could not update the service."));
-        return;
+        return false;
       }
       setServices((list) =>
-        list.map((s) =>
-          s.id === row.id ? { ...s, published: !row.published } : s,
-        ),
+        list.map((s) => (s.id === row.id ? { ...s, published } : s)),
       );
-      toast.success(
-        row.published
-          ? `“${row.title}” is now hidden from the website.`
-          : `“${row.title}” is now visible on the website.`,
-      );
+      return true;
     } catch {
       toast.error("Could not reach the server.");
+      return false;
     } finally {
-      setTogglingId(null);
+      setBusyId(null);
+    }
+  };
+
+  const togglePublished = async (row: ServiceRow) => {
+    const next = !row.published;
+    if (!(await setPublished(row, next))) return;
+    toast.success(
+      next
+        ? `“${row.title}” is now visible on the website.`
+        : `“${row.title}” is now hidden from the website.`,
+      {
+        action: {
+          label: "Undo",
+          onClick: () => void setPublished(row, row.published),
+        },
+      },
+    );
+  };
+
+  const move = async (row: ServiceRow, direction: -1 | 1) => {
+    const siblings = services
+      .filter((s) => s.groupId === row.groupId)
+      .sort(byOrder);
+    const from = siblings.findIndex((s) => s.id === row.id);
+    const to = from + direction;
+    if (from < 0 || to < 0 || to >= siblings.length) return;
+
+    const reordered = [...siblings];
+    [reordered[from], reordered[to]] = [reordered[to], reordered[from]];
+
+    const slots = siblings.map((s) => s.sortOrder);
+    const distinct = new Set(slots).size === slots.length;
+    const base = Math.min(...slots);
+    const nextOrder = new Map(
+      reordered.map((s, index) => [s.id, distinct ? slots[index] : base + index]),
+    );
+    const changed = reordered.filter((s) => nextOrder.get(s.id) !== s.sortOrder);
+
+    setServices((list) =>
+      list.map((s) =>
+        nextOrder.has(s.id) ? { ...s, sortOrder: nextOrder.get(s.id)! } : s,
+      ),
+    );
+    setBusyId(row.id);
+    try {
+      const results = await Promise.all(
+        changed.map((s) =>
+          apiFetch(`/admin/services/${s.id}`, {
+            method: "PUT",
+            body: JSON.stringify({ sortOrder: nextOrder.get(s.id) }),
+          }),
+        ),
+      );
+      if (results.some((res) => !res.ok)) {
+        toast.error("Could not save the new order.");
+        await load();
+      }
+    } catch {
+      toast.error("Could not reach the server.");
+      await load();
+    } finally {
+      setBusyId(null);
     }
   };
 
@@ -156,6 +317,15 @@ function ServicesManager() {
     } finally {
       setDeleting(false);
     }
+  };
+
+  const startCreate = (groupId?: number) => {
+    if (groups.length === 0) {
+      toast.info("Add a category first — every service belongs to one.");
+      setTab("categories");
+      return;
+    }
+    openEditor(groupId ? { new: "1", category: String(groupId) } : { new: "1" });
   };
 
   if (loading) {
@@ -189,58 +359,111 @@ function ServicesManager() {
     );
   }
 
-  if (view.kind === "edit") {
+  if (editor) {
+    const source = editor.mode === "create" ? null : editor.service;
     return (
       <ServiceEditor
-        key={view.service?.id ?? "new"}
+        key={`${editor.mode}-${source?.id ?? "new"}`}
         groups={groups}
-        initial={view.service}
-        onCancel={() => setView({ kind: "list" })}
-        onSaved={() => {
-          setView({ kind: "list" });
-          void load();
+        initial={source}
+        duplicate={editor.mode === "copy"}
+        defaultGroupId={editor.mode === "create" ? editor.groupId : undefined}
+        onCancel={closeEditor}
+        onSaved={(savedId) => {
+          closeEditor();
+          void load().then(() => {
+            if (savedId) setHighlightId(savedId);
+          });
         }}
-        onManageCategories={() => {
-          setView({ kind: "list" });
-          setTab("categories");
-        }}
+        onManageCategories={() => setSearchParams({ tab: "categories" })}
       />
     );
   }
 
-  const startCreate = () => {
-    if (groups.length === 0) {
-      toast.info("Add a category first — every service belongs to one.");
-      setTab("categories");
-      return;
-    }
-    setView({ kind: "edit", service: null });
-  };
+  const stats: {
+    id: StatusFilter | "categories";
+    label: string;
+    value: number;
+    icon: typeof BriefcaseIcon;
+    tone: string;
+  }[] = [
+    { id: "all", label: "All services", value: services.length, icon: BriefcaseIcon, tone: "bg-primary/10 text-primary" },
+    { id: "visible", label: "On website", value: visibleCount, icon: EyeIcon, tone: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" },
+    { id: "hidden", label: "Hidden", value: hiddenCount, icon: EyeOffIcon, tone: "bg-muted text-muted-foreground" },
+    { id: "categories", label: "Categories", value: groups.length, icon: FolderIcon, tone: "bg-violet-500/10 text-violet-600 dark:text-violet-400" },
+  ];
 
   return (
     <div className="grid gap-6">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {stats.map((stat) => {
+          const active =
+            stat.id === "categories"
+              ? tab === "categories"
+              : tab === "services" && statusFilter === stat.id;
+          return (
+            <button
+              key={stat.id}
+              type="button"
+              onClick={() => {
+                if (stat.id === "categories") {
+                  setTab("categories");
+                } else {
+                  setTab("services");
+                  setStatusFilter(stat.id);
+                }
+              }}
+              className={cn(
+                "flex items-center gap-3 rounded-2xl border bg-card p-4 text-left shadow-sm transition-colors hover:border-primary/40",
+                active && "border-primary ring-2 ring-primary/15",
+              )}
+            >
+              <span
+                className={cn(
+                  "flex size-10 shrink-0 items-center justify-center rounded-xl",
+                  stat.tone,
+                )}
+              >
+                <stat.icon className="size-5" />
+              </span>
+              <span>
+                <span className="block text-2xl font-semibold leading-none">
+                  {stat.value}
+                </span>
+                <span className="mt-1 block text-xs text-muted-foreground">
+                  {stat.label}
+                </span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
       <Card className="overflow-hidden border-border/70 bg-card/90">
         <CardHeader className="gap-4 border-b border-border/60 bg-muted/20 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-1">
             <CardTitle className="flex items-center gap-2">
               <span className="flex size-8 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                <BriefcaseIcon className="size-4" />
+                {tab === "categories" ? (
+                  <FolderIcon className="size-4" />
+                ) : (
+                  <BriefcaseIcon className="size-4" />
+                )}
               </span>
-              Services
+              {tab === "categories" ? "Categories" : "Services"}
             </CardTitle>
             <CardDescription>
-              Everything here appears on the website's Services page, the
-              Services menu and the homepage cards.
+              {tab === "categories"
+                ? "Categories are the headings that group services in the website menu."
+                : "Everything here appears on the website's Services page, the Services menu and the homepage cards. Changes show up on the website right after you save."}
             </CardDescription>
-            <p className="text-xs text-muted-foreground">
-              {visibleCount} of {services.length} services visible ·{" "}
-              {groups.length} categories
-            </p>
           </div>
-          <Button type="button" onClick={startCreate}>
-            <PlusIcon />
-            Add service
-          </Button>
+          {tab === "services" ? (
+            <Button type="button" onClick={() => startCreate()}>
+              <PlusIcon />
+              Add service
+            </Button>
+          ) : null}
         </CardHeader>
 
         <CardContent className="grid gap-5 pt-5">
@@ -286,7 +509,7 @@ function ServicesManager() {
                   Add your first service and it will show up on the website.
                 </p>
               </div>
-              <Button type="button" onClick={startCreate}>
+              <Button type="button" onClick={() => startCreate()}>
                 <PlusIcon />
                 Add your first service
               </Button>
@@ -297,17 +520,38 @@ function ServicesManager() {
                 <div className="relative flex-1">
                   <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
+                    ref={searchRef}
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Search services…"
-                    className="pl-9"
+                    onKeyDown={(e) => {
+                      if (e.key === "Escape") setSearch("");
+                    }}
+                    placeholder="Search by name, tagline or page address…"
+                    className="pl-9 pr-16"
                   />
+                  {search ? (
+                    <button
+                      type="button"
+                      aria-label="Clear search"
+                      onClick={() => {
+                        setSearch("");
+                        searchRef.current?.focus();
+                      }}
+                      className="absolute right-2 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+                    >
+                      <XIcon className="size-3.5" />
+                    </button>
+                  ) : (
+                    <kbd className="pointer-events-none absolute right-2 top-1/2 hidden -translate-y-1/2 rounded border bg-muted px-1.5 text-[10px] font-medium text-muted-foreground sm:block">
+                      /
+                    </kbd>
+                  )}
                 </div>
                 <Select
                   value={categoryFilter}
                   onValueChange={(value) => setCategoryFilter(value ?? ALL)}
                 >
-                  <SelectTrigger className="w-full sm:w-56">
+                  <SelectTrigger className="w-full sm:w-52">
                     <SelectValue>
                       {categoryFilter === ALL
                         ? "All categories"
@@ -324,15 +568,62 @@ function ServicesManager() {
                     ))}
                   </SelectContent>
                 </Select>
+                <Select
+                  value={statusFilter}
+                  onValueChange={(value) =>
+                    setStatusFilter((value as StatusFilter | null) ?? "all")
+                  }
+                >
+                  <SelectTrigger className="w-full sm:w-40">
+                    <SelectValue>
+                      {statusFilter === "all"
+                        ? "Any status"
+                        : statusFilter === "visible"
+                          ? "On website"
+                          : "Hidden"}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Any status</SelectItem>
+                    <SelectItem value="visible">On website</SelectItem>
+                    <SelectItem value="hidden">Hidden</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
-              {search.trim() && filteredCount === 0 ? (
-                <p className="rounded-2xl border border-dashed p-8 text-center text-sm text-muted-foreground">
-                  No services match your search.
-                </p>
+              {filtersActive ? (
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-muted/40 px-3 py-2 text-sm">
+                  <span className="text-muted-foreground">
+                    Showing {filteredCount} of {services.length} services
+                  </span>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={clearFilters}
+                  >
+                    <XIcon />
+                    Clear filters
+                  </Button>
+                </div>
               ) : null}
 
-              {sections.map(({ group, items }) => (
+              {filtersActive && filteredCount === 0 ? (
+                <div className="grid justify-items-center gap-2 rounded-2xl border border-dashed p-8 text-center text-sm text-muted-foreground">
+                  <SearchIcon className="size-5" />
+                  No services match these filters.
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={clearFilters}
+                  >
+                    Show all services
+                  </Button>
+                </div>
+              ) : null}
+
+              {sections.map(({ group, all, items }) => (
                 <section key={group.id} className="grid gap-2">
                   <div className="flex items-center gap-2">
                     <ServiceIcon
@@ -341,32 +632,74 @@ function ServicesManager() {
                     />
                     <h3 className="text-sm font-semibold">{group.title}</h3>
                     <span className="text-xs text-muted-foreground">
-                      {items.length}
+                      {filtersActive && items.length !== all.length
+                        ? `${items.length} of ${all.length}`
+                        : all.length}
                     </span>
+                    <Button
+                      type="button"
+                      size="xs"
+                      variant="ghost"
+                      className="ml-auto text-muted-foreground"
+                      onClick={() => startCreate(group.id)}
+                    >
+                      <PlusIcon />
+                      Add service here
+                    </Button>
                   </div>
 
                   {items.length === 0 ? (
-                    <p className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
-                      No services in this category yet.
-                    </p>
+                    <button
+                      type="button"
+                      onClick={() => startCreate(group.id)}
+                      className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
+                    >
+                      No services in this category yet. Click to add one.
+                    </button>
                   ) : (
                     <ul className="divide-y overflow-hidden rounded-2xl border bg-card">
                       {items.map((row) => {
-                        const theme =
-                          COLOR_THEMES[themeKeyFor(row.accent)];
+                        const theme = COLOR_THEMES[themeKeyFor(row.accent)];
+                        const position = all.findIndex((s) => s.id === row.id);
+                        const busy = busyId === row.id;
                         return (
                           <li
                             key={row.id}
+                            id={`service-row-${row.id}`}
                             className={cn(
-                              "flex flex-col gap-3 p-4 sm:flex-row sm:items-center",
+                              "flex flex-col gap-3 p-4 transition-colors sm:flex-row sm:items-center",
                               !row.published && "bg-muted/30",
+                              highlightId === row.id && "bg-primary/10",
                             )}
                           >
+                            {!filtersActive ? (
+                              <div className="hidden flex-col sm:flex">
+                                <Button
+                                  type="button"
+                                  size="icon-xs"
+                                  variant="ghost"
+                                  aria-label={`Move ${row.title} up`}
+                                  disabled={busy || position <= 0}
+                                  onClick={() => void move(row, -1)}
+                                >
+                                  <ArrowUpIcon />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="icon-xs"
+                                  variant="ghost"
+                                  aria-label={`Move ${row.title} down`}
+                                  disabled={busy || position >= all.length - 1}
+                                  onClick={() => void move(row, 1)}
+                                >
+                                  <ArrowDownIcon />
+                                </Button>
+                              </div>
+                            ) : null}
+
                             <button
                               type="button"
-                              onClick={() =>
-                                setView({ kind: "edit", service: row })
-                              }
+                              onClick={() => openEditor({ edit: String(row.id) })}
                               className="flex min-w-0 flex-1 items-center gap-3 text-left"
                             >
                               <span
@@ -378,70 +711,142 @@ function ServicesManager() {
                               >
                                 <ServiceIcon name={row.icon} className="size-5" />
                               </span>
-                              <span className="min-w-0">
+                              <span className="grid min-w-0 gap-0.5">
                                 <span className="flex flex-wrap items-center gap-2">
                                   <span className="font-medium">{row.title}</span>
-                                  {row.published ? (
-                                    <Badge>On website</Badge>
-                                  ) : (
+                                  {row.published ? null : (
                                     <Badge variant="secondary">Hidden</Badge>
                                   )}
                                 </span>
                                 <span className="line-clamp-1 text-xs text-muted-foreground">
-                                  {row.summary}
+                                  {row.tagline || row.summary}
+                                </span>
+                                <span className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
+                                  {row.timeline ? (
+                                    <span className="inline-flex items-center gap-1">
+                                      <ClockIcon className="size-3" />
+                                      {row.timeline}
+                                    </span>
+                                  ) : null}
+                                  {row.startingAt ? (
+                                    <span className="inline-flex items-center gap-1">
+                                      <TagIcon className="size-3" />
+                                      {row.startingAt}
+                                    </span>
+                                  ) : null}
+                                  <span className="inline-flex min-w-0 items-center gap-1">
+                                    <LinkIcon className="size-3 shrink-0" />
+                                    <span className="truncate">
+                                      {SERVICE_PATH}/{row.slug}
+                                    </span>
+                                  </span>
                                 </span>
                               </span>
                             </button>
 
-                            <div className="flex flex-wrap items-center gap-1 sm:justify-end">
+                            <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                              <div
+                                className="flex items-center gap-2 rounded-lg border px-2.5 py-1 text-xs font-medium"
+                                title={
+                                  row.published
+                                    ? "Visible on the website — switch off to hide it"
+                                    : "Hidden — switch on to show it on the website"
+                                }
+                              >
+                                {busy ? (
+                                  <Loader2Icon className="size-3.5 animate-spin" />
+                                ) : null}
+                                <span
+                                  className={cn(
+                                    "w-16",
+                                    row.published
+                                      ? "text-emerald-600 dark:text-emerald-400"
+                                      : "text-muted-foreground",
+                                  )}
+                                >
+                                  {row.published ? "On website" : "Hidden"}
+                                </span>
+                                <Switch
+                                  size="sm"
+                                  checked={row.published}
+                                  disabled={busy}
+                                  aria-label={`Show ${row.title} on the website`}
+                                  onCheckedChange={() => void togglePublished(row)}
+                                />
+                              </div>
                               <Button
                                 type="button"
                                 size="sm"
                                 variant="outline"
-                                onClick={() =>
-                                  setView({ kind: "edit", service: row })
-                                }
+                                onClick={() => openEditor({ edit: String(row.id) })}
                               >
                                 <PencilIcon />
                                 Edit
                               </Button>
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="ghost"
-                                disabled={togglingId === row.id}
-                                onClick={() => void togglePublished(row)}
-                              >
-                                {togglingId === row.id ? (
-                                  <Loader2Icon className="animate-spin" />
-                                ) : row.published ? (
-                                  <EyeOffIcon />
-                                ) : (
-                                  <EyeIcon />
-                                )}
-                                {row.published ? "Hide" : "Show"}
-                              </Button>
-                              {row.published ? (
-                                <a
-                                  href={servicePageUrl(row.slug)}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="inline-flex h-7 items-center gap-1 rounded-md px-2.5 text-[0.8rem] font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
+                              <DropdownMenu>
+                                <DropdownMenuTrigger
+                                  render={
+                                    <Button
+                                      type="button"
+                                      size="icon-sm"
+                                      variant="ghost"
+                                      aria-label={`More actions for ${row.title}`}
+                                    />
+                                  }
                                 >
-                                  <ExternalLinkIcon className="size-3.5" />
-                                  View
-                                </a>
-                              ) : null}
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="ghost"
-                                aria-label={`Delete ${row.title}`}
-                                className="text-destructive hover:text-destructive"
-                                onClick={() => setPendingDelete(row)}
-                              >
-                                <Trash2Icon />
-                              </Button>
+                                  <MoreHorizontalIcon />
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-52">
+                                  {row.published ? (
+                                    <DropdownMenuItem
+                                      onClick={() =>
+                                        window.open(
+                                          servicePageUrl(row.slug),
+                                          "_blank",
+                                          "noopener,noreferrer",
+                                        )
+                                      }
+                                    >
+                                      <ExternalLinkIcon />
+                                      View on website
+                                    </DropdownMenuItem>
+                                  ) : null}
+                                  <DropdownMenuItem
+                                    onClick={() => openEditor({ copy: String(row.id) })}
+                                  >
+                                    <CopyIcon />
+                                    Duplicate
+                                  </DropdownMenuItem>
+                                  {!filtersActive ? (
+                                    <>
+                                      <DropdownMenuItem
+                                        className="sm:hidden"
+                                        disabled={position <= 0}
+                                        onClick={() => void move(row, -1)}
+                                      >
+                                        <ArrowUpIcon />
+                                        Move up
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        className="sm:hidden"
+                                        disabled={position >= all.length - 1}
+                                        onClick={() => void move(row, 1)}
+                                      >
+                                        <ArrowDownIcon />
+                                        Move down
+                                      </DropdownMenuItem>
+                                    </>
+                                  ) : null}
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    variant="destructive"
+                                    onClick={() => setPendingDelete(row)}
+                                  >
+                                    <Trash2Icon />
+                                    Delete…
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                             </div>
                           </li>
                         );
@@ -450,6 +855,13 @@ function ServicesManager() {
                   )}
                 </section>
               ))}
+
+              {!filtersActive && services.length > 1 ? (
+                <p className="text-center text-xs text-muted-foreground">
+                  Use the arrows to change the order services appear in on the
+                  website.
+                </p>
+              ) : null}
             </>
           )}
         </CardContent>
@@ -461,7 +873,7 @@ function ServicesManager() {
           if (!open && !deleting) setPendingDelete(null);
         }}
         title={`Delete “${pendingDelete?.title ?? "service"}”?`}
-        description="Its page will be removed from the website. If you only want to take it down for now, use Hide instead."
+        description="Its page will be removed from the website. This cannot be undone. If you only want to take it down for now, switch it to Hidden instead."
         confirmLabel="Delete service"
         destructive
         loading={deleting}

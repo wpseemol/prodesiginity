@@ -1,9 +1,10 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   ArrowLeftIcon,
   ArrowRightIcon,
   CheckIcon,
   CircleAlertIcon,
+  ExternalLinkIcon,
   EyeIcon,
   EyeOffIcon,
   GlobeIcon,
@@ -42,6 +43,7 @@ import {
   DEFAULT_THEME,
   SERVICE_PATH,
   readMessage,
+  servicePageUrl,
   slugify,
   themeKeyFor,
   type GroupRow,
@@ -115,31 +117,44 @@ export function StepHeading({ title, text }: { title: string; text: string }) {
 export function ServiceEditor({
   groups,
   initial,
+  duplicate = false,
+  defaultGroupId,
   onCancel,
   onSaved,
   onManageCategories,
 }: {
   groups: GroupRow[];
+  /** Service to edit, or the source when `duplicate` is set. */
   initial: ServiceRow | null;
+  duplicate?: boolean;
+  defaultGroupId?: number;
   onCancel: () => void;
-  onSaved: () => void;
+  onSaved: (savedId?: number) => void;
   onManageCategories: () => void;
 }) {
-  const isEdit = initial !== null;
+  const editing = duplicate ? null : initial;
+  const isEdit = editing !== null;
+  const copyTitle = initial && duplicate ? `${initial.title} (copy)` : null;
 
   const [step, setStep] = useState<StepId>("basics");
   const [showErrors, setShowErrors] = useState(false);
   const [saving, setSaving] = useState(false);
   const [confirmLeave, setConfirmLeave] = useState(false);
 
-  const [title, setTitle] = useState(initial?.title ?? "");
-  const [slug, setSlug] = useState(initial?.slug ?? "");
-  const [slugTouched, setSlugTouched] = useState(isEdit);
-  const [groupId, setGroupId] = useState(
-    initial ? String(initial.groupId) : groups[0] ? String(groups[0].id) : "",
+  const [title, setTitle] = useState(copyTitle ?? initial?.title ?? "");
+  const [slug, setSlug] = useState(
+    copyTitle ? slugify(copyTitle) : (initial?.slug ?? ""),
   );
+  const [slugTouched, setSlugTouched] = useState(isEdit);
+  const [groupId, setGroupId] = useState(() => {
+    if (initial) return String(initial.groupId);
+    const preferred = groups.find((g) => g.id === defaultGroupId) ?? groups[0];
+    return preferred ? String(preferred.id) : "";
+  });
   const [tagline, setTagline] = useState(initial?.tagline ?? "");
-  const [published, setPublished] = useState(initial?.published ?? true);
+  const [published, setPublished] = useState(
+    duplicate ? false : (initial?.published ?? true),
+  );
 
   const [icon, setIcon] = useState(initial?.icon ?? "Sparkles");
   const [themeKey, setThemeKey] = useState(
@@ -301,7 +316,7 @@ export function ServiceEditor({
     setSaving(true);
     try {
       const res = await apiFetch(
-        isEdit ? `/admin/services/${initial.id}` : "/admin/services",
+        isEdit ? `/admin/services/${editing.id}` : "/admin/services",
         {
           method: isEdit ? "PUT" : "POST",
           body: JSON.stringify(payload),
@@ -311,18 +326,49 @@ export function ServiceEditor({
         toast.error(await readMessage(res, "Could not save the service."));
         return;
       }
+      const data = (await res.json().catch(() => null)) as {
+        service?: { id?: number };
+      } | null;
       toast.success(
         published
           ? `“${payload.title}” is saved and visible on the website.`
           : `“${payload.title}” is saved as hidden.`,
       );
-      onSaved();
+      onSaved(data?.service?.id ?? editing?.id);
     } catch {
       toast.error("Could not reach the server.");
     } finally {
       setSaving(false);
     }
   };
+
+  const completedSteps = STEPS.filter((s) => !stepHasErrors(s.id)).length;
+  const canSave = !saving && (!isEdit || dirty);
+
+  const saveRef = useRef<() => void>(() => {});
+  useEffect(() => {
+    saveRef.current = () => {
+      if (canSave) void handleSave();
+    };
+  });
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        saveRef.current();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  useEffect(() => {
+    if (!dirty || saving) return;
+    const warn = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty, saving]);
 
   const leave = () => (dirty ? setConfirmLeave(true) : onCancel());
 
@@ -336,21 +382,65 @@ export function ServiceEditor({
             All services
           </Button>
           <div className="hidden h-6 w-px bg-border sm:block" />
-          <div>
+          <div className="grid gap-1">
             <p className="text-sm font-semibold">
-              {isEdit ? `Editing “${initial.title}”` : "Add a new service"}
+              {isEdit
+                ? `Editing “${editing.title}”`
+                : duplicate
+                  ? `Duplicating “${initial?.title ?? "service"}”`
+                  : "Add a new service"}
             </p>
-            <p className="text-xs text-muted-foreground">
-              Step {stepIndex + 1} of {STEPS.length} ·{" "}
-              {dirty ? "Unsaved changes" : "No changes yet"}
-            </p>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span className="h-1.5 w-20 overflow-hidden rounded-full bg-muted">
+                <span
+                  className="block h-full rounded-full bg-emerald-500 transition-all"
+                  style={{ width: `${(completedSteps / STEPS.length) * 100}%` }}
+                />
+              </span>
+              <span>
+                {completedSteps} of {STEPS.length} sections complete ·{" "}
+                {dirty ? (
+                  <span className="font-medium text-amber-600 dark:text-amber-400">
+                    Unsaved changes
+                  </span>
+                ) : (
+                  "No changes yet"
+                )}
+              </span>
+            </div>
           </div>
         </div>
-        <Button type="button" onClick={() => void handleSave()} disabled={saving}>
-          {saving ? <Loader2Icon className="animate-spin" /> : <SaveIcon />}
-          {isEdit ? "Save changes" : "Save service"}
-        </Button>
+        <div className="flex items-center gap-2">
+          {isEdit && editing.published ? (
+            <a
+              href={servicePageUrl(editing.slug)}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
+            >
+              <ExternalLinkIcon className="size-4" />
+              <span className="hidden sm:inline">View on website</span>
+            </a>
+          ) : null}
+          <Button
+            type="button"
+            onClick={() => void handleSave()}
+            disabled={!canSave}
+            title="Save (Ctrl+S)"
+          >
+            {saving ? <Loader2Icon className="animate-spin" /> : <SaveIcon />}
+            {isEdit ? (dirty ? "Save changes" : "Saved") : "Save service"}
+          </Button>
+        </div>
       </div>
+
+      {duplicate ? (
+        <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-800 dark:text-amber-300">
+          This is a copy. Change the name and page address, then save. It
+          starts hidden so it won't appear on the website until you switch it
+          on.
+        </p>
+      ) : null}
 
       <div className="grid gap-5 lg:grid-cols-[220px_minmax(0,1fr)_300px]">
         {/* Steps */}
@@ -879,10 +969,10 @@ export function ServiceEditor({
               <Button
                 type="button"
                 onClick={() => void handleSave()}
-                disabled={saving}
+                disabled={!canSave}
               >
                 {saving ? <Loader2Icon className="animate-spin" /> : <SaveIcon />}
-                {isEdit ? "Save changes" : "Save service"}
+                {isEdit ? (dirty ? "Save changes" : "Saved") : "Save service"}
               </Button>
             )}
           </div>
