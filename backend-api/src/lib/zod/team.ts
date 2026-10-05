@@ -205,6 +205,7 @@ export const trackPageVisitSchema = z.object({
   path: z.string().trim().min(1).max(512),
   referrer: z.string().trim().max(512).optional().or(z.literal("")),
   sessionId: z.string().trim().max(64).optional().or(z.literal("")),
+  eventId: z.string().trim().max(64).optional().or(z.literal("")),
   country: z.string().trim().max(80).optional().or(z.literal("")),
   countryCode: z.string().trim().max(8).optional().or(z.literal("")),
 });

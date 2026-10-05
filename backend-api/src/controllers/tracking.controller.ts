@@ -76,7 +76,7 @@ export const recordPageVisit = async (req: Request, res: Response) => {
       eventSourceUrl,
       clientUserAgent: userAgent,
       clientIpAddress: requestClientIp(req) || undefined,
-      eventId: randomUUID(),
+      eventId: parsed.data.eventId?.trim() || randomUUID(),
     });
 
     return res.status(201).json({

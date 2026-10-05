@@ -3,6 +3,7 @@ import "./globals.css";
 import { Poppins } from "next/font/google";
 import PageTransition from "@/components/PageTransition";
 import SiteChrome from "@/components/SiteChrome";
+import SiteTracking from "@/components/SiteTracking";
 import JsonLd from "@/components/home/JsonLd";
 import { ThemeProvider } from "next-themes";
 import { siteSchema } from "@/lib/seo";
@@ -95,6 +96,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             <body className="">
                 {/* Site-wide entity graph: Organization + WebSite + FAQPage. */}
                 <JsonLd data={siteSchema(config)} />
+                <SiteTracking />
 
                 <ThemeProvider
                     attribute="class"
