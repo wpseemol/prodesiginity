@@ -1,9 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect } from "react";
 
 import IndustryDetail from "@/components/industries/IndustryDetail";
+import NotFoundView from "@/components/ui/NotFoundView";
+import PageLoader from "@/components/ui/PageLoader";
 import { INDUSTRIES_BASE_PATH, type Industry } from "@/data/industriesData";
 import {
     findIndustry,
@@ -44,23 +45,13 @@ export default function LiveIndustryDetail({
     }, [live, industry]);
 
     if (!industry) {
-        if (!live) return null;
+        if (!live) return <PageLoader label="Loading industry" />;
         return (
-            <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 bg-white px-4 text-center dark:bg-[#070B14]">
-                <h1 className="text-2xl font-black text-slate-900 dark:text-white">
-                    This industry page is no longer available
-                </h1>
-                <p className="max-w-md text-sm text-slate-600 dark:text-slate-400">
-                    It may have been renamed or retired. Have a look at every
-                    industry we work with instead.
-                </p>
-                <Link
-                    href={INDUSTRIES_BASE_PATH}
-                    className="rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white hover:opacity-90"
-                >
-                    Browse all industries
-                </Link>
-            </div>
+            <NotFoundView
+                title="This industry page is no longer available"
+                message="It may have been renamed or retired. Have a look at every industry we work with instead."
+                action={{ href: INDUSTRIES_BASE_PATH, label: "Browse all industries" }}
+            />
         );
     }
 

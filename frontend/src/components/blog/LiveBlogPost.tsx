@@ -1,9 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import BlogPostView from "@/components/blog/BlogPostView";
+import NotFoundView from "@/components/ui/NotFoundView";
 import { BLOG_BASE_PATH } from "@/data/blog";
 import type { BlogPost } from "@/data/blog/types";
 import { resolveTokens } from "@/lib/blog";
@@ -56,20 +56,11 @@ export default function LiveBlogPost({
 
     if (live && !livePost) {
         return (
-            <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 bg-white px-4 text-center dark:bg-[#070B14]">
-                <h1 className="text-2xl font-black text-slate-900 dark:text-white">
-                    This article is no longer available
-                </h1>
-                <p className="max-w-md text-sm text-slate-600 dark:text-slate-400">
-                    It may have been unpublished or moved.
-                </p>
-                <Link
-                    href={BLOG_BASE_PATH}
-                    className="rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white hover:opacity-90"
-                >
-                    Browse all articles
-                </Link>
-            </div>
+            <NotFoundView
+                title="This article is no longer available"
+                message="It may have been unpublished or moved."
+                action={{ href: BLOG_BASE_PATH, label: "Browse all articles" }}
+            />
         );
     }
 

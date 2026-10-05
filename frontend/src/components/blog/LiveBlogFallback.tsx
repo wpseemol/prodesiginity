@@ -1,13 +1,11 @@
 "use client";
 
-import {
-    useEffect,
-    useState,
-    useSyncExternalStore,
-    type ReactNode,
-} from "react";
+import { useEffect, type ReactNode } from "react";
 
 import BlogPostView from "@/components/blog/BlogPostView";
+import LoadErrorView from "@/components/ui/LoadErrorView";
+import NotFoundView from "@/components/ui/NotFoundView";
+import PageLoader from "@/components/ui/PageLoader";
 import { BLOG_BASE_PATH } from "@/data/blog";
 import type { BlogPost } from "@/data/blog/types";
 import { resolveTokens } from "@/lib/blog";
@@ -17,18 +15,24 @@ import {
     mergeBlogData,
     relatedPostsFor,
 } from "@/lib/blog-api";
+import { LIVE_ROUTES } from "@/lib/live-routes";
+import { useLiveLookup, type LiveLookup } from "@/lib/useLiveLookup";
 
-const POST_PATH = new RegExp(`^${BLOG_BASE_PATH}/([a-z0-9-]{1,160})/?$`);
+type Found = { post: BlogPost; related: BlogPost[] };
 
-const subscribe = () => () => {};
-
-/** On the static 404 page the router pathname is the not-found route. */
-function requestedPostSlug(): string | null {
-    const match = window.location.pathname.match(POST_PATH);
-    return match ? match[1] : null;
+async function loadPost(slug: string): Promise<LiveLookup<Found>> {
+    const [post, live] = await Promise.all([
+        fetchLivePost(slug),
+        fetchBlogFromApi(),
+    ]);
+    if (post) {
+        return {
+            status: "found",
+            data: { post, related: relatedPostsFor(mergeBlogData(live).posts, post) },
+        };
+    }
+    return live ? { status: "missing" } : { status: "error" };
 }
-
-type Lookup = { slug: string; post: BlogPost | null; related: BlogPost[] };
 
 /**
  * The static host serves 404.html for any URL it has no file for, including
@@ -37,44 +41,39 @@ type Lookup = { slug: string; post: BlogPost | null; related: BlogPost[] };
  * `children`.
  */
 export default function LiveBlogFallback({ children }: { children: ReactNode }) {
-    const slug = useSyncExternalStore(subscribe, requestedPostSlug, () => null);
-    const [lookup, setLookup] = useState<Lookup | null>(null);
+    const { slug, lookup, retry } = useLiveLookup(LIVE_ROUTES.blog, loadPost);
 
     useEffect(() => {
-        if (!slug) return;
-        let active = true;
-
-        void Promise.all([fetchLivePost(slug), fetchBlogFromApi()]).then(([post, live]) => {
-            if (!active) return;
-            const related = post ? relatedPostsFor(mergeBlogData(live).posts, post) : [];
-            if (post) {
-                document.title = resolveTokens(post.seo.title);
-                document
-                    .querySelector('meta[name="description"]')
-                    ?.setAttribute("content", resolveTokens(post.seo.description));
-            }
-            setLookup({ slug, post, related });
-        });
-
-        return () => {
-            active = false;
-        };
-    }, [slug]);
+        if (lookup?.status !== "found") return;
+        const { post } = lookup.data;
+        document.title = resolveTokens(post.seo.title);
+        document
+            .querySelector('meta[name="description"]')
+            ?.setAttribute("content", resolveTokens(post.seo.description));
+    }, [lookup]);
 
     if (!slug) return <>{children}</>;
+    if (!lookup) return <PageLoader label="Loading article" />;
 
-    if (lookup?.slug !== slug) {
+    if (lookup.status === "error") {
         return (
-            <div
-                className="min-h-[70vh] flex items-center justify-center bg-white dark:bg-[#070B14]"
-                aria-busy="true"
-            >
-                <span className="w-8 h-8 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
-            </div>
+            <LoadErrorView
+                onRetry={retry}
+                backHref={BLOG_BASE_PATH}
+                backLabel="Browse all articles"
+            />
         );
     }
 
-    if (lookup.post) return <BlogPostView post={lookup.post} related={lookup.related} />;
+    if (lookup.status === "missing") {
+        return (
+            <NotFoundView
+                title="Article not found"
+                message="This article does not exist or has been unpublished."
+                action={{ href: BLOG_BASE_PATH, label: "Browse all articles" }}
+            />
+        );
+    }
 
-    return <>{children}</>;
+    return <BlogPostView post={lookup.data.post} related={lookup.data.related} />;
 }

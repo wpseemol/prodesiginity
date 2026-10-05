@@ -1,13 +1,11 @@
 "use client";
 
-import {
-    useEffect,
-    useState,
-    useSyncExternalStore,
-    type ReactNode,
-} from "react";
+import { useEffect, type ReactNode } from "react";
 
 import IndustryDetail from "@/components/industries/IndustryDetail";
+import LoadErrorView from "@/components/ui/LoadErrorView";
+import NotFoundView from "@/components/ui/NotFoundView";
+import PageLoader from "@/components/ui/PageLoader";
 import { INDUSTRIES_BASE_PATH, type Industry } from "@/data/industriesData";
 import type { Service } from "@/data/servicesData";
 import {
@@ -16,30 +14,32 @@ import {
     industryServices,
     relatedIndustries,
 } from "@/lib/industries-catalog";
+import { LIVE_ROUTES } from "@/lib/live-routes";
 import {
     STATIC_SERVICES_CATALOG,
     fetchServicesCatalog,
 } from "@/lib/services-catalog";
+import { useLiveLookup, type LiveLookup } from "@/lib/useLiveLookup";
 
-const INDUSTRY_PATH = new RegExp(`^${INDUSTRIES_BASE_PATH}/([^/]+)/?$`);
+type Found = { industry: Industry; services: Service[]; related: Industry[] };
 
-const subscribe = () => () => {};
-
-/**
- * Read the browser URL: on the static 404 page the router's pathname is the
- * not-found route, not what the visitor requested.
- */
-function requestedIndustrySlug(): string | null {
-    const match = window.location.pathname.match(INDUSTRY_PATH);
-    return match ? decodeURIComponent(match[1]) : null;
+async function loadIndustry(slug: string): Promise<LiveLookup<Found>> {
+    const [industries, catalog] = await Promise.all([
+        fetchIndustries(),
+        fetchServicesCatalog(),
+    ]);
+    if (!industries) return { status: "error" };
+    const industry = findIndustry(industries, slug);
+    if (!industry) return { status: "missing" };
+    return {
+        status: "found",
+        data: {
+            industry,
+            services: industryServices(catalog ?? STATIC_SERVICES_CATALOG, industry),
+            related: relatedIndustries(industries, industry),
+        },
+    };
 }
-
-type Lookup = {
-    slug: string;
-    industry?: Industry;
-    services: Service[];
-    related: Industry[];
-};
 
 /**
  * The static host serves 404.html for any URL it has no file for, including
@@ -52,70 +52,45 @@ export default function LiveIndustryFallback({
 }: {
     children: ReactNode;
 }) {
-    const slug = useSyncExternalStore(
-        subscribe,
-        requestedIndustrySlug,
-        () => null,
+    const { slug, lookup, retry } = useLiveLookup(
+        LIVE_ROUTES.industry,
+        loadIndustry,
     );
-    const [lookup, setLookup] = useState<Lookup | null>(null);
 
     useEffect(() => {
-        if (!slug) return;
-        let active = true;
-
-        void Promise.all([fetchIndustries(), fetchServicesCatalog()]).then(
-            ([industries, catalog]) => {
-                if (!active) return;
-                const industry = industries
-                    ? findIndustry(industries, slug)
-                    : undefined;
-                if (industry) {
-                    document.title = industry.seo.title || industry.headline;
-                }
-                setLookup({
-                    slug,
-                    industry,
-                    services: industry
-                        ? industryServices(
-                              catalog ?? STATIC_SERVICES_CATALOG,
-                              industry,
-                          )
-                        : [],
-                    related:
-                        industry && industries
-                            ? relatedIndustries(industries, industry)
-                            : [],
-                });
-            },
-        );
-
-        return () => {
-            active = false;
-        };
-    }, [slug]);
+        if (lookup?.status !== "found") return;
+        const { industry } = lookup.data;
+        document.title = industry.seo.title || industry.headline;
+    }, [lookup]);
 
     if (!slug) return <>{children}</>;
+    if (!lookup) return <PageLoader label="Loading industry" />;
 
-    if (lookup?.slug !== slug) {
+    if (lookup.status === "error") {
         return (
-            <div
-                className="min-h-[70vh] flex items-center justify-center bg-white dark:bg-[#070B14]"
-                aria-busy="true"
-            >
-                <span className="w-8 h-8 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
-            </div>
-        );
-    }
-
-    if (lookup.industry) {
-        return (
-            <IndustryDetail
-                industry={lookup.industry}
-                services={lookup.services}
-                related={lookup.related}
+            <LoadErrorView
+                onRetry={retry}
+                backHref={INDUSTRIES_BASE_PATH}
+                backLabel="Browse all industries"
             />
         );
     }
 
-    return <>{children}</>;
+    if (lookup.status === "missing") {
+        return (
+            <NotFoundView
+                title="Industry not found"
+                message="We could not find an industry page at this address. It may have been renamed or retired."
+                action={{ href: INDUSTRIES_BASE_PATH, label: "Browse all industries" }}
+            />
+        );
+    }
+
+    return (
+        <IndustryDetail
+            industry={lookup.data.industry}
+            services={lookup.data.services}
+            related={lookup.data.related}
+        />
+    );
 }
