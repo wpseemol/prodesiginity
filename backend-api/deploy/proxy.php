@@ -24,12 +24,27 @@ $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 $uri = $_SERVER['REQUEST_URI'] ?? '/';
 $backendUrl = rtrim($BACKEND_ORIGIN, '/') . $uri;
 
+/**
+ * The proxy's own error responses never reach Node, so they carry no CORS
+ * headers and the browser would report "CORS error" instead of the real
+ * problem. Let the page read the error (no credentials, so nothing is exposed).
+ */
+function proxy_error(int $status, array $body): void
+{
+    http_response_code($status);
+    header('Content-Type: application/json');
+    header('Cache-Control: no-store');
+    if (!empty($_SERVER['HTTP_ORIGIN'])) {
+        header('Access-Control-Allow-Origin: ' . $_SERVER['HTTP_ORIGIN']);
+        header('Vary: Origin');
+    }
+    echo json_encode($body);
+    exit;
+}
+
 $ch = curl_init($backendUrl);
 if ($ch === false) {
-    http_response_code(500);
-    header('Content-Type: application/json');
-    echo json_encode(['error' => 'Proxy could not init cURL']);
-    exit;
+    proxy_error(500, ['error' => 'Proxy could not init cURL']);
 }
 
 curl_setopt_array($ch, [
@@ -168,13 +183,10 @@ if ($response === false) {
     error_log('[proxy] Node API unreachable at ' . $BACKEND_ORIGIN . ': ' . curl_error($ch)
         . ' (check: pm2 status && curl http://127.0.0.1:4000/api/health)');
     curl_close($ch);
-    http_response_code(502);
-    header('Content-Type: application/json');
-    echo json_encode([
+    proxy_error(502, [
         'error' => 'Bad Gateway',
         'message' => 'The API is temporarily unavailable. Please try again shortly.',
     ]);
-    exit;
 }
 
 $headerSize = curl_getinfo($ch, CURLINFO_HEADER_SIZE);

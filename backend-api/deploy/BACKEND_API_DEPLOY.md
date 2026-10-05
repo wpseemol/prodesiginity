@@ -123,6 +123,54 @@ Optional cron (every 5 min):
 
 ---
 
+## 7. CORS — when the site or dashboard says "CORS error" / "Failed to fetch"
+
+How the API decides (`src/config/cors.ts`, production only):
+
+| Request | From an origin in `ALLOWED_ORIGINS` | From any other origin |
+|---------|-------------------------------------|-----------------------|
+| `GET` (services, blog, team…) | allowed, with cookies | allowed, no cookies |
+| `POST` / `PUT` / `PATCH` / `DELETE` (login, forms, dashboard saves) | allowed | **blocked** |
+
+So if public pages load but logins, contact forms or dashboard saves fail, the
+origin is missing from `ALLOWED_ORIGINS`.
+
+**Fix checklist**
+
+1. Find the exact origin: browser DevTools → Network → the failed request →
+   Request Headers → `Origin` (e.g. `https://dashboard.prodesignity.com`).
+2. Check the API log — every blocked origin is printed once an hour:
+   ```bash
+   npx pm2 logs prodesignity-api --lines 200 | grep "\[cors\]"
+   # [cors] blocked POST /api/auth/login from https://… — add it to ALLOWED_ORIGINS
+   ```
+   On start the API also prints `[cors] trusted origins: …` — confirm yours is there.
+3. Add it to `.env` and restart:
+   ```env
+   ALLOWED_ORIGINS=https://prodesignity.com,https://dashboard.prodesignity.com
+   ```
+   ```bash
+   npx pm2 restart prodesignity-api --update-env
+   ```
+4. Still failing with a **502** in the Network tab? That is not CORS — Node is
+   down. See section 6.
+
+**Good to know**
+
+- Trailing slashes, paths and capital letters are ignored, and the `www.`
+  twin of every entry is allowed automatically.
+- `SITE_URL` and `STAFF_PORTAL_URL` (or `DASHBOARD_URL`) are trusted too if set.
+- `https://*.prodesignity.com` trusts one subdomain level of your own domain.
+  Never add `*.vercel.app` or other shared hosts — anyone can deploy there.
+  If the dashboard runs on a Vercel URL, add that exact URL instead.
+- `NODE_ENV` must be `production` on the server; in development every origin
+  is allowed, which hides these problems locally.
+- The frontend must be built with `NEXT_PUBLIC_API_URL=https://api.prodesignity.com/api`
+  and the dashboard with the matching API URL; a build pointing at `localhost`
+  looks like a CORS error in the browser.
+
+---
+
 ## pm2 short list
 
 ```bash

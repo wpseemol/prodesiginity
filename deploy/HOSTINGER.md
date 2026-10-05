@@ -168,5 +168,5 @@ Dashboard: `https://dashboard.prodesignity.com/login` with seeded admin.
 | Frontend deploys but API calls go to localhost | Rebuild frontend after `API_URL` var is set; hard-refresh |
 | Backend health 502                             | pm2 not running / proxy not pointing at PORT              |
 | Deploy fails: missing `.env`                   | Create `.env` once on the VPS (never commit it)           |
-| CORS errors                                    | Add the real site origin to `ALLOWED_ORIGINS`             |
+| CORS errors / "Failed to fetch" on login or save | Add the exact origin to `ALLOWED_ORIGINS`, then `pm2 restart --update-env` — full checklist in [`BACKEND_API_DEPLOY.md` §7](../backend-api/deploy/BACKEND_API_DEPLOY.md#7-cors--when-the-site-or-dashboard-says-cors-error--failed-to-fetch) |
 | FTP extract fails                              | Confirm `SITE_URL` variable matches the live domain       |
