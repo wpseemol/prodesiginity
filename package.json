@@ -7,6 +7,7 @@
     "dev:frontend": "pnpm --filter prodesignity dev",
     "dev:dashboard": "pnpm --filter prodesignity-dashboard dev",
     "dev:backend": "pnpm --filter prodesignity-api dev",
+    "dev:stop": "node scripts/stop-dev.mjs",
     "build": "pnpm -r --filter \"./frontend\" --filter \"./dashboard\" run build",
     "build:dashboard": "pnpm --filter prodesignity-dashboard build",
     "build:backend": "pnpm --filter prodesignity-api build",
