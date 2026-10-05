@@ -10,7 +10,10 @@ export const SECTION_IDS = {
   media: "post-section-media",
   content: "post-section-content",
   summary: "post-section-summary",
+  appearance: "post-section-appearance",
+  publish: "post-section-publish",
   category: "post-section-category",
+  related: "post-section-related",
   seo: "post-section-seo",
 } as const;
 

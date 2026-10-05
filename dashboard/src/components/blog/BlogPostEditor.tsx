@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Controller, useFieldArray, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -6,12 +6,14 @@ import {
   CheckIcon,
   CloudOffIcon,
   ExternalLinkIcon,
+  GitCompareArrowsIcon,
   HistoryIcon,
   Loader2Icon,
   PlusIcon,
   SaveIcon,
   SearchIcon,
   Trash2Icon,
+  TriangleAlertIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { apiBaseUrl } from "@/config";
@@ -47,10 +49,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { BlockListEditor } from "./BlockListEditor";
 import { BlogMediaInput } from "./BlogMediaInput";
+import { diffPost, type Change, type ChangeContext, type FieldKey } from "./blogChanges";
+import { ChangeList, ChangesPanel, SectionEdited, UnsavedCount } from "./ChangesPanel";
 import { findThreat, PublishChecklist, SECTION_IDS } from "./PublishChecklist";
 import {
   ACCENT_SWATCH,
@@ -118,6 +130,8 @@ export function BlogPostEditor({
   const [pendingPublish, setPendingPublish] = useState<BlogPostFormValues | null>(null);
   const [publishing, setPublishing] = useState(false);
   const [stale, setStale] = useState(false);
+  const [comparing, setComparing] = useState(false);
+  const [comparison, setComparison] = useState<{ theirs: Change[]; yours: Change[] } | null>(null);
   const [sessionLost, setSessionLost] = useState(false);
   const [restorable, setRestorable] = useState<LocalDraft<BlogPostFormValues> | null>(() => {
     const draft = loadLocalDraft<BlogPostFormValues>(draftKey);
@@ -278,6 +292,51 @@ export function BlogPostEditor({
     setRestorable(null);
   };
 
+  const baseline = useMemo(() => (initial ? postToForm(initial) : null), [initial]);
+  const changeContext = useMemo<ChangeContext>(
+    () => ({ categories, members, services }),
+    [categories, members, services],
+  );
+
+  const undoField = (key: FieldKey) => {
+    if (!baseline) return;
+    if (key === "slug") setSlugTouched(true);
+    form.setValue(key, baseline[key] as never, { shouldDirty: true, shouldValidate: true });
+  };
+
+  const undoAll = () => {
+    if (!baseline) return;
+    form.reset(baseline);
+    clearLocalDraft(draftKey);
+    setLocalSavedAt(null);
+    toast.success("All changes undone. The article matches the saved version again.");
+  };
+
+  const compareWithLatest = async () => {
+    if (!initial || !baseline) return;
+    setComparing(true);
+    try {
+      const res = await apiFetch(`/manage/blog/posts/${initial.id}`);
+      if (!res.ok) {
+        toast.error("Could not load the latest version.");
+        return;
+      }
+      const data = (await res.json()) as { post: BlogPostRow };
+      setComparison({
+        theirs: diffPost(baseline, postToForm(data.post), changeContext),
+        yours: diffPost(baseline, form.getValues(), changeContext),
+      });
+    } catch {
+      toast.error("Could not reach the server.");
+    } finally {
+      setComparing(false);
+    }
+  };
+
+  const conflicts = comparison
+    ? comparison.yours.filter((c) => comparison.theirs.some((t) => t.key === c.key)).map((c) => c.label)
+    : [];
+
   const back = () => (isDirty ? setConfirmLeave(true) : onCancel());
   const selectedCategory = (id: string) => categories.find((c) => String(c.id) === id)?.name;
 
@@ -295,16 +354,21 @@ export function BlogPostEditor({
             </h2>
             {status === "published" ? <Badge>Published</Badge> : <Badge variant="secondary">Draft</Badge>}
           </div>
-          <p className="flex items-center gap-1 text-xs text-muted-foreground" aria-live="polite">
+          <p className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground" aria-live="polite">
             {isDirty ? (
-              localSavedAt ? (
-                <>
-                  <HistoryIcon className="size-3" />
-                  Unsaved changes · backed up on this device at {timeOf(localSavedAt)}
-                </>
-              ) : (
-                "Unsaved changes"
-              )
+              <>
+                {baseline ? (
+                  <UnsavedCount control={form.control} baseline={baseline} context={changeContext} />
+                ) : (
+                  "Unsaved changes"
+                )}
+                {localSavedAt ? (
+                  <span className="inline-flex items-center gap-1">
+                    · <HistoryIcon className="size-3" />
+                    backed up on this device at {timeOf(localSavedAt)}
+                  </span>
+                ) : null}
+              </>
             ) : (
               <>
                 <CheckIcon className="size-3" />
@@ -360,9 +424,21 @@ export function BlogPostEditor({
               Saving now would overwrite their changes. Your version is backed up on this device — reload to see
               theirs, then restore yours if you still need it.
             </span>
-            <Button type="button" size="sm" variant="outline" onClick={onReload}>
-              Reload latest version
-            </Button>
+            <span className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={comparing}
+                onClick={() => void compareWithLatest()}
+              >
+                {comparing ? <Loader2Icon className="animate-spin" /> : <GitCompareArrowsIcon />}
+                See what changed
+              </Button>
+              <Button type="button" size="sm" variant="outline" onClick={onReload}>
+                Reload latest version
+              </Button>
+            </span>
           </AlertDescription>
         </Alert>
       ) : null}
@@ -393,7 +469,10 @@ export function BlogPostEditor({
           {/* ------------------------------------------------------- Basics */}
           <Card id={SECTION_IDS.basics} className="scroll-mt-32">
             <CardHeader>
-              <CardTitle>Basics</CardTitle>
+              <CardTitle>
+                Basics
+                <SectionEdited control={form.control} baseline={baseline} section={SECTION_IDS.basics} />
+              </CardTitle>
               <CardDescription>The title is the page’s H1 and the excerpt shows on cards.</CardDescription>
             </CardHeader>
             <CardContent>
@@ -469,7 +548,10 @@ export function BlogPostEditor({
           {/* -------------------------------------------------------- Media */}
           <Card id={SECTION_IDS.media} className="scroll-mt-32">
             <CardHeader>
-              <CardTitle>Cover image &amp; video</CardTitle>
+              <CardTitle>
+                Cover image &amp; video
+                <SectionEdited control={form.control} baseline={baseline} section={SECTION_IDS.media} />
+              </CardTitle>
               <CardDescription>
                 Both are optional. Without a cover, the category image or a generated cover is used.
               </CardDescription>
@@ -540,7 +622,10 @@ export function BlogPostEditor({
           {/* ------------------------------------------------------ Content */}
           <Card id={SECTION_IDS.content} className="scroll-mt-32">
             <CardHeader>
-              <CardTitle>Article content</CardTitle>
+              <CardTitle>
+                Article content
+                <SectionEdited control={form.control} baseline={baseline} section={SECTION_IDS.content} />
+              </CardTitle>
               <CardDescription>
                 Build the article from blocks. Text is stored as plain text, so formatting is safe for the
                 website.
@@ -554,7 +639,10 @@ export function BlogPostEditor({
           {/* ---------------------------------------------- Takeaways + FAQ */}
           <Card id={SECTION_IDS.summary} className="scroll-mt-32">
             <CardHeader>
-              <CardTitle>Summary &amp; FAQ</CardTitle>
+              <CardTitle>
+                Summary &amp; FAQ
+                <SectionEdited control={form.control} baseline={baseline} section={SECTION_IDS.summary} />
+              </CardTitle>
               <CardDescription>
                 Key takeaways and FAQs are what search engines and AI assistants quote most.
               </CardDescription>
@@ -640,9 +728,12 @@ export function BlogPostEditor({
           </Card>
 
           {/* --------------------------------------------------- Appearance */}
-          <Card>
+          <Card id={SECTION_IDS.appearance} className="scroll-mt-32">
             <CardHeader>
-              <CardTitle>Appearance</CardTitle>
+              <CardTitle>
+                Appearance
+                <SectionEdited control={form.control} baseline={baseline} section={SECTION_IDS.appearance} />
+              </CardTitle>
               <CardDescription>Colour and icon used on cards and the generated cover.</CardDescription>
             </CardHeader>
             <CardContent>
@@ -705,11 +796,24 @@ export function BlogPostEditor({
 
         {/* ---------------------------------------------------------- Sidebar */}
         <div className="grid content-start gap-6">
+          {baseline ? (
+            <ChangesPanel
+              control={form.control}
+              baseline={baseline}
+              context={changeContext}
+              onUndo={undoField}
+              onUndoAll={undoAll}
+            />
+          ) : null}
+
           <PublishChecklist control={form.control} />
 
-          <Card>
+          <Card id={SECTION_IDS.publish} className="scroll-mt-32">
             <CardHeader>
-              <CardTitle>Publish</CardTitle>
+              <CardTitle>
+                Publish
+                <SectionEdited control={form.control} baseline={baseline} section={SECTION_IDS.publish} />
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <FieldGroup>
@@ -800,7 +904,10 @@ export function BlogPostEditor({
 
           <Card id={SECTION_IDS.category} className="scroll-mt-32">
             <CardHeader>
-              <CardTitle>Category &amp; tags</CardTitle>
+              <CardTitle>
+                Category &amp; tags
+                <SectionEdited control={form.control} baseline={baseline} section={SECTION_IDS.category} />
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <FieldGroup>
@@ -844,9 +951,12 @@ export function BlogPostEditor({
             </CardContent>
           </Card>
 
-          <Card>
+          <Card id={SECTION_IDS.related} className="scroll-mt-32">
             <CardHeader>
-              <CardTitle>Related services</CardTitle>
+              <CardTitle>
+                Related services
+                <SectionEdited control={form.control} baseline={baseline} section={SECTION_IDS.related} />
+              </CardTitle>
               <CardDescription>
                 Linked under the article. Pick up to {MAX_RELATED_SERVICES}.
               </CardDescription>
@@ -926,6 +1036,7 @@ export function BlogPostEditor({
               <CardTitle className="flex items-center gap-2">
                 <SearchIcon className="size-4" />
                 SEO
+                <SectionEdited control={form.control} baseline={baseline} section={SECTION_IDS.seo} />
               </CardTitle>
               <CardDescription>Leave empty to use the title and excerpt.</CardDescription>
             </CardHeader>
@@ -984,6 +1095,73 @@ export function BlogPostEditor({
           </Card>
         </div>
       </div>
+
+      <Sheet
+        open={comparison !== null}
+        onOpenChange={(open) => {
+          if (!open) setComparison(null);
+        }}
+      >
+        <SheetContent className="w-full overflow-y-auto sm:max-w-md">
+          <SheetHeader>
+            <SheetTitle>What changed since you opened it</SheetTitle>
+            <SheetDescription>
+              Both lists compare against the version you started from.
+            </SheetDescription>
+          </SheetHeader>
+          {comparison ? (
+            <div className="grid gap-5 px-4">
+              {conflicts.length > 0 ? (
+                <Alert variant="destructive">
+                  <TriangleAlertIcon />
+                  <AlertTitle>You both changed {conflicts.join(", ")}</AlertTitle>
+                  <AlertDescription>
+                    Reloading keeps their version of these. Copy anything of yours you want to keep first.
+                  </AlertDescription>
+                </Alert>
+              ) : null}
+              <section className="grid gap-2">
+                <h3 className="text-sm font-semibold">
+                  Changed by someone else{" "}
+                  <span className="font-normal text-muted-foreground">({comparison.theirs.length})</span>
+                </h3>
+                {comparison.theirs.length ? (
+                  <ChangeList changes={comparison.theirs} jump={false} />
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Nothing visible changed — it was saved again without edits.
+                  </p>
+                )}
+              </section>
+              <section className="grid gap-2">
+                <h3 className="text-sm font-semibold">
+                  Your unsaved changes{" "}
+                  <span className="font-normal text-muted-foreground">({comparison.yours.length})</span>
+                </h3>
+                {comparison.yours.length ? (
+                  <ChangeList changes={comparison.yours} jump={false} />
+                ) : (
+                  <p className="text-sm text-muted-foreground">You haven’t changed anything.</p>
+                )}
+              </section>
+            </div>
+          ) : null}
+          <SheetFooter>
+            <Button
+              type="button"
+              onClick={() => {
+                setComparison(null);
+                onReload();
+              }}
+            >
+              Reload latest version
+            </Button>
+            <p className="text-center text-xs text-muted-foreground">
+              Your version stays backed up on this device, so you can restore it after reloading.
+            </p>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
 
       <ConfirmDialog
         open={confirmLeave}

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  BellDotIcon,
   CalendarClockIcon,
+  CheckCheckIcon,
   EyeOffIcon,
   ExternalLinkIcon,
   FilePenLineIcon,
@@ -13,6 +15,7 @@ import {
   NewspaperIcon,
   PencilIcon,
   PlusIcon,
+  RefreshCwIcon,
   SearchIcon,
   StarIcon,
   Trash2Icon,
@@ -23,6 +26,7 @@ import { toast } from "sonner";
 import { mediaUrl } from "@/config";
 import { apiFetch } from "@/lib/api";
 import { blogDraftKey, loadLocalDraft } from "@/lib/blogDrafts";
+import { loadSeen, markSeen, resetSeen, seenState } from "@/lib/blogSeen";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ServiceIcon } from "@/components/ServiceIcon";
@@ -91,8 +95,47 @@ function stateOf(post: BlogPostRow): PostState {
   return post.publishedAt && new Date(post.publishedAt) > new Date() ? "scheduled" : "published";
 }
 
+type SortOrder = "updated" | "created" | "title";
+
+const SORT_LABELS: Record<SortOrder, string> = {
+  updated: "Recently updated",
+  created: "Newest first",
+  title: "Title A–Z",
+};
+
+const SEEN_STYLE = {
+  new: {
+    label: "New",
+    hint: "Added since you last looked",
+    className: "border-sky-500/40 bg-sky-500/10 text-sky-700 dark:text-sky-300",
+  },
+  updated: {
+    label: "Updated",
+    hint: "Changed since you last looked",
+    className: "border-violet-500/40 bg-violet-500/10 text-violet-700 dark:text-violet-300",
+  },
+} as const;
+
 const timeOf = (ms: number) =>
   new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(ms);
+
+const RELATIVE_UNITS: [Intl.RelativeTimeFormatUnit, number][] = [
+  ["year", 31_536_000],
+  ["month", 2_592_000],
+  ["week", 604_800],
+  ["day", 86_400],
+  ["hour", 3_600],
+  ["minute", 60],
+];
+
+function relativeTime(iso: string) {
+  const seconds = (Date.parse(iso) - Date.now()) / 1000;
+  const format = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
+  for (const [unit, size] of RELATIVE_UNITS) {
+    if (Math.abs(seconds) >= size) return format.format(Math.round(seconds / size), unit);
+  }
+  return "just now";
+}
 
 function BlogManager({ user }: { user: DashboardUser }) {
   const isAdmin = user.role === "admin";
@@ -110,6 +153,12 @@ function BlogManager({ user }: { user: DashboardUser }) {
   const [deleting, setDeleting] = useState(false);
   const [pendingPublish, setPendingPublish] = useState<BlogPostRow | null>(null);
   const [changing, setChanging] = useState<number | null>(null);
+  const [seen, setSeen] = useState(() => loadSeen(user.id));
+  const [onlyChanged, setOnlyChanged] = useState(false);
+  const [sort, setSort] = useState<SortOrder>("updated");
+  const [refreshing, setRefreshing] = useState(false);
+  const [checkedAt, setCheckedAt] = useState<number | null>(null);
+  const [highlightId, setHighlightId] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     setError(null);
@@ -123,18 +172,62 @@ function BlogManager({ user }: { user: DashboardUser }) {
         return;
       }
       const [postsData, catsData] = await Promise.all([postsRes.json(), catsRes.json()]);
-      setPosts(postsData.posts ?? []);
+      const list: BlogPostRow[] = postsData.posts ?? [];
+      // First visit on this device: everything counts as already seen.
+      if (!loadSeen(user.id)) resetSeen(user.id, list);
+      setSeen(loadSeen(user.id));
+      setPosts(list);
       setCategories(catsData.categories ?? []);
+      setCheckedAt(Date.now());
     } catch {
       setError("Could not reach the server.");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user.id]);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  const refresh = useCallback(async () => {
+    setRefreshing(true);
+    await load();
+    setRefreshing(false);
+  }, [load]);
+
+  // Pick up edits made by other people when the user comes back to the tab.
+  useEffect(() => {
+    if (view.kind !== "list") return;
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void refresh();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [view.kind, refresh]);
+
+  useEffect(() => {
+    if (highlightId === null || view.kind !== "list") return;
+    document
+      .getElementById(`blog-row-${highlightId}`)
+      ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    const timer = window.setTimeout(() => setHighlightId(null), 2500);
+    return () => window.clearTimeout(timer);
+  }, [highlightId, view.kind]);
+
+  const rememberSeen = (post: BlogPostRow) => {
+    markSeen(user.id, [post]);
+    setSeen(loadSeen(user.id));
+  };
+
+  const markAllSeen = () => {
+    resetSeen(user.id, posts);
+    setSeen(loadSeen(user.id));
+    setOnlyChanged(false);
+  };
+
+  const changedPosts = useMemo(() => posts.filter((p) => seenState(seen, p) !== null), [posts, seen]);
+  const newCount = changedPosts.filter((p) => seenState(seen, p) === "new").length;
 
   const counts = useMemo(() => {
     const c: Record<StatusFilter, number> = { all: posts.length, published: 0, scheduled: 0, draft: 0 };
@@ -144,8 +237,9 @@ function BlogManager({ user }: { user: DashboardUser }) {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return posts.filter(
+    const list = posts.filter(
       (p) =>
+        (!onlyChanged || seenState(seen, p) !== null) &&
         (statusFilter === "all" || stateOf(p) === statusFilter) &&
         (categoryFilter === "all" || String(p.category.id) === categoryFilter) &&
         (!q ||
@@ -154,13 +248,18 @@ function BlogManager({ user }: { user: DashboardUser }) {
           p.category.name.toLowerCase().includes(q) ||
           p.author.name.toLowerCase().includes(q)),
     );
-  }, [posts, search, statusFilter, categoryFilter]);
+    if (sort === "title") return [...list].sort((a, b) => a.title.localeCompare(b.title));
+    if (sort === "created") return [...list].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+    return [...list].sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt));
+  }, [posts, search, statusFilter, categoryFilter, onlyChanged, seen, sort]);
 
-  const filtersActive = search.trim() !== "" || statusFilter !== "all" || categoryFilter !== "all";
+  const filtersActive =
+    search.trim() !== "" || statusFilter !== "all" || categoryFilter !== "all" || onlyChanged;
   const clearFilters = () => {
     setSearch("");
     setStatusFilter("all");
     setCategoryFilter("all");
+    setOnlyChanged(false);
   };
 
   const openEditor = async (post: BlogPostRow) => {
@@ -172,6 +271,7 @@ function BlogManager({ user }: { user: DashboardUser }) {
         return;
       }
       const data = (await res.json()) as { post: BlogPostRow };
+      rememberSeen(data.post);
       setView({ kind: "edit", post: data.post });
     } catch {
       toast.error("Could not reach the server.");
@@ -205,6 +305,9 @@ function BlogManager({ user }: { user: DashboardUser }) {
         if (res.status === 409) await load();
         return;
       }
+      const data = (await res.json().catch(() => null)) as { post?: BlogPostRow } | null;
+      if (data?.post) rememberSeen(data.post);
+      setHighlightId(post.id);
       toast.success(
         status === "published"
           ? `“${post.title}” is now live on the website.`
@@ -280,7 +383,9 @@ function BlogManager({ user }: { user: DashboardUser }) {
           setView({ kind: "list" });
           void load();
         }}
-        onSaved={() => {
+        onSaved={(saved) => {
+          rememberSeen(saved);
+          setHighlightId(saved.id);
           setView({ kind: "list" });
           void load();
         }}
@@ -356,6 +461,43 @@ function BlogManager({ user }: { user: DashboardUser }) {
           })}
         </div>
 
+        {changedPosts.length > 0 ? (
+          <div className="flex flex-wrap items-center gap-3 rounded-xl border border-violet-500/30 bg-violet-500/5 px-3 py-2.5">
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-violet-500/15 text-violet-700 dark:text-violet-300">
+              <BellDotIcon className="size-4" />
+            </span>
+            <div className="min-w-0 flex-1 text-sm">
+              <p className="font-medium">
+                {changedPosts.length} article{changedPosts.length === 1 ? "" : "s"} changed since you last looked
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {[
+                  newCount ? `${newCount} new` : null,
+                  changedPosts.length - newCount ? `${changedPosts.length - newCount} updated` : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+                {" — "}
+                {isAdmin ? "added or edited by someone else, or on another device." : "for example edited by an admin."}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant={onlyChanged ? "default" : "outline"}
+                onClick={() => setOnlyChanged((v) => !v)}
+              >
+                {onlyChanged ? "Show all articles" : "Show only these"}
+              </Button>
+              <Button type="button" size="sm" variant="ghost" onClick={markAllSeen}>
+                <CheckCheckIcon />
+                Mark all as seen
+              </Button>
+            </div>
+          </div>
+        ) : null}
+
         <div className="flex flex-col gap-2 sm:flex-row">
           <div className="relative flex-1">
             <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -385,12 +527,39 @@ function BlogManager({ user }: { user: DashboardUser }) {
               ))}
             </SelectContent>
           </Select>
+          <Select value={sort} onValueChange={(v) => setSort((v as SortOrder | null) ?? "updated")}>
+            <SelectTrigger className="w-full sm:w-44" aria-label="Sort articles">
+              <SelectValue>{SORT_LABELS[sort]}</SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {(Object.keys(SORT_LABELS) as SortOrder[]).map((key) => (
+                <SelectItem key={key} value={key}>
+                  {SORT_LABELS[key]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           {filtersActive ? (
             <Button type="button" variant="ghost" onClick={clearFilters}>
               <XIcon />
               Clear
             </Button>
           ) : null}
+        </div>
+
+        <div className="-mt-2 flex items-center justify-end gap-2 text-xs text-muted-foreground">
+          {checkedAt ? <span>List checked {timeOf(checkedAt)}</span> : null}
+          <Button
+            type="button"
+            size="xs"
+            variant="ghost"
+            disabled={refreshing}
+            onClick={() => void refresh()}
+            title="Load the latest articles. This also happens when you come back to this tab."
+          >
+            <RefreshCwIcon className={cn(refreshing && "animate-spin")} />
+            Refresh
+          </Button>
         </div>
 
         {filtered.length === 0 ? (
@@ -408,10 +577,16 @@ function BlogManager({ user }: { user: DashboardUser }) {
               const cover = mediaUrl(post.coverImage ?? post.category.imageUrl);
               const state = stateOf(post);
               const busy = opening === post.id || changing === post.id;
+              const fresh = seenState(seen, post);
               return (
                 <li
                   key={post.id}
-                  className="group/row flex items-center gap-3 p-3 transition-colors hover:bg-muted/30 sm:p-4"
+                  id={`blog-row-${post.id}`}
+                  className={cn(
+                    "group/row flex items-center gap-3 p-3 transition-colors hover:bg-muted/30 sm:p-4",
+                    fresh && "bg-violet-500/[0.04]",
+                    highlightId === post.id && "bg-primary/10",
+                  )}
                 >
                   <button
                     type="button"
@@ -436,6 +611,16 @@ function BlogManager({ user }: { user: DashboardUser }) {
                         <Badge variant="outline" className={STATE_STYLE[state].className}>
                           {STATE_STYLE[state].label}
                         </Badge>
+                        {fresh ? (
+                          <Badge
+                            variant="outline"
+                            className={SEEN_STYLE[fresh].className}
+                            title={SEEN_STYLE[fresh].hint}
+                          >
+                            <BellDotIcon />
+                            {SEEN_STYLE[fresh].label}
+                          </Badge>
+                        ) : null}
                         {post.featured ? (
                           <Badge variant="outline">
                             <StarIcon />
@@ -460,7 +645,14 @@ function BlogManager({ user }: { user: DashboardUser }) {
                           ? ` · goes live ${formatDate(post.publishedAt)}`
                           : state === "published" && post.publishedAt
                             ? ` · published ${formatDate(post.publishedAt)}`
-                            : ` · edited ${formatDate(post.updatedAt)}`}
+                            : ""}
+                        {" · "}
+                        <span
+                          title={`Last saved ${timeOf(Date.parse(post.updatedAt))}`}
+                          className={cn(fresh && "font-medium text-violet-700 dark:text-violet-300")}
+                        >
+                          updated {relativeTime(post.updatedAt)}
+                        </span>
                       </span>
                     </span>
                   </button>
