@@ -1,11 +1,14 @@
-import { useDeferredValue } from "react";
+import { useDeferredValue, useMemo, type MouseEvent, type ReactNode } from "react";
 import { useWatch, type Control } from "react-hook-form";
 import {
+  ChevronDownIcon,
   ChevronsRightIcon,
   ClockIcon,
   EyeIcon,
   InfoIcon,
+  ListChecksIcon,
   Maximize2Icon,
+  MousePointerClickIcon,
   PlayIcon,
   TriangleAlertIcon,
   CircleCheckIcon,
@@ -13,10 +16,11 @@ import {
 import { mediaUrl } from "@/config";
 import { cn } from "@/lib/utils";
 import { useAppDispatch, useAppSelector } from "@/lib/store/hooks";
-import { setPreviewTab, type BlogPreviewTab } from "@/lib/store/blogEditorUiSlice";
+import { setPreviewTab, toggleIssues, type BlogPreviewTab } from "@/lib/store/blogEditorUiSlice";
 import { ServiceIcon } from "@/components/ServiceIcon";
 import { Button } from "@/components/ui/button";
 import { countWords } from "./PublishChecklist";
+import { findIssues, jumpToEdit, spotTarget, type Issue, type Spot } from "./blogIssues";
 import {
   ACCENT_SWATCH,
   formatDate,
@@ -198,6 +202,8 @@ function Cover({
   );
 }
 
+type PreviewData = ReturnType<typeof usePreviewData>;
+
 function usePreviewData({ control, categories, members, authorName }: PreviewProps) {
   const watched = useWatch({ control }) as BlogPostFormValues;
   const values = useDeferredValue(watched);
@@ -205,28 +211,175 @@ function usePreviewData({ control, categories, members, authorName }: PreviewPro
   const byline = members.find((m) => String(m.id) === values.bylineMemberId)?.name ?? authorName;
   const minutes = Math.max(1, Math.round(countWords(values.body ?? []) / WORDS_PER_MINUTE));
   const date = values.publishedAt ? formatDate(values.publishedAt) : formatDate(new Date().toISOString());
-  return { values, category, byline, minutes, date };
+  const issues = useMemo(() => findIssues(values), [values]);
+  return { values, category, byline, minutes, date, issues };
 }
 
-function ArticlePreview(props: PreviewProps) {
-  const { values, category, byline, minutes, date } = usePreviewData(props);
+function Marker({ issue, onClick }: { issue: Issue; onClick?: () => void }) {
+  return (
+    <span
+      role={onClick ? "button" : undefined}
+      onClick={onClick}
+      title={`${issue.label} — ${issue.hint}`}
+      className={cn(
+        "flex size-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white shadow-sm ring-2 ring-card",
+        issue.required ? "bg-red-500" : "bg-amber-500",
+      )}
+    >
+      {issue.number}
+    </span>
+  );
+}
+
+/**
+ * A clickable region of the preview: click jumps to the matching field in the
+ * editor. Issues pinned to this spot show as numbered markers and an outline.
+ */
+function PreviewSpot({
+  spot,
+  issues,
+  children,
+  className,
+}: {
+  spot: Spot;
+  issues: Issue[];
+  children: ReactNode;
+  className?: string;
+}) {
+  const pinned = issues.filter((i) => i.spot === spot);
+  const required = pinned.some((i) => i.required);
+  const edit = (e?: MouseEvent) => {
+    e?.stopPropagation();
+    if (e && (e.target as HTMLElement).closest("video, summary, a")) return;
+    jumpToEdit(spotTarget(spot));
+  };
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={edit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          e.stopPropagation();
+          edit();
+        }
+      }}
+      title="Click to edit"
+      className={cn(
+        "relative -mx-1.5 cursor-pointer rounded-lg px-1.5 py-1 outline-none transition hover:bg-primary/5 hover:ring-1 hover:ring-primary/30 focus-visible:ring-2 focus-visible:ring-primary/50",
+        pinned.length > 0 &&
+          (required
+            ? "bg-red-500/5 ring-1 ring-red-500/40"
+            : "outline-1 outline-offset-0 outline-dashed outline-amber-500/60"),
+        className,
+      )}
+    >
+      {pinned.length ? (
+        <span className="absolute -top-2 -right-1.5 z-10 flex gap-0.5">
+          {pinned.map((issue) => (
+            <Marker key={issue.number} issue={issue} />
+          ))}
+        </span>
+      ) : null}
+      {children}
+    </div>
+  );
+}
+
+function IssuesList({ issues }: { issues: Issue[] }) {
+  const dispatch = useAppDispatch();
+  const open = useAppSelector((s) => s.blogEditorUi.issuesOpen);
+  const required = issues.filter((i) => i.required).length;
+  const suggested = issues.length - required;
+
+  if (issues.length === 0) {
+    return (
+      <p className="mb-4 flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-xs text-emerald-700 dark:text-emerald-300">
+        <CircleCheckIcon className="size-4 shrink-0" />
+        Nothing left to fix — the article looks ready.
+      </p>
+    );
+  }
+
+  return (
+    <div
+      className={cn(
+        "mb-4 rounded-xl border",
+        required ? "border-red-500/30 bg-red-500/[0.03]" : "border-amber-500/30 bg-amber-500/[0.03]",
+      )}
+    >
+      <button
+        type="button"
+        onClick={() => dispatch(toggleIssues())}
+        aria-expanded={open}
+        className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs"
+      >
+        <ListChecksIcon className="size-4 shrink-0 text-muted-foreground" />
+        <span className="flex-1 font-medium">
+          {required ? `${required} to fix` : "Nothing required"}
+          {suggested ? <span className="font-normal text-muted-foreground"> · {suggested} suggested</span> : null}
+        </span>
+        <ChevronDownIcon className={cn("size-4 text-muted-foreground transition-transform", open && "rotate-180")} />
+      </button>
+      {open ? (
+        <ol className="grid gap-0.5 border-t px-1.5 py-1.5">
+          {issues.map((issue) => (
+            <li key={issue.number}>
+              <button
+                type="button"
+                onClick={() => jumpToEdit(issue)}
+                className="flex w-full items-start gap-2 rounded-md px-1.5 py-1.5 text-left hover:bg-muted"
+              >
+                <Marker issue={issue} />
+                <span className="min-w-0">
+                  <span className="block text-xs font-medium">
+                    {issue.label}
+                    {issue.required ? <span className="ml-1 font-normal text-red-600">required</span> : null}
+                  </span>
+                  <span className="block text-[11px] text-muted-foreground">{issue.hint}</span>
+                </span>
+              </button>
+            </li>
+          ))}
+          <li className="flex items-center gap-1.5 px-1.5 pt-1 text-[11px] text-muted-foreground">
+            <MousePointerClickIcon className="size-3" />
+            Click an item, a number or any part of the preview to edit it.
+          </li>
+        </ol>
+      ) : null}
+    </div>
+  );
+}
+
+function ArticlePreview({ values, category, byline, minutes, date, issues }: PreviewData) {
   const takeaways = splitList(values.keyTakeaways ?? "", /\n/);
   const faqs = (values.faqs ?? []).filter((f) => f.q.trim() || f.a.trim());
+  const body = values.body ?? [];
 
   return (
     <article className="grid gap-4">
       <div className="grid gap-2">
-        {category ? (
-          <span className="w-fit rounded-full bg-primary/10 px-2.5 py-0.5 text-[11px] font-semibold text-primary">
-            {category.name}
+        <PreviewSpot spot="category" issues={issues} className="w-fit">
+          <span
+            className={cn(
+              "block w-fit rounded-full px-2.5 py-0.5 text-[11px] font-semibold",
+              category ? "bg-primary/10 text-primary" : "border border-dashed text-muted-foreground",
+            )}
+          >
+            {category?.name ?? "No category"}
           </span>
-        ) : null}
-        <h1 className={cn("text-xl font-black leading-tight", !values.title.trim() && "text-muted-foreground/60")}>
-          {values.title.trim() || "Your article title"}
-        </h1>
-        <p className={cn("text-sm text-muted-foreground", !values.excerpt.trim() && "italic opacity-60")}>
-          {values.excerpt.trim() || "The excerpt appears here, under the title."}
-        </p>
+        </PreviewSpot>
+        <PreviewSpot spot="title" issues={issues}>
+          <h1 className={cn("text-xl font-black leading-tight", !values.title.trim() && "text-muted-foreground/60")}>
+            {values.title.trim() || "Your article title"}
+          </h1>
+        </PreviewSpot>
+        <PreviewSpot spot="excerpt" issues={issues}>
+          <p className={cn("text-sm text-muted-foreground", !values.excerpt.trim() && "italic opacity-60")}>
+            {values.excerpt.trim() || "The excerpt appears here, under the title."}
+          </p>
+        </PreviewSpot>
         <p className="flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
           <span className="font-medium text-foreground">{byline}</span>
           <span>·</span>
@@ -239,8 +392,10 @@ function ArticlePreview(props: PreviewProps) {
         </p>
       </div>
 
-      <Cover values={values} category={category} />
-      {values.videoUrl.trim() ? <VideoPreview src={values.videoUrl.trim()} /> : null}
+      <PreviewSpot spot="cover" issues={issues} className="grid gap-3">
+        <Cover values={values} category={category} />
+        {values.videoUrl.trim() ? <VideoPreview src={values.videoUrl.trim()} /> : null}
+      </PreviewSpot>
 
       {takeaways.length ? (
         <div className="rounded-xl border bg-muted/40 p-3">
@@ -253,14 +408,31 @@ function ArticlePreview(props: PreviewProps) {
         </div>
       ) : null}
 
-      <div className="grid gap-3">
-        {(values.body ?? []).map((block, i) => (
-          <Block key={i} block={block} />
-        ))}
-      </div>
+      <PreviewSpot spot="content" issues={issues} className="grid gap-3 py-2">
+        {body.length === 0 ? (
+          <p className="rounded-lg border border-dashed px-3 py-4 text-center text-xs text-muted-foreground">
+            No content yet — click to add a block.
+          </p>
+        ) : null}
+        {body.map((block, i) => {
+          const spot = `block-${i}` as const;
+          const empty = issues.some((issue) => issue.spot === spot);
+          return (
+            <PreviewSpot key={i} spot={spot} issues={issues}>
+              {empty ? (
+                <p className="py-1 text-xs italic text-muted-foreground">
+                  Empty {block.type} block
+                </p>
+              ) : (
+                <Block block={block} />
+              )}
+            </PreviewSpot>
+          );
+        })}
+      </PreviewSpot>
 
-      {faqs.length ? (
-        <div className="grid gap-2 border-t pt-4">
+      {faqs.length || issues.some((i) => i.spot === "faqs") ? (
+        <PreviewSpot spot="faqs" issues={issues} className="grid gap-2 border-t pt-4">
           <h2 className="text-lg font-bold">Frequently asked questions</h2>
           {faqs.map((faq, i) => (
             <details key={i} className="rounded-lg border px-3 py-2 text-sm" open={i === 0}>
@@ -268,7 +440,7 @@ function ArticlePreview(props: PreviewProps) {
               <p className="mt-1.5 whitespace-pre-line text-muted-foreground">{faq.a}</p>
             </details>
           ))}
-        </div>
+        </PreviewSpot>
       ) : null}
 
       {values.tags.trim() ? (
@@ -284,28 +456,35 @@ function ArticlePreview(props: PreviewProps) {
   );
 }
 
-function CardPreview(props: PreviewProps) {
-  const { values, category, byline, minutes, date } = usePreviewData(props);
+function CardPreview({ values, category, byline, minutes, date, issues }: PreviewData) {
   return (
     <div className="grid gap-3">
       <p className="text-xs text-muted-foreground">How the article appears in the list on /blog.</p>
-      <div className="overflow-hidden rounded-2xl border bg-card shadow-sm">
-        <Cover values={values} category={category} className="rounded-none" />
-        <div className="grid gap-2 p-4">
-          <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-primary">
-            {category?.name ?? "Category"}
-            {values.featured ? (
-              <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-amber-700 normal-case dark:text-amber-300">
-                Featured
-              </span>
-            ) : null}
-          </div>
-          <p className="line-clamp-2 text-base font-bold leading-snug">
-            {values.title.trim() || "Your article title"}
-          </p>
-          <p className="line-clamp-3 text-sm text-muted-foreground">
-            {values.excerpt.trim() || "The excerpt appears here."}
-          </p>
+      <div className="rounded-2xl border bg-card p-1.5 shadow-sm">
+        <PreviewSpot spot="cover" issues={issues} className="mx-0 px-0 py-0">
+          <Cover values={values} category={category} />
+        </PreviewSpot>
+        <div className="grid gap-2 p-3">
+          <PreviewSpot spot="category" issues={issues} className="w-fit">
+            <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-primary">
+              {category?.name ?? "Category"}
+              {values.featured ? (
+                <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-amber-700 normal-case dark:text-amber-300">
+                  Featured
+                </span>
+              ) : null}
+            </div>
+          </PreviewSpot>
+          <PreviewSpot spot="title" issues={issues}>
+            <p className="line-clamp-2 text-base font-bold leading-snug">
+              {values.title.trim() || "Your article title"}
+            </p>
+          </PreviewSpot>
+          <PreviewSpot spot="excerpt" issues={issues}>
+            <p className="line-clamp-3 text-sm text-muted-foreground">
+              {values.excerpt.trim() || "The excerpt appears here."}
+            </p>
+          </PreviewSpot>
           <p className="border-t pt-2 text-xs text-muted-foreground">
             {byline} · {date} · {minutes} min read
           </p>
@@ -324,12 +503,31 @@ export function BlogLivePreview({
 }: PreviewProps & { onExpand?: () => void; onCollapse?: () => void; className?: string }) {
   const dispatch = useAppDispatch();
   const tab = useAppSelector((s) => s.blogEditorUi.previewTab);
+  const data = usePreviewData(props);
+  const required = data.issues.filter((i) => i.required).length;
+  const suggested = data.issues.length - required;
 
   return (
     <div className={cn("flex min-h-0 flex-col rounded-2xl border bg-card shadow-sm", className)}>
       <div className="flex items-center gap-2 border-b px-3 py-2">
         <EyeIcon className="size-4 text-muted-foreground" />
         <span className="text-sm font-semibold">Live preview</span>
+        {required ? (
+          <span
+            className="rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white"
+            title={`${required} thing${required === 1 ? "" : "s"} to fix`}
+          >
+            {required}
+          </span>
+        ) : null}
+        {suggested ? (
+          <span
+            className="rounded-full bg-amber-500 px-1.5 text-[10px] font-bold text-white"
+            title={`${suggested} suggestion${suggested === 1 ? "" : "s"}`}
+          >
+            {suggested}
+          </span>
+        ) : null}
         <span className="ml-auto flex items-center gap-0.5">
           {onExpand ? (
             <Button
@@ -373,8 +571,9 @@ export function BlogLivePreview({
           </button>
         ))}
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto p-4">
-        {tab === "card" ? <CardPreview {...props} /> : <ArticlePreview {...props} />}
+      <div className="min-h-0 flex-1 overflow-y-auto p-4 pt-3">
+        <IssuesList issues={data.issues} />
+        {tab === "card" ? <CardPreview {...data} /> : <ArticlePreview {...data} />}
       </div>
     </div>
   );

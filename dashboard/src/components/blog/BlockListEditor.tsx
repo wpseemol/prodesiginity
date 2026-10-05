@@ -278,7 +278,8 @@ export function BlockListEditor({ form }: { form: Form }) {
           <div key={block.id}>
             {index > 0 ? <InsertBlockMenu onPick={(t) => insert(index, emptyBlock(t))} /> : null}
           <div
-            className={`grid gap-3 rounded-xl border bg-card p-3 sm:p-4 ${hasError ? "border-destructive/50" : ""}`}
+            id={`post-block-${index}`}
+            className={`grid scroll-mt-32 gap-3 rounded-xl border bg-card p-3 transition-shadow sm:p-4 ${hasError ? "border-destructive/50" : ""}`}
           >
             <div className="flex items-center gap-2">
               <span className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary">

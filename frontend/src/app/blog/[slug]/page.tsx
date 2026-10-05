@@ -7,7 +7,8 @@
  * `generateStaticParams` emits every slug at build time, which is what makes
  * these routes work under `output: "export"`. Posts published after the last
  * build are rendered client-side by LiveBlogFallback (from the 404 page) until
- * the next build makes them static and fully indexable.
+ * the next build makes them static and fully indexable. Built articles re-read
+ * the API on load (LiveBlogPost), so dashboard edits show without a rebuild.
  *
  * SEO: canonical URL, per-article title/description, og:type=article with
  * author / section / tags / dates, Twitter large card, and BlogPosting +
@@ -16,13 +17,13 @@
 
 import { notFound } from "next/navigation";
 
-import BlogPostView from "@/components/blog/BlogPostView";
+import LiveBlogPost from "@/components/blog/LiveBlogPost";
 import { siteConfig } from "@/config/site";
 import { blogCanonicalPath } from "@/data/blog";
 import { resolveTokens } from "@/lib/blog";
 import { findPost, getBlogData, relatedPostsFor } from "@/lib/blog-api";
 import { buildMetadata } from "@/lib/seo";
-import { findService, getServicesCatalog } from "@/lib/services-catalog";
+import { getServicesCatalog } from "@/lib/services-catalog";
 import { findStaffByName, getTeamData, staffSlug } from "@/lib/team-api";
 
 import type { Metadata } from "next";
@@ -94,16 +95,11 @@ export default async function BlogPostPage({
         ? { ...found, author: { ...found.author, slug: staffSlug(authorMember) } }
         : found;
 
-    // Unknown service slugs are dropped rather than rendered as dead links.
-    const services = (post.relatedServices ?? [])
-        .map((serviceSlug) => findService(catalog, serviceSlug))
-        .filter((service) => service !== undefined);
-
     return (
-        <BlogPostView
-            post={post}
-            related={relatedPostsFor(posts, post)}
-            services={services}
+        <LiveBlogPost
+            initialPost={post}
+            initialRelated={relatedPostsFor(posts, post)}
+            initialCatalog={catalog}
         />
     );
 }
