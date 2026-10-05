@@ -1,24 +1,12 @@
-import { useDeferredValue, useMemo, type MouseEvent, type ReactNode } from "react";
+import { useDeferredValue, useMemo, type ReactNode } from "react";
 import { useWatch, type Control } from "react-hook-form";
-import {
-  ChevronDownIcon,
-  ChevronsRightIcon,
-  ClockIcon,
-  EyeIcon,
-  InfoIcon,
-  ListChecksIcon,
-  Maximize2Icon,
-  MousePointerClickIcon,
-  PlayIcon,
-  TriangleAlertIcon,
-  CircleCheckIcon,
-} from "lucide-react";
+import { ClockIcon, InfoIcon, PlayIcon, TriangleAlertIcon, CircleCheckIcon } from "lucide-react";
 import { mediaUrl } from "@/config";
 import { cn } from "@/lib/utils";
 import { useAppDispatch, useAppSelector } from "@/lib/store/hooks";
 import { setPreviewTab, toggleIssues, type BlogPreviewTab } from "@/lib/store/blogEditorUiSlice";
 import { ServiceIcon } from "@/components/ServiceIcon";
-import { Button } from "@/components/ui/button";
+import { LivePreviewPanel, PreviewSpot as KitSpot } from "@/components/preview/PreviewKit";
 import { countWords } from "./PublishChecklist";
 import { findIssues, jumpToEdit, spotTarget, type Issue, type Spot } from "./blogIssues";
 import {
@@ -215,141 +203,10 @@ function usePreviewData({ control, categories, members, authorName }: PreviewPro
   return { values, category, byline, minutes, date, issues };
 }
 
-function Marker({ issue, onClick }: { issue: Issue; onClick?: () => void }) {
-  return (
-    <span
-      role={onClick ? "button" : undefined}
-      onClick={onClick}
-      title={`${issue.label} — ${issue.hint}`}
-      className={cn(
-        "flex size-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white shadow-sm ring-2 ring-card",
-        issue.required ? "bg-red-500" : "bg-amber-500",
-      )}
-    >
-      {issue.number}
-    </span>
-  );
-}
+const editSpot = (spot: Spot) => jumpToEdit(spotTarget(spot));
 
-/**
- * A clickable region of the preview: click jumps to the matching field in the
- * editor. Issues pinned to this spot show as numbered markers and an outline.
- */
-function PreviewSpot({
-  spot,
-  issues,
-  children,
-  className,
-}: {
-  spot: Spot;
-  issues: Issue[];
-  children: ReactNode;
-  className?: string;
-}) {
-  const pinned = issues.filter((i) => i.spot === spot);
-  const required = pinned.some((i) => i.required);
-  const edit = (e?: MouseEvent) => {
-    e?.stopPropagation();
-    if (e && (e.target as HTMLElement).closest("video, summary, a")) return;
-    jumpToEdit(spotTarget(spot));
-  };
-  return (
-    <div
-      role="button"
-      tabIndex={0}
-      onClick={edit}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          e.stopPropagation();
-          edit();
-        }
-      }}
-      title="Click to edit"
-      className={cn(
-        "relative -mx-1.5 cursor-pointer rounded-lg px-1.5 py-1 outline-none transition hover:bg-primary/5 hover:ring-1 hover:ring-primary/30 focus-visible:ring-2 focus-visible:ring-primary/50",
-        pinned.length > 0 &&
-          (required
-            ? "bg-red-500/5 ring-1 ring-red-500/40"
-            : "outline-1 outline-offset-0 outline-dashed outline-amber-500/60"),
-        className,
-      )}
-    >
-      {pinned.length ? (
-        <span className="absolute -top-2 -right-1.5 z-10 flex gap-0.5">
-          {pinned.map((issue) => (
-            <Marker key={issue.number} issue={issue} />
-          ))}
-        </span>
-      ) : null}
-      {children}
-    </div>
-  );
-}
-
-function IssuesList({ issues }: { issues: Issue[] }) {
-  const dispatch = useAppDispatch();
-  const open = useAppSelector((s) => s.blogEditorUi.issuesOpen);
-  const required = issues.filter((i) => i.required).length;
-  const suggested = issues.length - required;
-
-  if (issues.length === 0) {
-    return (
-      <p className="mb-4 flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-xs text-emerald-700 dark:text-emerald-300">
-        <CircleCheckIcon className="size-4 shrink-0" />
-        Nothing left to fix — the article looks ready.
-      </p>
-    );
-  }
-
-  return (
-    <div
-      className={cn(
-        "mb-4 rounded-xl border",
-        required ? "border-red-500/30 bg-red-500/[0.03]" : "border-amber-500/30 bg-amber-500/[0.03]",
-      )}
-    >
-      <button
-        type="button"
-        onClick={() => dispatch(toggleIssues())}
-        aria-expanded={open}
-        className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs"
-      >
-        <ListChecksIcon className="size-4 shrink-0 text-muted-foreground" />
-        <span className="flex-1 font-medium">
-          {required ? `${required} to fix` : "Nothing required"}
-          {suggested ? <span className="font-normal text-muted-foreground"> · {suggested} suggested</span> : null}
-        </span>
-        <ChevronDownIcon className={cn("size-4 text-muted-foreground transition-transform", open && "rotate-180")} />
-      </button>
-      {open ? (
-        <ol className="grid gap-0.5 border-t px-1.5 py-1.5">
-          {issues.map((issue) => (
-            <li key={issue.number}>
-              <button
-                type="button"
-                onClick={() => jumpToEdit(issue)}
-                className="flex w-full items-start gap-2 rounded-md px-1.5 py-1.5 text-left hover:bg-muted"
-              >
-                <Marker issue={issue} />
-                <span className="min-w-0">
-                  <span className="block text-xs font-medium">
-                    {issue.label}
-                    {issue.required ? <span className="ml-1 font-normal text-red-600">required</span> : null}
-                  </span>
-                  <span className="block text-[11px] text-muted-foreground">{issue.hint}</span>
-                </span>
-              </button>
-            </li>
-          ))}
-          <li className="flex items-center gap-1.5 px-1.5 pt-1 text-[11px] text-muted-foreground">
-            <MousePointerClickIcon className="size-3" />
-            Click an item, a number or any part of the preview to edit it.
-          </li>
-        </ol>
-      ) : null}
-    </div>
-  );
+function PreviewSpot(props: { spot: Spot; issues: Issue[]; children: ReactNode; className?: string }) {
+  return <KitSpot {...props} onEdit={editSpot} />;
 }
 
 function ArticlePreview({ values, category, byline, minutes, date, issues }: PreviewData) {
@@ -503,78 +360,24 @@ export function BlogLivePreview({
 }: PreviewProps & { onExpand?: () => void; onCollapse?: () => void; className?: string }) {
   const dispatch = useAppDispatch();
   const tab = useAppSelector((s) => s.blogEditorUi.previewTab);
+  const issuesOpen = useAppSelector((s) => s.blogEditorUi.issuesOpen);
   const data = usePreviewData(props);
-  const required = data.issues.filter((i) => i.required).length;
-  const suggested = data.issues.length - required;
 
   return (
-    <div className={cn("flex min-h-0 flex-col rounded-2xl border bg-card shadow-sm", className)}>
-      <div className="flex items-center gap-2 border-b px-3 py-2">
-        <EyeIcon className="size-4 text-muted-foreground" />
-        <span className="text-sm font-semibold">Live preview</span>
-        {required ? (
-          <span
-            className="rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white"
-            title={`${required} thing${required === 1 ? "" : "s"} to fix`}
-          >
-            {required}
-          </span>
-        ) : null}
-        {suggested ? (
-          <span
-            className="rounded-full bg-amber-500 px-1.5 text-[10px] font-bold text-white"
-            title={`${suggested} suggestion${suggested === 1 ? "" : "s"}`}
-          >
-            {suggested}
-          </span>
-        ) : null}
-        <span className="ml-auto flex items-center gap-0.5">
-          {onExpand ? (
-            <Button
-              type="button"
-              size="icon-sm"
-              variant="ghost"
-              aria-label="Open a larger preview"
-              title="Open a larger preview"
-              onClick={onExpand}
-            >
-              <Maximize2Icon />
-            </Button>
-          ) : null}
-          {onCollapse ? (
-            <Button
-              type="button"
-              size="icon-sm"
-              variant="ghost"
-              aria-label="Hide the preview"
-              title="Hide the preview"
-              onClick={onCollapse}
-            >
-              <ChevronsRightIcon />
-            </Button>
-          ) : null}
-        </span>
-      </div>
-      <div className="flex gap-1 border-b bg-muted/30 p-1.5">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            aria-pressed={tab === t.id}
-            onClick={() => dispatch(setPreviewTab(t.id))}
-            className={cn(
-              "flex-1 rounded-md px-2 py-1 text-xs font-medium transition-colors",
-              tab === t.id ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
-            )}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-      <div className="min-h-0 flex-1 overflow-y-auto p-4 pt-3">
-        <IssuesList issues={data.issues} />
-        {tab === "card" ? <CardPreview {...data} /> : <ArticlePreview {...data} />}
-      </div>
-    </div>
+    <LivePreviewPanel
+      issues={data.issues}
+      tabs={TABS}
+      tab={tab}
+      onTabChange={(next) => dispatch(setPreviewTab(next))}
+      issuesOpen={issuesOpen}
+      onToggleIssues={() => dispatch(toggleIssues())}
+      onJump={jumpToEdit}
+      readyText="Nothing left to fix — the article looks ready."
+      onExpand={onExpand}
+      onCollapse={onCollapse}
+      className={className}
+    >
+      {tab === "card" ? <CardPreview {...data} /> : <ArticlePreview {...data} />}
+    </LivePreviewPanel>
   );
 }

@@ -1,16 +1,10 @@
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type PointerEvent as ReactPointerEvent,
-} from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { CollapsedPreviewRail, ResizeHandle } from "@/components/preview/PreviewKit";
 import { Controller, useFieldArray, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   ArrowLeftIcon,
   CheckIcon,
-  ChevronsLeftIcon,
   CloudOffIcon,
   ExternalLinkIcon,
   EyeIcon,
@@ -156,37 +150,6 @@ export function BlogPostEditor({
   const [previewSheet, setPreviewSheet] = useState(false);
   const previewWidth = useAppSelector((s) => s.blogEditorUi.previewWidth);
   const [dragWidth, setDragWidth] = useState<number | null>(null);
-
-  const startResize = (e: ReactPointerEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    const handle = e.currentTarget;
-    handle.setPointerCapture(e.pointerId);
-    const startX = e.clientX;
-    const startWidth = previewWidth;
-    const maxWidth = Math.min(PREVIEW_WIDTH.max, Math.round(window.innerWidth * 0.5));
-    const widthAt = (x: number) =>
-      Math.round(Math.min(maxWidth, Math.max(PREVIEW_WIDTH.min, startWidth + (startX - x))));
-    let latest = startWidth;
-    document.body.style.cursor = "col-resize";
-    document.body.style.userSelect = "none";
-
-    const onMove = (ev: PointerEvent) => {
-      latest = widthAt(ev.clientX);
-      setDragWidth(latest);
-    };
-    const onUp = () => {
-      handle.removeEventListener("pointermove", onMove);
-      handle.removeEventListener("pointerup", onUp);
-      handle.removeEventListener("pointercancel", onUp);
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
-      dispatch(setPreviewWidth(latest));
-      setDragWidth(null);
-    };
-    handle.addEventListener("pointermove", onMove);
-    handle.addEventListener("pointerup", onUp);
-    handle.addEventListener("pointercancel", onUp);
-  };
   const [sessionLost, setSessionLost] = useState(false);
   const [restorable, setRestorable] = useState<LocalDraft<BlogPostFormValues> | null>(() => {
     const draft = loadLocalDraft<BlogPostFormValues>(draftKey);
@@ -1183,51 +1146,25 @@ export function BlogPostEditor({
         {wideScreen ? (
           <aside className="sticky top-[7.5rem] h-[calc(100vh-9rem)] self-start">
             {previewOpen ? (
-              <div
-                role="separator"
-                aria-orientation="vertical"
-                aria-label="Resize the preview"
-                aria-valuemin={PREVIEW_WIDTH.min}
-                aria-valuemax={PREVIEW_WIDTH.max}
-                aria-valuenow={dragWidth ?? previewWidth}
-                tabIndex={0}
-                title="Drag to resize · double-click to reset"
-                onPointerDown={startResize}
-                onDoubleClick={() => dispatch(resetPreviewWidth())}
-                onKeyDown={(e) => {
-                  if (e.key === "ArrowLeft") dispatch(setPreviewWidth(previewWidth + 24));
-                  else if (e.key === "ArrowRight") dispatch(setPreviewWidth(previewWidth - 24));
-                  else return;
-                  e.preventDefault();
-                }}
-                className="group/resize absolute inset-y-0 -left-4 z-10 flex w-4 cursor-col-resize touch-none items-center justify-center outline-none"
-              >
-                <span
-                  className={cn(
-                    "h-14 w-1.5 rounded-full bg-border transition-colors group-hover/resize:bg-primary/60 group-focus-visible/resize:bg-primary",
-                    dragWidth !== null && "bg-primary",
-                  )}
+              <>
+                <ResizeHandle
+                  width={dragWidth ?? previewWidth}
+                  min={PREVIEW_WIDTH.min}
+                  max={PREVIEW_WIDTH.max}
+                  dragging={dragWidth !== null}
+                  onDrag={setDragWidth}
+                  onCommit={(width) => dispatch(setPreviewWidth(width))}
+                  onReset={() => dispatch(resetPreviewWidth())}
                 />
-              </div>
-            ) : null}
-            {previewOpen ? (
-              <BlogLivePreview
-                {...previewProps}
-                className="h-full"
-                onExpand={() => setPreviewSheet(true)}
-                onCollapse={() => dispatch(setPreviewOpen(false))}
-              />
+                <BlogLivePreview
+                  {...previewProps}
+                  className="h-full"
+                  onExpand={() => setPreviewSheet(true)}
+                  onCollapse={() => dispatch(setPreviewOpen(false))}
+                />
+              </>
             ) : (
-              <button
-                type="button"
-                onClick={() => dispatch(setPreviewOpen(true))}
-                title="Show the live preview"
-                className="flex h-full w-full flex-col items-center gap-3 rounded-2xl border bg-card py-3 text-muted-foreground shadow-sm transition-colors hover:border-primary/40 hover:text-foreground"
-              >
-                <ChevronsLeftIcon className="size-4" />
-                <EyeIcon className="size-4" />
-                <span className="text-xs font-medium [writing-mode:vertical-rl]">Live preview</span>
-              </button>
+              <CollapsedPreviewRail onOpen={() => dispatch(setPreviewOpen(true))} />
             )}
           </aside>
         ) : null}
