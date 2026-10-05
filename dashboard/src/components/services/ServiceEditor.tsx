@@ -1,4 +1,12 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useDeferredValue,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import {
   ArrowLeftIcon,
   ArrowRightIcon,
@@ -7,7 +15,6 @@ import {
   ExternalLinkIcon,
   EyeIcon,
   EyeOffIcon,
-  GlobeIcon,
   Loader2Icon,
   PlusIcon,
   SaveIcon,
@@ -15,17 +22,35 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
-import { IconPicker, ServiceIcon } from "@/components/ServiceIcon";
+import { jumpToEdit } from "@/lib/jumpToEdit";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { useAppDispatch, useAppSelector } from "@/lib/store/hooks";
 import {
-  SimpleEditor,
-  htmlToList,
-  htmlToParagraphs,
-  htmlToText,
-  listToHtml,
-  paragraphsToHtml,
-  textToHtml,
-} from "@/components/editor/SimpleEditor";
+  addFaq,
+  addProcessStep,
+  endSession,
+  removeFaq,
+  removeProcessStep,
+  resetPreviewWidth,
+  setField,
+  setPreviewOpen,
+  setPreviewWidth,
+  setShowErrors,
+  setSlug,
+  setStep,
+  setTitle,
+  startSession,
+  togglePreview,
+  updateFaq,
+  updateProcessStep,
+  SERVICE_PREVIEW_WIDTH,
+  type ServiceDraft,
+  type ServiceStepId,
+} from "@/lib/store/serviceEditorSlice";
+import { IconPicker } from "@/components/ServiceIcon";
+import { SimpleEditor } from "@/components/editor/SimpleEditor";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { CollapsedPreviewRail, ResizeHandle } from "@/components/preview/PreviewKit";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,35 +62,33 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import {
   COLOR_THEMES,
-  DEFAULT_THEME,
   SERVICE_PATH,
   readMessage,
   servicePageUrl,
   slugify,
-  themeKeyFor,
   type GroupRow,
   type ServiceRow,
 } from "./serviceTypes";
-
-type StepId = "basics" | "card" | "page" | "process" | "search";
-
-const STEPS: { id: StepId; title: string; hint: string }[] = [
-  { id: "basics", title: "Basic info", hint: "Name and category" },
-  { id: "card", title: "Card look", hint: "Icon, colour, short text" },
-  { id: "page", title: "Service page", hint: "What visitors read" },
-  { id: "process", title: "Process & FAQ", hint: "How you work" },
-  { id: "search", title: "Google search", hint: "Optional" },
-];
-
-type ProcessStep = { title: string; bodyHtml: string };
-type FaqItem = { q: string; aHtml: string };
-
-const EMPTY_LIST = "<ul><li><p></p></li></ul>";
+import {
+  STEPS,
+  STEP_FIELDS,
+  buildPayload,
+  faqItemId,
+  makeDraft,
+  processStepId,
+  serviceSpotTarget,
+  validateService,
+  type ServiceEditTarget,
+  type ServiceSpot,
+} from "./serviceDraft";
+import { ServiceLivePreview } from "./ServiceLivePreview";
 
 export function Field({
+  id,
   label,
   htmlFor,
   required,
@@ -73,6 +96,8 @@ export function Field({
   error,
   children,
 }: {
+  /** Lets the live preview scroll to and highlight this field. */
+  id?: string;
   label: string;
   htmlFor?: string;
   required?: boolean;
@@ -81,7 +106,7 @@ export function Field({
   children: ReactNode;
 }) {
   return (
-    <div className="grid gap-1.5">
+    <div id={id} data-slot="field" className="grid scroll-mt-24 gap-1.5 rounded-lg transition-shadow">
       <div className="flex items-center gap-2">
         <Label htmlFor={htmlFor}>{label}</Label>
         <span
@@ -114,6 +139,8 @@ export function StepHeading({ title, text }: { title: string; text: string }) {
   );
 }
 
+let sessionCounter = 0;
+
 export function ServiceEditor({
   groups,
   initial,
@@ -134,194 +161,83 @@ export function ServiceEditor({
 }) {
   const editing = duplicate ? null : initial;
   const isEdit = editing !== null;
-  const copyTitle = initial && duplicate ? `${initial.title} (copy)` : null;
+  const dispatch = useAppDispatch();
 
-  const [step, setStep] = useState<StepId>("basics");
-  const [showErrors, setShowErrors] = useState(false);
+  /* ---------------------------------------------------- Redux-held draft */
+  const [session] = useState(() => `service-editor-${++sessionCounter}`);
+  const [initialDraft] = useState(() => makeDraft({ initial, duplicate, groups, defaultGroupId }));
+
+  useLayoutEffect(() => {
+    dispatch(startSession({ session, draft: initialDraft }));
+    return () => {
+      dispatch(endSession(session));
+    };
+  }, [dispatch, session, initialDraft]);
+
+  const stored = useAppSelector((s) => s.serviceEditor);
+  const ours = stored.session === session && stored.draft !== null;
+  const draft = ours && stored.draft ? stored.draft : initialDraft;
+  const step: ServiceStepId = ours ? stored.step : "basics";
+  const showErrors = ours && stored.showErrors;
+  const ui = stored.ui;
+
+  const set = <K extends keyof ServiceDraft>(key: K, value: ServiceDraft[K]) =>
+    dispatch(setField({ key, value } as Parameters<typeof setField>[0]));
+
   const [saving, setSaving] = useState(false);
   const [confirmLeave, setConfirmLeave] = useState(false);
 
-  const [title, setTitle] = useState(copyTitle ?? initial?.title ?? "");
-  const [slug, setSlug] = useState(
-    copyTitle ? slugify(copyTitle) : (initial?.slug ?? ""),
-  );
-  const [slugTouched, setSlugTouched] = useState(isEdit);
-  const [groupId, setGroupId] = useState(() => {
-    if (initial) return String(initial.groupId);
-    const preferred = groups.find((g) => g.id === defaultGroupId) ?? groups[0];
-    return preferred ? String(preferred.id) : "";
-  });
-  const [tagline, setTagline] = useState(initial?.tagline ?? "");
-  const [published, setPublished] = useState(
-    duplicate ? false : (initial?.published ?? true),
-  );
+  /* ---------------------------------------------------- Live preview UI */
+  const wideScreen = useMediaQuery("(min-width: 1280px)");
+  const [previewSheet, setPreviewSheet] = useState(false);
+  const [dragWidth, setDragWidth] = useState<number | null>(null);
+  const previewDraft = useDeferredValue(draft);
 
-  const [icon, setIcon] = useState(initial?.icon ?? "Sparkles");
-  const [themeKey, setThemeKey] = useState(
-    initial ? themeKeyFor(initial.accent) : DEFAULT_THEME,
-  );
-  const [summaryHtml, setSummaryHtml] = useState(
-    initial ? textToHtml(initial.summary) : "<p></p>",
-  );
-
-  const [introHtml, setIntroHtml] = useState(
-    initial ? paragraphsToHtml(initial.intro) : "<p></p>",
-  );
-  const [deliverablesHtml, setDeliverablesHtml] = useState(
-    initial ? listToHtml(initial.deliverables) : EMPTY_LIST,
-  );
-  const [idealForHtml, setIdealForHtml] = useState(
-    initial ? listToHtml(initial.idealFor) : EMPTY_LIST,
-  );
-  const [timeline, setTimeline] = useState(initial?.timeline ?? "1–2 weeks");
-  const [startingAt, setStartingAt] = useState(
-    initial?.startingAt ?? "Custom quote",
-  );
-
-  const [processSteps, setProcessSteps] = useState<ProcessStep[]>(
-    initial?.process.length
-      ? initial.process.map((s) => ({
-          title: s.title,
-          bodyHtml: textToHtml(s.body),
-        }))
-      : [
-          { title: "Discovery call", bodyHtml: "<p></p>" },
-          { title: "Delivery", bodyHtml: "<p></p>" },
-        ],
-  );
-  const [faqs, setFaqs] = useState<FaqItem[]>(
-    (initial?.faqs ?? []).map((f) => ({ q: f.q, aHtml: textToHtml(f.a) })),
-  );
-
-  const [seoTitle, setSeoTitle] = useState(initial?.seo?.title ?? "");
-  const [seoDescription, setSeoDescription] = useState(
-    initial?.seo?.description ?? "",
-  );
-  const [seoKeywords, setSeoKeywords] = useState(
-    (initial?.seo?.keywords ?? []).join(", "),
-  );
-
-  const summary = htmlToText(summaryHtml);
-  const theme = COLOR_THEMES[themeKey] ?? COLOR_THEMES[DEFAULT_THEME];
-  const effectiveSlug = slug || slugify(title);
-  const categoryName = groups.find((g) => String(g.id) === groupId)?.title;
-
-  const payload = useMemo(
-    () => ({
-      title: title.trim(),
-      slug: effectiveSlug,
-      groupId: Number(groupId),
-      icon,
-      tagline: tagline.trim(),
-      summary,
-      intro: htmlToParagraphs(introHtml),
-      deliverables: htmlToList(deliverablesHtml),
-      idealFor: htmlToList(idealForHtml),
-      process: processSteps
-        .map((s) => ({ title: s.title.trim(), body: htmlToText(s.bodyHtml) }))
-        .filter((s) => s.title || s.body),
-      faqs: faqs
-        .map((f) => ({ q: f.q.trim(), a: htmlToText(f.aHtml) }))
-        .filter((f) => f.q || f.a),
-      timeline: timeline.trim(),
-      startingAt: startingAt.trim(),
-      accent: theme.website,
-      seo: {
-        title: seoTitle.trim() || title.trim(),
-        description: seoDescription.trim() || summary.slice(0, 320),
-        keywords: seoKeywords
-          .split(",")
-          .map((k) => k.trim())
-          .filter(Boolean),
-      },
-      published,
-    }),
-    [
-      title,
-      effectiveSlug,
-      groupId,
-      icon,
-      tagline,
-      summary,
-      introHtml,
-      deliverablesHtml,
-      idealForHtml,
-      processSteps,
-      faqs,
-      timeline,
-      startingAt,
-      theme,
-      seoTitle,
-      seoDescription,
-      seoKeywords,
-      published,
-    ],
-  );
-
-  const [initialSnapshot] = useState(() => JSON.stringify(payload));
+  /* ---------------------------------------------------- Derived values */
+  const payload = useMemo(() => buildPayload(draft), [draft]);
+  const [initialSnapshot] = useState(() => JSON.stringify(buildPayload(initialDraft)));
   const dirty = JSON.stringify(payload) !== initialSnapshot;
+  const errors = useMemo(() => validateService(payload), [payload]);
+  const categoryName = groups.find((g) => String(g.id) === draft.groupId)?.title;
 
-  const errors = useMemo(() => {
-    const e: Record<string, string> = {};
-    if (payload.title.length < 2) e.title = "Give the service a name.";
-    if (!groupId) e.groupId = "Choose which category it belongs to.";
-    if (payload.tagline.length < 2) e.tagline = "Add a one-line tagline.";
-    if (payload.summary.length < 2) e.summary = "Write a short description.";
-    if (!payload.intro.length) e.intro = "Write at least one paragraph.";
-    if (!payload.deliverables.length)
-      e.deliverables = "List at least one thing the client gets.";
-    if (!payload.idealFor.length)
-      e.idealFor = "List at least one type of client.";
-    if (!payload.timeline) e.timeline = "Add a typical timeline.";
-    if (!payload.startingAt) e.startingAt = "Add a starting price.";
-    if (!payload.process.length) e.process = "Add at least one step.";
-    else if (payload.process.some((s) => !s.title || !s.body))
-      e.process = "Every step needs both a title and a description.";
-    if (payload.faqs.some((f) => !f.q || !f.a))
-      e.faqs = "Every question needs an answer (or remove it).";
-    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(payload.slug) || payload.slug.length < 2)
-      e.slug = "Use lowercase letters, numbers and dashes only.";
-    return e;
-  }, [payload, groupId]);
-
-  const stepFields: Record<StepId, string[]> = {
-    basics: ["title", "groupId", "tagline"],
-    card: ["summary"],
-    page: ["intro", "deliverables", "idealFor", "timeline", "startingAt"],
-    process: ["process", "faqs"],
-    search: ["slug"],
-  };
-  const stepHasErrors = (id: StepId) =>
-    stepFields[id].some((field) => errors[field]);
+  const stepHasErrors = (id: ServiceStepId) => STEP_FIELDS[id].some((field) => errors[field]);
   const err = (field: string) => (showErrors ? errors[field] : undefined);
 
   const stepIndex = STEPS.findIndex((s) => s.id === step);
   const goTo = (index: number) => {
     const next = STEPS[index];
     if (next) {
-      setStep(next.id);
+      dispatch(setStep(next.id));
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
 
+  /** Opens the step that holds the field, then scrolls to and flashes it. */
+  const jumpTo = (target: ServiceEditTarget) => {
+    // A closing sheet hands focus back to its trigger, so wait for it.
+    const delay = previewSheet ? 220 : target.step === step ? 0 : 80;
+    setPreviewSheet(false);
+    if (target.step !== step) dispatch(setStep(target.step));
+    if (delay) window.setTimeout(() => jumpToEdit(target), delay);
+    else jumpToEdit(target);
+  };
+  const editSpot = (spot: ServiceSpot) => jumpTo(serviceSpotTarget(spot));
+
   const handleSave = async () => {
-    setShowErrors(true);
+    dispatch(setShowErrors(true));
     const firstBroken = STEPS.find((s) => stepHasErrors(s.id));
     if (firstBroken) {
-      setStep(firstBroken.id);
+      dispatch(setStep(firstBroken.id));
       toast.error(`Please finish “${firstBroken.title}” before saving.`);
       return;
     }
 
     setSaving(true);
     try {
-      const res = await apiFetch(
-        isEdit ? `/admin/services/${editing.id}` : "/admin/services",
-        {
-          method: isEdit ? "PUT" : "POST",
-          body: JSON.stringify(payload),
-        },
-      );
+      const res = await apiFetch(isEdit ? `/admin/services/${editing.id}` : "/admin/services", {
+        method: isEdit ? "PUT" : "POST",
+        body: JSON.stringify(payload),
+      });
       if (!res.ok) {
         toast.error(await readMessage(res, "Could not save the service."));
         return;
@@ -330,7 +246,7 @@ export function ServiceEditor({
         service?: { id?: number };
       } | null;
       toast.success(
-        published
+        draft.published
           ? `“${payload.title}” is saved and visible on the website.`
           : `“${payload.title}” is saved as hidden.`,
       );
@@ -372,6 +288,8 @@ export function ServiceEditor({
 
   const leave = () => (dirty ? setConfirmLeave(true) : onCancel());
 
+  const previewWidth = dragWidth ?? ui.previewWidth;
+
   return (
     <div className="grid gap-5">
       {/* Top bar */}
@@ -400,9 +318,7 @@ export function ServiceEditor({
               <span>
                 {completedSteps} of {STEPS.length} sections complete ·{" "}
                 {dirty ? (
-                  <span className="font-medium text-amber-600 dark:text-amber-400">
-                    Unsaved changes
-                  </span>
+                  <span className="font-medium text-amber-600 dark:text-amber-400">Unsaved changes</span>
                 ) : (
                   "No changes yet"
                 )}
@@ -411,6 +327,23 @@ export function ServiceEditor({
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant={wideScreen && ui.previewOpen ? "secondary" : "outline"}
+            size="sm"
+            aria-pressed={wideScreen ? ui.previewOpen : undefined}
+            title={
+              wideScreen
+                ? ui.previewOpen
+                  ? "Hide the live preview"
+                  : "Show the live preview"
+                : "Open the live preview"
+            }
+            onClick={() => (wideScreen ? dispatch(togglePreview()) : setPreviewSheet(true))}
+          >
+            <EyeIcon />
+            <span className="hidden sm:inline">Preview</span>
+          </Button>
           {isEdit && editing.published ? (
             <a
               href={servicePageUrl(editing.slug)}
@@ -422,12 +355,7 @@ export function ServiceEditor({
               <span className="hidden sm:inline">View on website</span>
             </a>
           ) : null}
-          <Button
-            type="button"
-            onClick={() => void handleSave()}
-            disabled={!canSave}
-            title="Save (Ctrl+S)"
-          >
+          <Button type="button" onClick={() => void handleSave()} disabled={!canSave} title="Save (Ctrl+S)">
             {saving ? <Loader2Icon className="animate-spin" /> : <SaveIcon />}
             {isEdit ? (dirty ? "Save changes" : "Saved") : "Save service"}
           </Button>
@@ -436,15 +364,23 @@ export function ServiceEditor({
 
       {duplicate ? (
         <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-800 dark:text-amber-300">
-          This is a copy. Change the name and page address, then save. It
-          starts hidden so it won't appear on the website until you switch it
-          on.
+          This is a copy. Change the name and page address, then save. It starts hidden so it won't appear on
+          the website until you switch it on.
         </p>
       ) : null}
 
-      <div className="grid gap-5 lg:grid-cols-[220px_minmax(0,1fr)_300px]">
+      <div
+        className="grid gap-5 lg:grid-cols-[200px_minmax(0,1fr)]"
+        style={
+          wideScreen
+            ? {
+                gridTemplateColumns: `200px minmax(0,1fr) ${ui.previewOpen ? `${previewWidth}px` : "2.75rem"}`,
+              }
+            : undefined
+        }
+      >
         {/* Steps */}
-        <nav className="flex gap-2 overflow-x-auto lg:flex-col lg:overflow-visible">
+        <nav className="flex gap-2 self-start overflow-x-auto lg:sticky lg:top-[4.5rem] lg:flex-col lg:overflow-visible">
           {STEPS.map((s, index) => {
             const active = s.id === step;
             const broken = showErrors && stepHasErrors(s.id);
@@ -456,9 +392,7 @@ export function ServiceEditor({
                 onClick={() => goTo(index)}
                 className={cn(
                   "flex min-w-44 items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors lg:min-w-0",
-                  active
-                    ? "border-primary bg-primary/10"
-                    : "border-transparent hover:bg-muted",
+                  active ? "border-primary bg-primary/10" : "border-transparent hover:bg-muted",
                 )}
               >
                 <span
@@ -483,9 +417,7 @@ export function ServiceEditor({
                 </span>
                 <span>
                   <span className="block text-sm font-medium">{s.title}</span>
-                  <span className="block text-xs text-muted-foreground">
-                    {s.hint}
-                  </span>
+                  <span className="block text-xs text-muted-foreground">{s.hint}</span>
                 </span>
               </button>
             );
@@ -501,6 +433,7 @@ export function ServiceEditor({
                 text="Start with the name visitors will see and where the service sits in the menu."
               />
               <Field
+                id="svc-field-title"
                 label="Service name"
                 htmlFor="svcTitle"
                 required
@@ -509,15 +442,15 @@ export function ServiceEditor({
               >
                 <Input
                   id="svcTitle"
-                  value={title}
+                  value={draft.title}
                   placeholder="e.g. Shopify Store Design"
-                  onChange={(e) => {
-                    setTitle(e.target.value);
-                    if (!slugTouched) setSlug(slugify(e.target.value));
-                  }}
+                  onChange={(e) =>
+                    dispatch(setTitle({ title: e.target.value, slug: slugify(e.target.value) }))
+                  }
                 />
               </Field>
               <Field
+                id="svc-field-category"
                 label="Category"
                 required
                 help="Services are grouped by category in the website menu."
@@ -525,12 +458,12 @@ export function ServiceEditor({
               >
                 <div className="flex flex-wrap items-center gap-2">
                   <Select
-                    value={groupId}
+                    value={draft.groupId}
                     onValueChange={(value) => {
-                      if (value) setGroupId(value);
+                      if (value) set("groupId", value);
                     }}
                   >
-                    <SelectTrigger className="w-full sm:w-72">
+                    <SelectTrigger id="svcGroup" className="w-full sm:w-72">
                       <SelectValue placeholder="Choose a category">
                         {categoryName ?? "Choose a category"}
                       </SelectValue>
@@ -543,17 +476,13 @@ export function ServiceEditor({
                       ))}
                     </SelectContent>
                   </Select>
-                  <Button
-                    type="button"
-                    variant="link"
-                    size="sm"
-                    onClick={onManageCategories}
-                  >
+                  <Button type="button" variant="link" size="sm" onClick={onManageCategories}>
                     Need a new category?
                   </Button>
                 </div>
               </Field>
               <Field
+                id="svc-field-tagline"
                 label="Tagline"
                 htmlFor="svcTagline"
                 required
@@ -562,21 +491,24 @@ export function ServiceEditor({
               >
                 <Input
                   id="svcTagline"
-                  value={tagline}
+                  value={draft.tagline}
                   placeholder="e.g. Storefronts that turn visitors into customers."
-                  onChange={(e) => setTagline(e.target.value)}
+                  onChange={(e) => set("tagline", e.target.value)}
                 />
               </Field>
-              <label className="flex cursor-pointer items-center justify-between gap-4 rounded-xl border bg-muted/20 p-4">
+              <label
+                id="svc-field-visibility"
+                className="flex cursor-pointer items-center justify-between gap-4 rounded-xl border bg-muted/20 p-4 transition-shadow"
+              >
                 <span className="flex items-start gap-3">
-                  {published ? (
+                  {draft.published ? (
                     <EyeIcon className="mt-0.5 size-5 text-emerald-600" />
                   ) : (
                     <EyeOffIcon className="mt-0.5 size-5 text-muted-foreground" />
                   )}
                   <span>
                     <span className="block text-sm font-medium">
-                      {published ? "Visible on the website" : "Hidden from the website"}
+                      {draft.published ? "Visible on the website" : "Hidden from the website"}
                     </span>
                     <span className="block text-xs text-muted-foreground">
                       Turn this off to keep working on it privately.
@@ -586,8 +518,8 @@ export function ServiceEditor({
                 <input
                   type="checkbox"
                   className="size-5 accent-primary"
-                  checked={published}
-                  onChange={(e) => setPublished(e.target.checked)}
+                  checked={draft.published}
+                  onChange={(e) => set("published", e.target.checked)}
                 />
               </label>
             </>
@@ -600,38 +532,37 @@ export function ServiceEditor({
                 text="This is the small card shown on the homepage and the Services page. Watch the preview on the right."
               />
               <Field
+                id="svc-field-summary"
                 label="Short description"
                 required
                 help="One or two sentences. Keep it under about 160 characters."
                 error={err("summary")}
               >
                 <SimpleEditor
-                  value={summaryHtml}
-                  onChange={setSummaryHtml}
+                  value={draft.summaryHtml}
+                  onChange={(html) => set("summaryHtml", html)}
                   placeholder="e.g. Custom Shopify layouts and product pages built to convert."
                   minHeight="88px"
                 />
                 <p
                   className={cn(
                     "text-right text-xs",
-                    summary.length > 200
-                      ? "text-amber-600"
-                      : "text-muted-foreground",
+                    payload.summary.length > 160 ? "text-amber-600" : "text-muted-foreground",
                   )}
                 >
-                  {summary.length} characters
+                  {payload.summary.length} characters
                 </p>
               </Field>
-              <Field label="Colour" required help="Colour of the icon on the card.">
+              <Field id="svc-field-color" label="Colour" required help="Colour of the icon on the card.">
                 <div className="flex flex-wrap gap-2">
                   {Object.entries(COLOR_THEMES).map(([key, t]) => (
                     <button
                       key={key}
                       type="button"
-                      onClick={() => setThemeKey(key)}
+                      onClick={() => set("themeKey", key)}
                       className={cn(
                         "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors",
-                        themeKey === key
+                        draft.themeKey === key
                           ? "border-primary bg-primary/10 text-primary"
                           : "border-border text-muted-foreground hover:border-primary/40",
                       )}
@@ -642,55 +573,55 @@ export function ServiceEditor({
                   ))}
                 </div>
               </Field>
-              <Field label="Icon" required help="Pick the picture that best fits the service.">
-                <IconPicker value={icon} onChange={setIcon} />
+              <Field id="svc-field-icon" label="Icon" required help="Pick the picture that best fits the service.">
+                <IconPicker value={draft.icon} onChange={(icon) => set("icon", icon)} />
               </Field>
             </>
           )}
 
           {step === "page" && (
             <>
-              <StepHeading
-                title="Service page"
-                text="The full page visitors see after clicking the card."
-              />
+              <StepHeading title="Service page" text="The full page visitors see after clicking the card." />
               <Field
+                id="svc-field-intro"
                 label="Introduction"
                 required
                 help="Explain what the service is. Press Enter to start a new paragraph."
                 error={err("intro")}
               >
                 <SimpleEditor
-                  value={introHtml}
-                  onChange={setIntroHtml}
+                  value={draft.introHtml}
+                  onChange={(html) => set("introHtml", html)}
                   placeholder="Describe the service in a few short paragraphs…"
                   minHeight="140px"
                 />
               </Field>
               <div className="grid gap-5 md:grid-cols-2">
                 <Field
+                  id="svc-field-deliverables"
                   label="What the client gets"
                   required
                   help="One item per line."
                   error={err("deliverables")}
                 >
                   <SimpleEditor
-                    value={deliverablesHtml}
-                    onChange={setDeliverablesHtml}
+                    value={draft.deliverablesHtml}
+                    onChange={(html) => set("deliverablesHtml", html)}
                     placeholder="e.g. Custom homepage design"
                     listMode
                     minHeight="140px"
                   />
                 </Field>
                 <Field
+                  id="svc-field-idealFor"
                   label="Who it's for"
                   required
                   help="One type of client per line."
                   error={err("idealFor")}
                 >
                   <SimpleEditor
-                    value={idealForHtml}
-                    onChange={setIdealForHtml}
+                    value={draft.idealForHtml}
+                    onChange={(html) => set("idealForHtml", html)}
                     placeholder="e.g. New Shopify brands"
                     listMode
                     minHeight="140px"
@@ -699,6 +630,7 @@ export function ServiceEditor({
               </div>
               <div className="grid gap-5 sm:grid-cols-2">
                 <Field
+                  id="svc-field-timeline"
                   label="How long it usually takes"
                   htmlFor="svcTimeline"
                   required
@@ -707,11 +639,12 @@ export function ServiceEditor({
                 >
                   <Input
                     id="svcTimeline"
-                    value={timeline}
-                    onChange={(e) => setTimeline(e.target.value)}
+                    value={draft.timeline}
+                    onChange={(e) => set("timeline", e.target.value)}
                   />
                 </Field>
                 <Field
+                  id="svc-field-startingAt"
                   label="Starting price"
                   htmlFor="svcPrice"
                   required
@@ -720,8 +653,8 @@ export function ServiceEditor({
                 >
                   <Input
                     id="svcPrice"
-                    value={startingAt}
-                    onChange={(e) => setStartingAt(e.target.value)}
+                    value={draft.startingAt}
+                    onChange={(e) => set("startingAt", e.target.value)}
                   />
                 </Field>
               </div>
@@ -735,50 +668,40 @@ export function ServiceEditor({
                 text="Show visitors what happens after they hire you, and answer common questions."
               />
               <Field
+                id="svc-field-process"
                 label="Work steps"
                 required
                 help="Shown in order as numbered steps on the page."
                 error={err("process")}
               >
                 <div className="grid gap-3">
-                  {processSteps.map((s, index) => (
+                  {draft.processSteps.map((s, index) => (
                     <div
                       key={index}
-                      className="grid gap-2 rounded-xl border bg-muted/10 p-3"
+                      id={processStepId(index)}
+                      className="grid scroll-mt-24 gap-2 rounded-xl border bg-muted/10 p-3 transition-shadow"
                     >
                       <div className="flex items-center gap-2">
                         <Badge variant="secondary">Step {index + 1}</Badge>
                         <Input
                           value={s.title}
                           placeholder="Step name, e.g. Discovery call"
-                          onChange={(e) => {
-                            const next = [...processSteps];
-                            next[index] = { ...s, title: e.target.value };
-                            setProcessSteps(next);
-                          }}
+                          onChange={(e) => dispatch(updateProcessStep({ index, title: e.target.value }))}
                         />
                         <Button
                           type="button"
                           size="icon"
                           variant="ghost"
                           aria-label={`Remove step ${index + 1}`}
-                          disabled={processSteps.length <= 1}
-                          onClick={() =>
-                            setProcessSteps(
-                              processSteps.filter((_, i) => i !== index),
-                            )
-                          }
+                          disabled={draft.processSteps.length <= 1}
+                          onClick={() => dispatch(removeProcessStep(index))}
                         >
                           <Trash2Icon />
                         </Button>
                       </div>
                       <SimpleEditor
                         value={s.bodyHtml}
-                        onChange={(html) => {
-                          const next = [...processSteps];
-                          next[index] = { ...s, bodyHtml: html };
-                          setProcessSteps(next);
-                        }}
+                        onChange={(html) => dispatch(updateProcessStep({ index, bodyHtml: html }))}
                         placeholder="What happens in this step?"
                         minHeight="64px"
                       />
@@ -789,12 +712,7 @@ export function ServiceEditor({
                     variant="outline"
                     size="sm"
                     className="w-fit"
-                    onClick={() =>
-                      setProcessSteps([
-                        ...processSteps,
-                        { title: "", bodyHtml: "<p></p>" },
-                      ])
-                    }
+                    onClick={() => dispatch(addProcessStep())}
                   >
                     <PlusIcon />
                     Add a step
@@ -803,50 +721,42 @@ export function ServiceEditor({
               </Field>
 
               <Field
+                id="svc-field-faqs"
                 label="Questions & answers"
                 help="Common questions clients ask about this service."
                 error={err("faqs")}
               >
                 <div className="grid gap-3">
-                  {faqs.length === 0 ? (
+                  {draft.faqs.length === 0 ? (
                     <p className="rounded-xl border border-dashed p-4 text-center text-sm text-muted-foreground">
                       No questions yet.
                     </p>
                   ) : null}
-                  {faqs.map((faq, index) => (
+                  {draft.faqs.map((faq, index) => (
                     <div
                       key={index}
-                      className="grid gap-2 rounded-xl border bg-muted/10 p-3"
+                      id={faqItemId(index)}
+                      className="grid scroll-mt-24 gap-2 rounded-xl border bg-muted/10 p-3 transition-shadow"
                     >
                       <div className="flex items-center gap-2">
                         <Input
                           value={faq.q}
                           placeholder="Question, e.g. Can I edit the store myself?"
-                          onChange={(e) => {
-                            const next = [...faqs];
-                            next[index] = { ...faq, q: e.target.value };
-                            setFaqs(next);
-                          }}
+                          onChange={(e) => dispatch(updateFaq({ index, q: e.target.value }))}
                         />
                         <Button
                           type="button"
                           size="icon"
                           variant="ghost"
                           aria-label={`Remove question ${index + 1}`}
-                          onClick={() =>
-                            setFaqs(faqs.filter((_, i) => i !== index))
-                          }
+                          onClick={() => dispatch(removeFaq(index))}
                         >
                           <Trash2Icon />
                         </Button>
                       </div>
                       <SimpleEditor
                         value={faq.aHtml}
-                        onChange={(html) => {
-                          const next = [...faqs];
-                          next[index] = { ...faq, aHtml: html };
-                          setFaqs(next);
-                        }}
+                        onChange={(html) => dispatch(updateFaq({ index, aHtml: html }))}
                         placeholder="Answer…"
                         minHeight="64px"
                       />
@@ -857,7 +767,7 @@ export function ServiceEditor({
                     variant="outline"
                     size="sm"
                     className="w-fit"
-                    onClick={() => setFaqs([...faqs, { q: "", aHtml: "<p></p>" }])}
+                    onClick={() => dispatch(addFaq())}
                   >
                     <PlusIcon />
                     Add a question
@@ -878,7 +788,7 @@ export function ServiceEditor({
                   Google preview
                 </p>
                 <p className="truncate text-xs text-emerald-700 dark:text-emerald-400">
-                  {SERVICE_PATH}/{effectiveSlug || "your-service"}
+                  {SERVICE_PATH}/{payload.slug || "your-service"}
                 </p>
                 <p className="truncate text-base text-blue-700 dark:text-blue-400">
                   {payload.seo.title || "Service name"}
@@ -888,17 +798,15 @@ export function ServiceEditor({
                 </p>
               </div>
               <Field
+                id="svc-field-seoTitle"
                 label="Search title"
                 htmlFor="seoTitle"
-                help={`Leave blank to use “${title || "the service name"}”. Best under 60 characters.`}
+                help={`Leave blank to use “${draft.title || "the service name"}”. Best under 60 characters.`}
               >
-                <Input
-                  id="seoTitle"
-                  value={seoTitle}
-                  onChange={(e) => setSeoTitle(e.target.value)}
-                />
+                <Input id="seoTitle" value={draft.seoTitle} onChange={(e) => set("seoTitle", e.target.value)} />
               </Field>
               <Field
+                id="svc-field-seoDescription"
                 label="Search description"
                 htmlFor="seoDesc"
                 help="Leave blank to use the short description. Best under 160 characters."
@@ -906,25 +814,27 @@ export function ServiceEditor({
                 <textarea
                   id="seoDesc"
                   rows={3}
-                  value={seoDescription}
+                  value={draft.seoDescription}
                   maxLength={320}
-                  onChange={(e) => setSeoDescription(e.target.value)}
+                  onChange={(e) => set("seoDescription", e.target.value)}
                   className="w-full rounded-lg border bg-transparent px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                 />
               </Field>
               <Field
+                id="svc-field-keywords"
                 label="Keywords"
                 htmlFor="seoKw"
                 help="Words people might search for, separated by commas."
               >
                 <Input
                   id="seoKw"
-                  value={seoKeywords}
+                  value={draft.seoKeywords}
                   placeholder="e.g. shopify design, store redesign"
-                  onChange={(e) => setSeoKeywords(e.target.value)}
+                  onChange={(e) => set("seoKeywords", e.target.value)}
                 />
               </Field>
               <Field
+                id="svc-field-slug"
                 label="Page address"
                 htmlFor="svcSlug"
                 required
@@ -937,11 +847,8 @@ export function ServiceEditor({
                   </span>
                   <input
                     id="svcSlug"
-                    value={slug}
-                    onChange={(e) => {
-                      setSlugTouched(true);
-                      setSlug(slugify(e.target.value));
-                    }}
+                    value={draft.slug}
+                    onChange={(e) => dispatch(setSlug(slugify(e.target.value)))}
                     className="min-w-0 flex-1 bg-transparent px-3 py-2 text-sm outline-none"
                   />
                 </div>
@@ -951,12 +858,7 @@ export function ServiceEditor({
 
           {/* Step navigation */}
           <div className="flex items-center justify-between gap-2 border-t pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              disabled={stepIndex === 0}
-              onClick={() => goTo(stepIndex - 1)}
-            >
+            <Button type="button" variant="outline" disabled={stepIndex === 0} onClick={() => goTo(stepIndex - 1)}>
               <ArrowLeftIcon />
               Back
             </Button>
@@ -966,11 +868,7 @@ export function ServiceEditor({
                 <ArrowRightIcon />
               </Button>
             ) : (
-              <Button
-                type="button"
-                onClick={() => void handleSave()}
-                disabled={!canSave}
-              >
+              <Button type="button" onClick={() => void handleSave()} disabled={!canSave}>
                 {saving ? <Loader2Icon className="animate-spin" /> : <SaveIcon />}
                 {isEdit ? (dirty ? "Save changes" : "Saved") : "Save service"}
               </Button>
@@ -979,52 +877,49 @@ export function ServiceEditor({
         </div>
 
         {/* Live preview */}
-        <aside className="grid content-start gap-3 lg:sticky lg:top-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Preview on the website
-          </p>
-          <div className="flex flex-col rounded-3xl border bg-card p-6 shadow-sm">
-            <div
-              className={cn(
-                "mb-4 flex size-12 items-center justify-center rounded-2xl",
-                theme.preview,
-              )}
-            >
-              <ServiceIcon name={icon} className="size-6" />
-            </div>
-            <p className="mb-2 text-lg font-black leading-tight">
-              {title || "Service name"}
-            </p>
-            <p className="line-clamp-3 text-sm text-muted-foreground">
-              {summary || "Your short description will appear here."}
-            </p>
-            <div className="mt-5 flex items-center justify-between border-t pt-4 text-[11px] font-bold uppercase tracking-widest">
-              <span className="text-muted-foreground">{timeline || "—"}</span>
-              <span className="text-primary">Details</span>
-            </div>
-          </div>
-          <div className="grid gap-2 rounded-2xl border bg-muted/20 p-4 text-xs">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-muted-foreground">Category</span>
-              <span className="font-medium">{categoryName ?? "—"}</span>
-            </div>
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-muted-foreground">Status</span>
-              {published ? (
-                <Badge>On website</Badge>
-              ) : (
-                <Badge variant="secondary">Hidden</Badge>
-              )}
-            </div>
-            <div className="flex items-start gap-2 pt-1 text-muted-foreground">
-              <GlobeIcon className="mt-0.5 size-3.5 shrink-0" />
-              <span className="break-all">
-                {SERVICE_PATH}/{effectiveSlug || "…"}
-              </span>
-            </div>
-          </div>
-        </aside>
+        {wideScreen ? (
+          <aside className="sticky top-[4.5rem] h-[calc(100vh-5.5rem)] self-start">
+            {ui.previewOpen ? (
+              <>
+                <ResizeHandle
+                  width={previewWidth}
+                  min={SERVICE_PREVIEW_WIDTH.min}
+                  max={SERVICE_PREVIEW_WIDTH.max}
+                  dragging={dragWidth !== null}
+                  onDrag={setDragWidth}
+                  onCommit={(width) => dispatch(setPreviewWidth(width))}
+                  onReset={() => dispatch(resetPreviewWidth())}
+                />
+                <ServiceLivePreview
+                  draft={previewDraft}
+                  groups={groups}
+                  onEdit={editSpot}
+                  onJump={jumpTo}
+                  onExpand={() => setPreviewSheet(true)}
+                  onCollapse={() => dispatch(setPreviewOpen(false))}
+                  className="h-full"
+                />
+              </>
+            ) : (
+              <CollapsedPreviewRail onOpen={() => dispatch(setPreviewOpen(true))} />
+            )}
+          </aside>
+        ) : null}
       </div>
+
+      <Sheet open={previewSheet} onOpenChange={setPreviewSheet}>
+        <SheetContent className="w-full gap-0 p-0 sm:max-w-xl" showCloseButton={false}>
+          <SheetTitle className="sr-only">Live preview</SheetTitle>
+          <ServiceLivePreview
+            draft={previewDraft}
+            groups={groups}
+            onEdit={editSpot}
+            onJump={jumpTo}
+            onCollapse={() => setPreviewSheet(false)}
+            className="h-full rounded-none border-0 shadow-none"
+          />
+        </SheetContent>
+      </Sheet>
 
       <ConfirmDialog
         open={confirmLeave}
