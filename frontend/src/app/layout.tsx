@@ -8,9 +8,9 @@ import JsonLd from "@/components/home/JsonLd";
 import { ThemeProvider } from "next-themes";
 import { siteSchema } from "@/lib/seo";
 import {
-  absoluteMediaUrl,
-  getResolvedSiteConfig,
-  seoTitle,
+    absoluteMediaUrl,
+    getResolvedSiteConfig,
+    seoTitle,
 } from "@/lib/site-settings";
 
 const poppins = Poppins({
@@ -100,7 +100,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
 
                 <ThemeProvider
                     attribute="class"
-                    defaultTheme="dark"
+                    defaultTheme="light"
                     enableSystem={true}
                 >
                     <SiteChrome>
